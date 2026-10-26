@@ -91,7 +91,14 @@ h1{font-size:32px;line-height:1.3;font-weight:400;margin:1.5rem 0 .25rem;text-al
 @keyframes blink{50%{opacity:.35}}
 .rain line{animation:rain .8s linear infinite}
 @keyframes rain{from{transform:translateY(-6px)}to{transform:translateY(8px)}}
-@media (prefers-reduced-motion:reduce){.fade,.wag,.blink,.rain line,.linger{animation:none}.shade{animation:none;opacity:.6}}
+/* 돌돌이: 정장 위를 직접 민다 */
+.suit{touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab;-webkit-tap-highlight-color:transparent}
+.suit:active{cursor:grabbing}
+.suit:focus-visible{outline:3px solid var(--lamp);outline-offset:-3px}
+.suit .strand{transition:opacity .25s ease}
+.suit .strand.gone{opacity:0}
+.roll-left{font-size:14px;color:var(--muted);text-align:center;margin:-.6rem 0 0;min-height:1.75em}
+@media (prefers-reduced-motion:reduce){.fade,.wag,.blink,.rain line,.linger{animation:none}.shade{animation:none;opacity:.6}.suit .strand{transition:none}}
 </style>
 </head>
 <body>
@@ -374,15 +381,6 @@ function sceneRoller(){
     </g>
     <text x="140" y="110" font-size="18" fill="var(--lamp)">★</text>
   `);
-}
-function sceneRollerHome(){
-  return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    <rect x="28" y="40" width="70" height="138" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
-    <circle cx="88" cy="112" r="4" fill="var(--lamp)"/>
-    <line x1="150" y1="58" x2="150" y2="70" stroke="var(--door-edge)" stroke-width="3"/>
-    ${roller(150,96,.9)}
-    ${person(230,178,{fur:16,face:"sad"})}
-    <text x="262" y="78" font-size="18" fill="var(--muted)">?</text>`);
 }
 function scenePayday(left){
   return V(`
@@ -797,8 +795,9 @@ function scold(lines, skippedRoller){
   finishDay(lines, sceneOffice(kind, S[1]));
 }
 /* ---- 곁가지 2: 고양이를 좋아하는 사장님 ---- */
-function ceoVisit(lines, fur){
+function ceoVisit(lines, fur, rolled=false){
   if (fur){
+    if (s.roller && !rolled){ s.pend = lines; return rollerMorning(true); }
     if (s.roller){
       s.salary -= 10; s.refills++;
       lines.push("아침. 돌돌이로 앞판, 뒤판, 소매까지 싹 밀었다. 오늘은 사장님이 오시는 날이니까.");
@@ -806,7 +805,9 @@ function ceoVisit(lines, fur){
     } else {
       lines.push("아침. 정장에 붙은 털을 손으로 대충 털고 나왔다. 하필 사장님이 오시는 날이다.");
     }
-    lines.push("사장님이 팀을 한 바퀴 돌다가 내 앞에서 멈췄다. 내 어깨에서 치즈색 털 한 가닥을 집어 든다. 팀장님 얼굴이 하얘졌다.");
+    lines.push(rolled
+      ? "사장님이 팀을 한 바퀴 돌다가 내 앞에서 멈췄다. 그렇게 밀었는데도 어깨에 한 가닥이 남아 있었나 보다. 사장님이 치즈색 털 한 가닥을 집어 든다. 팀장님 얼굴이 하얘졌다."
+      : "사장님이 팀을 한 바퀴 돌다가 내 앞에서 멈췄다. 내 어깨에서 치즈색 털 한 가닥을 집어 든다. 팀장님 얼굴이 하얘졌다.");
     lines.push("“…치즈 고양이죠? 우리 집 호떡이랑 색이 똑같네.” 사장님이 휴대폰 배경화면을 보여 줬다. 동그란 치즈 고양이가 하품을 하고 있었다.");
     lines.push("그날 오후, 팀장님이 지나가며 작게 말했다. “…사장님 고양이 이름이 호떡이래요.”");
     s.bossCat = true; s.firstFur = false; s.salary += 100;
@@ -829,18 +830,120 @@ function finishDay(lines, pic){
   `);
 }
 /* ---- 돌돌이 ---- */
-function rollerMorning(){
+function rollerMorning(ceo=false){
+  const n = Math.min(18, 9 + s.slept);
+  RL = { strands:suitStrands(n), left:n, total:n, ceo };
   render(`
     ${topBar(`${s.day+1}일째 아침`)}
-    ${scene(sceneRollerHome())}
     <div class="text">${paras(s.pend)}
-      <p>아침. 정장이 털 범벅이다. 현관에 돌돌이가 걸려 있다.</p>
+      <p>${ceo ? "아침. 정장이 털 범벅이다. 하필 오늘은 사장님이 오시는 날이다." : "아침. 정장이 털 범벅이다. 현관에 돌돌이가 걸려 있다."}</p>
       <p class="cost">리필은 한 롤에 ${REFILL}만원. 이번 달 ${s.refills}롤 썼다.</p></div>
+    <div class="scene suit" id="suit" tabindex="0" role="button" aria-label="정장. 누른 채로 문지르면 돌돌이가 털을 뗀다. 키보드는 스페이스로 한 줄씩." aria-describedby="rollLeft">${sceneSuit()}</div>
+    <p class="roll-left" id="rollLeft" aria-live="polite">${rollLeftText()}</p>
     <div class="choices">
-      <button onclick="useRoller(true)">돌돌이로 싹 민다<small>리필 한 롤 · 월급날 ${REFILL}만원</small></button>
-      <button onclick="useRoller(false)">그냥 손으로 털고 나간다<small>리필은 아끼고, 팀장님 눈치는 감수</small></button>
+      <button id="rollDone" onclick="rollDone()" disabled>다 뗐다, 출근한다<small>리필 한 롤 · 월급날 ${REFILL}만원</small></button>
+      ${ceo ? "" : `<button onclick="useRoller(false)">그냥 손으로 털고 나간다<small>리필은 아끼고, 팀장님 눈치는 감수</small></button>`}
     </div>
+  `, false);
+  bindSuit();
+}
+/* ---- 돌돌이: 정장 위를 직접 민다 ---- */
+let RL = null;
+const dom = id => { const e = document.getElementById(id); return e && e.setAttribute ? e : null; };
+// 털 위치는 날마다 다르게, 같은 날엔 같게
+function suitStrands(n){
+  let seed = s.day * 97 + s.slept * 13 + 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const zones = [[102,140,60,184],[180,218,60,184],[142,178,122,184],[64,94,92,182],[226,256,92,182]];
+  const pickZone = [0,1,2,0,1,3,4];
+  const out = [];
+  for (let i=0;i<n;i++){
+    const z = zones[pickZone[i % pickZone.length]];
+    out.push({ x:Math.round(z[0] + rnd()*(z[1]-z[0])), y:Math.round(z[2] + rnd()*(z[3]-z[2])), a:Math.round(rnd()*170), on:true });
+  }
+  return out;
+}
+function sceneSuit(){
+  const strands = RL.strands.map((t,i)=>`<path class="strand" id="st${i}" d="M${t.x-5},${t.y} q5,-4 10,0" transform="rotate(${t.a} ${t.x} ${t.y})" stroke="var(--fur)" stroke-width="2.6" fill="none" stroke-linecap="round"/>`).join('');
+  return V(`
+    <rect width="320" height="200" fill="var(--wall)"/>
+    <path d="M102,46 q-36,8 -42,42 l-6,112 h46 z" fill="var(--suit)"/>
+    <path d="M218,46 q36,8 42,42 l6,112 h-46 z" fill="var(--suit)"/>
+    <rect x="96" y="38" width="128" height="174" rx="18" fill="var(--suit)"/>
+    <polygon points="140,38 160,116 180,38" fill="var(--shirt)"/>
+    <polygon points="156,40 164,40 166,100 160,110 154,100" fill="var(--bowl)"/>
+    <path d="M140,38 L160,116 L126,76 Z M180,38 L160,116 L194,76 Z" fill="var(--paw)" opacity=".35"/>
+    <path d="M100,92 q-2,50 0,108 M220,92 q2,50 0,108" stroke="var(--paw)" stroke-width="2" fill="none" opacity=".4"/>
+    <circle cx="160" cy="140" r="3.5" fill="var(--muted)"/><circle cx="160" cy="166" r="3.5" fill="var(--muted)"/>
+    <path d="M184,150 h26" stroke="var(--paw)" stroke-width="2.5" opacity=".5"/>
+    ${strands}
+    <g id="rl" opacity="0" pointer-events="none">
+      <line x1="6" y1="10" x2="20" y2="44" stroke="var(--muted)" stroke-width="7" stroke-linecap="round"/>
+      <rect x="-26" y="-10" width="52" height="20" rx="10" fill="var(--sheet)" stroke="var(--line)" stroke-width="2"/>
+      <g id="rlfur"></g>
+    </g>
   `);
+}
+function rollLeftText(){
+  if (!RL) return "";
+  if (RL.left === 0) return "정장이 다시 까매졌다.";
+  if (RL.left === 1) return "마지막 한 가닥.";
+  return `남은 털 ${RL.left}가닥${RL.left === RL.total ? " · 정장을 누른 채로 문질러 보세요" : ""}`;
+}
+function takeStrand(i){
+  const t = RL.strands[i];
+  if (!t.on) return;
+  t.on = false; RL.left--;
+  const el = dom("st"+i); if (el) el.classList.add("gone");
+  const fur = dom("rlfur");
+  if (fur && RL.total - RL.left <= 14){
+    const k = RL.total - RL.left, fx = -20 + (k*11) % 40, fy = -5 + (k*7) % 10;
+    fur.insertAdjacentHTML("beforeend", `<path d="M${fx},${fy} l5,${k%2?2:-2}" stroke="var(--fur)" stroke-width="2.2" stroke-linecap="round"/>`);
+  }
+  const label = dom("rollLeft"); if (label) label.textContent = rollLeftText();
+  if (RL.left === 0){ const b = dom("rollDone"); if (b) b.disabled = false; }
+}
+// 돌돌이가 a에서 b로 지나간 자리의 털을 뗀다
+function sweep(a, b){
+  const d = Math.hypot(b.x-a.x, b.y-a.y), steps = Math.max(1, Math.ceil(d/4));
+  for (let k=0;k<=steps;k++){
+    const x = a.x + (b.x-a.x)*k/steps, y = a.y + (b.y-a.y)*k/steps;
+    RL.strands.forEach((t,i)=>{ if (t.on && Math.abs(t.x-x) < 27 && Math.abs(t.y-y) < 12) takeStrand(i); });
+  }
+}
+function showRoller(p){
+  const g = dom("rl"); if (!g) return;
+  g.setAttribute("transform", `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+  g.setAttribute("opacity", "1");
+}
+// 키보드(또는 테스트): 위에서부터 한 줄씩 민다
+function rollBand(){
+  if (!RL || RL.left === 0) return 0;
+  const per = Math.ceil(RL.total / 5);
+  const rest = RL.strands.map((t,i)=>[t,i]).filter(([t])=>t.on).sort((p,q)=>p[0].y-q[0].y).slice(0, per);
+  rest.forEach(([,i])=>takeStrand(i));
+  showRoller({ x:160, y:rest.length ? rest[rest.length-1][0].y : 120 });
+  return RL.left;
+}
+function bindSuit(){
+  const el = dom("suit");
+  if (!el || !el.addEventListener) return;
+  const svg = el.querySelector("svg");
+  let down = false, last = null;
+  const at = e => { const r = svg.getBoundingClientRect(); return { x:(e.clientX-r.left)*320/r.width, y:(e.clientY-r.top)*200/r.height }; };
+  el.addEventListener("pointerdown", e => { down = true; last = at(e); try { el.setPointerCapture(e.pointerId); } catch(_){} showRoller(last); sweep(last, last); });
+  el.addEventListener("pointermove", e => { const p = at(e); showRoller(p); if (down){ sweep(last, p); last = p; } });
+  const up = () => { down = false; last = null; };
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter"){ e.preventDefault(); rollBand(); } });
+  el.focus({preventScroll:true});
+}
+function rollDone(){
+  if (!RL || RL.left > 0) return;
+  const ceo = RL.ceo; RL = null;
+  if (ceo) return ceoVisit(s.pend, true, true);
+  useRoller(true);
 }
 function useRoller(use){
   const lines = s.pend;
