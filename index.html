@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>같이 잘까? 말까?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14182e;--panel:#1f2547;--ink:#eceaf5;--sub:#9a98b8;--lamp:#ffd479;--bad:#ff7a7a;--good:#8fe3b0;--line:#323a6b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f1eef9;--panel:#fff;--ink:#1a1d33;--sub:#625f82;--lamp:#a8650a;--bad:#c23a3a;--good:#1f7a48;--line:#d6d1ea}}
+:root[data-theme="light"]{--bg:#f1eef9;--panel:#fff;--ink:#1a1d33;--sub:#625f82;--lamp:#a8650a;--bad:#c23a3a;--good:#1f7a48;--line:#d6d1ea}
+:root[data-theme="dark"]{--bg:#14182e;--panel:#1f2547;--ink:#eceaf5;--sub:#9a98b8;--lamp:#ffd479;--bad:#ff7a7a;--good:#8fe3b0;--line:#323a6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Jua','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:18px;line-height:1.6}
+main{max-width:480px;margin:0 auto;padding:16px}
+.door{height:92px;border-radius:14px;background:#0a0c18;position:relative;overflow:hidden;border:2px solid var(--line);margin-bottom:14px}
+.door::before{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(var(--lamp),transparent);opacity:.55}
+.door i{position:absolute;bottom:26px;width:22px;height:30px;border-radius:50%;background:var(--lamp);box-shadow:0 0 14px var(--lamp);animation:blink 5s infinite;transition:opacity 1s}
+.door i:nth-child(1){left:calc(50% - 40px)}.door i:nth-child(2){left:calc(50% + 18px)}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+@media (prefers-reduced-motion:reduce){.door i{animation:none}}
+.top{display:flex;justify-content:space-between;margin-bottom:14px;color:var(--sub);font-size:16px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:18px}
+.say{color:var(--lamp);margin:12px 0 0}
+.btns{display:grid;gap:10px;margin-top:16px}
+button{font:inherit;color:var(--ink);background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;text-align:left}
+button:hover{border-color:var(--lamp)}
+button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+button.main{background:var(--lamp);color:#14182e;border-color:var(--lamp);text-align:center}
+small{display:block;color:var(--sub);font-size:14px}
+.delta{font-size:30px;margin:0 0 6px}
+.delta.up{color:var(--good)}.delta.down{color:var(--bad)}
+.title{font-size:26px;margin:0 0 8px}
+.dim{color:var(--sub);font-size:15px}
+</style>
+</head>
+<body>
+<main>
+  <div class="door" id="door"><i></i><i></i></div>
+  <div class="top"><span id="day"></span><span id="sal"></span></div>
+  <div id="view"></div>
+</main>
+<script>
+var NIGHTS=10;
+var EVENTS=[
+ {t:"내일은 첫 출근날. 정장도 다려놨고 알람도 맞췄다. 그런데 방문 밑으로 그림자가 어른거린다.",c:"야아아옹…"},
+ {t:"천둥이 친다. 문 앞의 고양이가 평소보다 훨씬 작은 소리로 운다.",c:"…먀."},
+ {t:"내일은 임원 보고. 고양이가 문틈으로 당신을 빤히 본다.",c:"(눈을 천천히 깜빡인다)"},
+ {t:"고양이가 아까 한 번 토했다. 지금은 괜찮아 보이는데, 문 앞에서 가만히 있다.",c:"…"},
+ {t:"새벽 3시. 문 너머로 고양이가 긁는 소리가 들린다. 이 정도면 합의된 거 아닌가?",c:"골골골골"},
+ {t:"정전. 깜깜한 방에서 고양이 발소리만 가까워진다.",c:"야옹?"},
+ {t:"내일 마감인 프로젝트 파일이 노트북에 있다. 고양이가 문 앞에서 낮게 운다.",c:"먀."},
+ {t:"오늘은 고양이가 울지 않는다. 문 앞에 앉아서 당신이 열어주길 기다린다.",c:"……"},
+ {t:"눈이 마주쳤다. 고양이는 이제 크게 울지 않는다. 그게 더 무섭다.",c:"(앉은 채로 꼬리만 흔든다)"},
+ {t:"아침 알람 5분 전. 오늘은 월급날 전날이다. 문 앞에서 고양이가 작게 운다.",c:"야옹"}
+];
+var BOSS=[
+ ["소매에 털이 한가득. 팀장이 한숨을 쉰다. \"이게 뭐예요.\"","롤러를 점심 내내 놓지 못했다."],
+ ["점심시간, 인사팀이 부른다. 정장 어깨에 털이 한가득이다.","연봉 협상표가 다시 쓰였다."],
+ ["\"또요?\" 이 한마디에 연봉표가 한 번 더 바뀌었다.","더 이상 변명이 통하지 않는다."]
+];
+var BOSS_D1=["첫날부터 털이 묻은 검정 정장. 팀장이 한숨을 쉰다. \"첫인상이 이게 뭐예요.\"","출근 첫날부터 혼났다. 롤러를 하루 종일 못 놓았다."];
+var CLEAN=["아침. 이불에 털 한 올 없다. 정장은 깔끔하다.","칼같이 출근했다. 팀장이 오늘 처음으로 고개를 끄덕인다.","주머니에 롤러가 필요 없는 하루. 일이 잘 풀린다.","깨끗한 소매를 보며 팀장이 말한다. \"요즘 일 잘하네요.\""];
+var PEN=[1200,1800,2500], FLOOR=500;
+var s,view=document.getElementById('view');
+
+function start(){s={day:1,sal:3000,sleeps:0,refuses:0,streak:0};night();}
+function hud(){
+ document.getElementById('day').textContent=s.day+" / "+NIGHTS+"일째 밤";
+ document.getElementById('sal').textContent="연봉 "+s.sal.toLocaleString()+"만원";
+ var op=Math.max(.2,1-s.refuses*.09);
+ var eyes=document.querySelectorAll('.door i');
+ for(var j=0;j<eyes.length;j++)eyes[j].style.opacity=op;
+}
+function show(h){view.innerHTML=h;var b=view.querySelector('button');if(b)b.focus({preventScroll:true});}
+function catLine(e){
+ var past=s.day-1;
+ if(past>=4&&s.refuses/past>=.7)return "(문 앞에 앉아 있다. 소리는 없다)";
+ return e.c;
+}
+function night(){
+ var e=EVENTS[s.day-1];hud();
+ show('<div class="card"><p style="margin:0">'+e.t+'</p><p class="say">"'+catLine(e)+'"</p></div>'+
+ '<div class="btns"><button onclick="choose(false)">같이 안 잔다<small>문을 닫고 혼자 잔다</small></button>'+
+ '<button onclick="choose(true)">같이 잔다<small>문을 열어준다</small></button></div>');
+}
+function choose(sleep){
+ var d,txt,cat;
+ if(sleep){
+  var t=Math.min(s.sleeps,2);d=-PEN[t];
+  var b=(t==0)?(s.day==1?BOSS_D1:BOSS[0]):BOSS[t];
+  txt=b[0]+"<br><span class='dim'>"+b[1]+"</span>";
+  s.sleeps++;s.streak=0;
+  cat="새벽 내내 골골 소리가 이어졌다. 따뜻했다.";
+ }else{
+  d=700+Math.min(s.streak,5)*60;s.streak++;s.refuses++;
+  txt=CLEAN[Math.floor(Math.random()*CLEAN.length)];
+  var r=s.refuses;
+  cat=r<=2?"문 너머 울음이 잦아들었다. 그러곤 조용해졌다.":r<=4?"울음이 평소보다 빨리 그쳤다.":r<=6?"오늘은 울음이 짧았다. 금방 조용해졌다.":"문 앞에서 소리가 나지 않았다. 잘 자는 모양이다.";
+ }
+ s.sal=Math.max(FLOOR,s.sal+d);hud();
+ var cls=d>0?'up':'down',sign=d>0?'+':'';
+ show('<div class="card"><p class="delta '+cls+'">'+sign+d.toLocaleString()+'만원</p><p style="margin:0">'+txt+'</p><p class="dim" style="margin-top:12px">'+cat+'</p></div>'+
+ '<div class="btns"><button class="main" onclick="next()">'+(s.day>=NIGHTS?'월급날로':'다음 날')+'</button></div>');
+}
+function next(){
+ if(s.day>=NIGHTS)return payday();
+ s.day++;night();
+}
+function payday(){
+ hud();
+ var m=Math.round(s.sal/12),toy=m+30;
+ show('<div class="card"><p class="title">월급날</p><p>이번 달 월급은 약 '+m+'만원이다. 고양이가 멀찍이서 지켜본다.</p></div>'+
+ '<div class="btns">'+
+ '<button onclick="buy(0)">최고급 사료<small>12만원. 제일 비싼 거니까 분명 좋아하겠지</small></button>'+
+ '<button onclick="buy(1)">일반 사료<small>3만원. 평소 먹던 그거</small></button>'+
+ '<button onclick="buy(2)">돌돌이<small>'+toy+'만원. 이번 월급보다 딱 30만원 비싸다</small></button></div>');
+}
+function end(title,body,tag){
+ var poor=s.sal<2500&&s.sleeps>=3?'<p class="dim">연봉표는 처참하다. 그래도.</p>':'';
+ show('<div class="card"><p class="title">'+title+'</p><p>'+body+'</p>'+poor+'<p class="dim">'+tag+' · 같이 잔 밤 '+s.sleeps+'번, 안 잔 밤 '+s.refuses+'번</p></div><div class="btns"><button class="main" onclick="start()">다시 하기</button></div>');
+}
+function buy(i){
+ var k=s.sleeps;
+ if(i==2){
+  show('<div class="card"><p class="title">잔액이 모자라요</p><p>돌돌이는 이번 월급으로 살 수 없다. 장바구니를 몇 번이나 열었다 닫는다. 고양이가 옆에서 하품한다.</p></div><div class="btns"><button class="main" onclick="payday()">다시 고르기</button></div>');
+  return;
+ }
+ if(k<=1){
+  if(k==0)end("먹지 않는 사료",i==0?"고양이는 사료 냄새를 맡고 고개를 돌린다. 이제 문 앞에서 울지도 않는다. 연봉은 오를 만큼 올랐고 정장에는 털이 한 올도 없다. 돈으로는 돌릴 수 없는 게 방 안에 있다.":"고양이는 사료를 먹긴 한다. 하지만 먹는 동안 당신 쪽은 보지 않는다. 아무도 혼내지 않는 평화로운 집이다.","배드 엔딩: 완벽한 출근러");
+  else end("먹지 않는 사료",i==0?"고양이는 사료 냄새를 맡고 고개를 돌린다. 한 번 안겼던 기억이 있는지, 잠깐 이쪽을 보지만 다가오지는 않는다.":"고양이는 사료를 먹지만 당신 곁에는 오지 않는다. 한 번쯤은 괜찮았는데, 하는 생각이 든다.","배드 엔딩: 너무 늦은 월급날");
+ }else if(k==2){
+  end("어정쩡한 저녁",i==0?"고양이는 최고급 사료를 조금 먹다 만다. 눈은 마주치지 않는다. 그래도 방에서 나가지는 않는다.":"고양이는 사료를 먹고 멀찍이 앉는다. 가까워질 수도 있었을 것 같다.","중간 엔딩: 반쯤 얻고 반쯤 놓친");
+ }else{
+  end("털투성이 월급날",i==0?"고양이는 최고급 사료를 한 번 쳐다보고는 당신 무릎 위로 올라온다. 사료는 그대로다. 정장에는 털이 묻었다. 이상하게 괜찮다.":"고양이가 사료를 싹 비우고 그릇 옆에서 골골거린다. 그러곤 당신 무릎으로 올라온다.","굿 엔딩: 비용을 치른 사람");
+ }
+}
+start();
+</script>
+</body>
+</html>
