@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cat at the Door — 전개도</title>
+<style>
+@font-face{font-family:'DungGeunMo';src:url(../fonts/DungGeunMo.woff) format('woff');font-display:block}
+:root{--page:#e9e4d8;--frame:#cfc6b2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--page:#24211d;--frame:#4a443b}}
+:root[data-theme="dark"]{--page:#24211d;--frame:#4a443b}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--page)}
+.wrap{overflow-x:auto;padding:16px}
+svg{display:block;min-width:1100px;width:100%;max-width:1700px;margin:0 auto;border-radius:10px;border:1px solid var(--frame)}
+svg text{font-family:'DungGeunMo',monospace}
+</style>
+</head>
+<body>
+<div class="wrap"><svg id="map" viewBox="0 0 1600 1960" role="img" aria-label="Cat at the Door 게임 전개도: 하루 순환, 엔딩 판정, 단서, 실습"></svg></div>
+<script>
+const C = {paper:"#f8f2e4", ink:"#3a3330", soft:"#857e74", line:"#cbbfa8", blue:"#2f6fb5", red:"#c8433a",
+  cat:"#e39a4f", catD:"#b46e2c", work:"#6b5fb5", green:"#4f8a5b", gray:"#9a9389", hi:"#f6d77e",
+  skin:"#f1cfae", suit:"#3b3f5c", white:"#fffdf7", catBg:"#fbe8d3", workBg:"#e7e3f6", greenBg:"#e1efe3", grayBg:"#ece8e1"};
+
+const T = (x,y,s,o={}) => `<text x="${x}" y="${y}" font-size="${o.size||16}" fill="${o.color||C.ink}" text-anchor="${o.anchor||'start'}">${s}</text>`;
+const lines = (x,y,arr,o={}) => arr.map((s,i)=>T(x,y+i*(o.lh||24),s,o)).join('');
+const R = (x,y,w,h,o={}) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx||10}" fill="${o.fill||'none'}" stroke="${o.stroke||C.ink}" stroke-width="${o.sw||2}" ${o.dash?`stroke-dasharray="${o.dash}"`:''} filter="url(#rough)"/>`;
+const badge = (x,y,n,color=C.ink) => `<circle cx="${x}" cy="${y}" r="20" fill="${color}" filter="url(#rough)"/>${T(x,y+8,n,{size:20,color:C.white,anchor:'middle'})}`;
+const arrow = (d,color=C.blue,w=4,dash) => `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:''} stroke-linecap="round" marker-end="url(#m${color===C.red?'R':color===C.cat?'C':color===C.work?'W':'B'})" filter="url(#rough)"/>`;
+
+function cat(x,y,s=1,mode="sit"){
+  if(mode==="loaf") return `<g transform="translate(${x},${y}) scale(${s})" filter="url(#rough)">
+    <ellipse cx="0" cy="-12" rx="26" ry="14" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>
+    <circle cx="22" cy="-22" r="12" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>
+    <path d="M12,-30 l3,-12 l6,9 M26,-31 l5,-11 l3,11" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>
+    <path d="M16,-23 q3,2 5,0 M25,-23 q3,2 5,0" stroke="${C.ink}" stroke-width="1.4" fill="none"/></g>`;
+  const face = mode==="back" ? `<path d="M-6,-30 q6,4 12,0 M-8,-22 q8,4 16,0" stroke="${C.catD}" stroke-width="2" fill="none"/>`
+    : `<circle cx="-5" cy="-45" r="2" fill="${C.ink}"/><circle cx="5" cy="-45" r="2" fill="${C.ink}"/><path d="M-2,-40 h4 l-2,2z" fill="${C.red}"/>`;
+  const tail = mode==="back" ? `<path d="M-14,-4 q-24,4 -20,-18" stroke="${C.cat}" stroke-width="7" fill="none" stroke-linecap="round"/>`
+    : `<path d="M14,-6 q26,-2 18,-30" stroke="${C.cat}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+  return `<g transform="translate(${x},${y}) scale(${s})" filter="url(#rough)">${tail}
+    <ellipse cx="0" cy="-18" rx="18" ry="20" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>
+    <path d="M-13,-50 l5,-17 l7,11 M13,-50 l-5,-17 l-7,11" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>
+    <circle cx="0" cy="-44" r="14" fill="${C.cat}" stroke="${C.ink}" stroke-width="1.5"/>${face}</g>`;
+}
+function person(x,y,o={}){
+  let fur=""; for(let i=0;i<(o.fur||0);i++){const fx=-13+((i*37)%26), fy=-44+((i*23)%36); fur+=`<path d="M${fx},${fy} l5,${i%2?2:-2}" stroke="${C.cat}" stroke-width="2.4" stroke-linecap="round"/>`;}
+  const mouth = o.face==="sad"?`<path d="M-4,-62 q4,-4 8,0" stroke="${C.ink}" stroke-width="1.6" fill="none"/>`:o.face==="happy"?`<path d="M-5,-64 q5,5 10,0" stroke="${C.ink}" stroke-width="1.6" fill="none"/>`:`<path d="M-4,-63 h8" stroke="${C.ink}" stroke-width="1.6"/>`;
+  return `<g transform="translate(${x},${y}) scale(${o.s||1})" filter="url(#rough)">
+    <rect x="-17" y="-50" width="34" height="46" rx="9" fill="${o.color||C.suit}" stroke="${C.ink}" stroke-width="1.5"/>${fur}
+    <circle cx="0" cy="-68" r="14" fill="${C.skin}" stroke="${C.ink}" stroke-width="1.5"/>
+    <path d="M-14,-70 q2,-16 14,-14 q12,-2 14,14 q-8,-8 -28,0" fill="${C.ink}"/>
+    <circle cx="-5" cy="-68" r="1.6" fill="${C.ink}"/><circle cx="5" cy="-68" r="1.6" fill="${C.ink}"/>${mouth}</g>`;
+}
+function boss(x,y,mood){
+  const m = mood==="angry"?`<path d="M-5,-61 q5,-5 10,0" stroke="${C.ink}" stroke-width="1.8" fill="none"/><path d="M-9,-76 l6,3 M9,-76 l-6,3" stroke="${C.ink}" stroke-width="2"/>`
+          : `<path d="M-6,-64 q6,6 12,0" stroke="${C.ink}" stroke-width="1.8" fill="none"/>`;
+  return `<g transform="translate(${x},${y})" filter="url(#rough)"><rect x="-20" y="-50" width="40" height="50" rx="10" fill="${C.gray}" stroke="${C.ink}" stroke-width="1.5"/><circle cx="0" cy="-68" r="15" fill="${C.skin}" stroke="${C.ink}" stroke-width="1.5"/><circle cx="-5" cy="-69" r="1.7" fill="${C.ink}"/><circle cx="5" cy="-69" r="1.7" fill="${C.ink}"/>${m}</g>`;
+}
+function roller(x,y,s=1){return `<g transform="translate(${x},${y}) scale(${s})" filter="url(#rough)"><rect x="-4" y="0" width="8" height="28" rx="3" fill="${C.gray}" stroke="${C.ink}" stroke-width="1.2"/><rect x="-20" y="-24" width="40" height="26" rx="11" fill="${C.white}" stroke="${C.ink}" stroke-width="1.5"/><path d="M-10,-20 v18 M0,-20 v18 M10,-20 v18" stroke="${C.gray}" stroke-width="1.2"/></g>`;}
+function bowl(x,y,full,star){return `<g transform="translate(${x},${y})" filter="url(#rough)">${full?`<ellipse cx="0" cy="-12" rx="20" ry="6" fill="#a9703c"/>`:''}<path d="M-24,-12 h48 l-6,12 h-36 z" fill="#8fa3d9" stroke="${C.ink}" stroke-width="1.5"/>${star?T(18,-18,"★",{color:C.catD,size:16}):''}</g>`;}
+function face(x,y,m){const mouth={a:`M-4,3 q4,-4 8,0`,b:`M-4,2 h8`,c:`M-5,1 q5,4 10,0`,d:`M-6,0 q6,7 12,0`}[m];
+  return `<g transform="translate(${x},${y})" filter="url(#rough)"><circle r="15" fill="${C.white}" stroke="${C.ink}" stroke-width="1.5"/><circle cx="-5" cy="-4" r="1.8" fill="${C.ink}"/><circle cx="5" cy="-4" r="1.8" fill="${C.ink}"/><path d="${mouth}" stroke="${C.ink}" stroke-width="1.6" fill="none"/></g>`;}
+function door(x,y,w,h){return `<g filter="url(#rough)"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#c9b59a" stroke="${C.ink}" stroke-width="2"/><circle cx="${x+w-12}" cy="${y+h/2}" r="4" fill="${C.ink}"/><rect x="${x}" y="${y+h-2}" width="${w}" height="5" fill="${C.hi}"/></g>`;}
+function paws(x,y,op){return `<g opacity="${op}"><ellipse cx="${x-9}" cy="${y}" rx="7" ry="3" fill="${C.ink}"/><ellipse cx="${x+9}" cy="${y}" rx="7" ry="3" fill="${C.ink}"/></g>`;}
+const section = (y,n,title,sub) => badge(60,y,n) + T(94,y+10,title,{size:32}) + (sub?T(94,y+40,sub,{size:16,color:C.soft}):'');
+
+let g = `<defs>
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>
+  ${[['B',C.blue],['R',C.red],['C',C.cat],['W',C.work]].map(([k,c])=>`<marker id="m${k}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="${c}" stroke-width="2.2"/></marker>`).join('')}
+</defs><rect width="1600" height="1960" fill="${C.paper}"/>`;
+
+/* ===== 머리말 ===== */
+g += T(40,66,"Cat at the Door — 전개도",{size:40});
+g += T(40,100,"내일은 출근날! 고양이와 같이 자도 괜찮을까?",{size:16,color:C.soft});
+// 범례
+g += R(1120,24,450,92,{fill:C.white,sw:1.5});
+g += `<line x1="1140" y1="52" x2="1190" y2="52" stroke="${C.blue}" stroke-width="4" marker-end="url(#mB)"/>` + T(1202,58,"진행 (주인공 이동과 같은 길)",{size:16});
+g += `<line x1="1140" y1="86" x2="1190" y2="86" stroke="${C.red}" stroke-width="2.5" stroke-dasharray="3 6" marker-end="url(#mR)"/>` + T(1202,92,"원인 → 결과",{size:16});
+g += T(1360,92,"? 확인 필요  ○ 예상",{size:16,color:C.red});
+
+/* ===== ① 하루 한 바퀴 ===== */
+g += section(160,"1","하루 한 바퀴","밤에 고르고, 아침에 결과를 보고, 퇴근해서 다시 밤. 이걸 10번.");
+// 밤 노드
+g += R(40,240,330,370,{fill:C.white,sw:2.5});
+g += T(60,276,"밤 · 방문 앞",{size:24});
+g += `<rect x="60" y="292" width="290" height="220" rx="8" fill="#4b5287" filter="url(#rough)"/>`;
+g += `<circle cx="110" cy="330" r="14" fill="#fbe7a1"/><circle cx="117" cy="324" r="13" fill="#4b5287"/>`;
+g += door(190,320,90,170) + paws(235,492,1) + cat(305,505,.75,"sit");
+g += T(196,312,"야옹~ 야옹~",{size:20,color:C.hi});
+g += lines(60,546,["보이는 것: 울음, 문틈 발 그림자","고를 것: 같이 잔다 / 그냥 잔다"],{size:16});
+// 선택 마름모
+g += `<polygon points="450,425 505,370 560,425 505,480" fill="${C.hi}" stroke="${C.ink}" stroke-width="2" filter="url(#rough)"/>`;
+g += T(505,421,"같이",{size:16,anchor:'middle'}) + T(505,443,"잘까?",{size:16,anchor:'middle'});
+g += arrow("M372,425 L444,425");
+// 위 레인: 같이 잔다
+g += arrow("M505,368 C505,300 540,300 600,300",C.cat);
+g += T(520,286,"같이 잔다",{size:20,color:C.catD});
+g += R(610,240,330,200,{fill:C.catBg,stroke:C.cat,sw:2.5});
+g += T(630,274,"아침 · 회사",{size:24});
+g += person(680,410,{fur:12,face:"sad"}) + boss(760,410,"angry");
+g += lines(810,320,["털 범벅","→ 꾸중","→ 연봉 ↓"],{size:16,color:C.red});
+g += T(630,432,"고양이와 가까워짐",{size:16,color:C.catD});
+// 아래 레인: 그냥 잔다
+g += arrow("M505,482 C505,550 540,550 600,550",C.work);
+g += T(520,586,"그냥 잔다",{size:20,color:C.work});
+g += R(610,470,330,200,{fill:C.workBg,stroke:C.work,sw:2.5});
+g += T(630,504,"아침 · 현관 → 회사",{size:24});
+g += person(680,640,{face:"happy"}) + cat(745,640,.65,"sit");
+g += lines(800,560,["깔끔","→ 칭찬","→ 연봉 ↑"],{size:16,color:C.green});
+g += T(630,662,"고양이 배웅이 점점 줄어듦",{size:16,color:C.work});
+// 돌돌이
+g += arrow("M942,340 L1000,340",C.cat);
+g += R(1010,240,280,200,{fill:C.white,stroke:C.cat,sw:2,dash:"8 6"});
+g += T(1030,274,"돌돌이 (선택)",{size:24});
+g += roller(1060,370,1);
+g += lines(1100,306,["혼난 날 퇴근길에","선배가 권함 (최대 2번)","산 뒤엔 아침마다:","민다 → 리필 20만","안 민다 → 꾸중"],{size:16,lh:22});
+// 퇴근 노드
+g += R(1340,380,220,130,{fill:C.white,sw:2.5});
+g += T(1360,416,"퇴근",{size:24});
+g += lines(1360,448,["→ 다음 밤","10번째 밤 뒤엔 월급날"],{size:16,lh:24});
+g += arrow("M1292,340 C1340,340 1400,350 1420,376");
+g += arrow("M942,570 C1100,570 1300,560 1420,514");
+// 되돌아가기 루프
+g += `<path d="M1450,512 C1450,700 900,712 205,712 C150,712 160,640 170,616" fill="none" stroke="${C.blue}" stroke-width="4" stroke-dasharray="14 9" marker-end="url(#mB)" filter="url(#rough)"/>`;
+g += `<rect x="700" y="690" width="200" height="40" rx="20" fill="${C.blue}" filter="url(#rough)"/>` + T(800,717,"↻ 10번 반복",{size:20,color:C.white,anchor:'middle'});
+
+/* ===== ② 엔딩 ===== */
+g += section(800,"2","월급날 → 엔딩","같이 잔 밤 수가 어디에 떨어지느냐로 갈린다. 월급날에야 처음으로 숫자(명세서)가 보인다.");
+const X0=120, step=134, LY=1030;
+const band=(a,b,fill,stroke)=>`<rect x="${X0+a*step-step/2+4}" y="${LY-26}" width="${(b-a+1)*step-8}" height="52" rx="12" fill="${fill}" stroke="${stroke}" stroke-width="2.5" filter="url(#rough)"/>`;
+g += band(0,2,C.workBg,C.work)+band(3,5,C.grayBg,C.gray)+band(6,6,C.greenBg,C.green)+band(7,10,C.catBg,C.cat);
+for(let i=0;i<=10;i++){ g += T(X0+i*step,LY+8,String(i),{size:24,anchor:'middle'}); }
+// 위: 엔딩 카드
+const card=(cx,w,letter,kind,name,color,art)=>{const x=cx-w/2;return R(x,860,w,130,{fill:C.white,stroke:color,sw:2.5})+art+T(x+12,884,letter+" "+kind,{size:16,color})+T(cx,980,name,{size:20,anchor:'middle'});};
+g += card(X0+1*step,380,"B","배드","돈으로는 못 돌린다",C.work, bowl(X0+step-60,950,true,true)+cat(X0+step+40,950,.7,"back"));
+g += card(X0+4*step,380,"C","노멀","앞으로 더 노력해야지",C.gray, bowl(X0+4*step-80,950,true)+cat(X0+4*step-10,950,.65,"sit")+person(X0+4*step+70,955,{s:.75}));
+g += card(X0+6*step,128,"D·E","","",C.green, "");
+g += T(X0+6*step,930,"굿 /",{size:16,color:C.green,anchor:'middle'})+T(X0+6*step,952,"히든",{size:16,color:C.catD,anchor:'middle'});
+g += card(X0+8.5*step,500,"A","배드","사랑만으로는",C.cat, bowl(X0+8.5*step-60,950,false)+cat(X0+8.5*step+30,950,.7,"sit")+T(X0+8.5*step-100,925,"텅…",{size:16,color:C.soft}));
+// 아래: 조건 설명
+g += R(40,1080,1520,190,{fill:C.white,sw:1.5});
+g += T(64,1116,"딱 6밤일 때만 갈림이 생긴다",{size:20,color:C.green});
+g += lines(64,1148,[
+  "D 굿 · 둘 다 지켰다 — 돌돌이 없이 6밤 + 마지막에 고양이가 가까이 있음 → 최애 사료를 살 수 있음",
+  "E 히든 · 돌돌이 장인 — 돌돌이를 사고 6밤 + 리필 3롤 이상 → 체면은 지켰지만 최애 사료는 못 삼",
+  "6밤이어도 C로 가는 경우 — 마지막에 고양이가 멀어져 있음 / 돌돌이를 샀는데 리필 2롤 이하",
+  "7밤 이상이면 연봉이 너무 깎여 사료값이 안 남는다 → A"],{size:16,lh:28});
+
+/* ===== ③ 단서 ===== */
+g += section(1340,"3","플레이어가 보는 단서","일 쪽은 숫자처럼 늘 보이고, 고양이 쪽은 장면으로만 보인다.");
+// 일 쪽
+g += R(40,1400,500,190,{fill:C.workBg,stroke:C.work,sw:2});
+g += T(60,1436,"일 쪽 — 화면 위 ‘체면’ (늘 보임)",{size:20,color:C.work});
+g += face(110,1500,"a")+face(190,1500,"b")+face(270,1500,"c")+face(350,1500,"d");
+g += T(110,1546,"연봉 ↓",{size:16,anchor:'middle',color:C.soft})+T(350,1546,"연봉 ↑",{size:16,anchor:'middle',color:C.soft});
+g += T(60,1576,"★ 라벨 없을 땐 누구 표정인지 몰랐음",{size:16,color:C.red});
+// 고양이 쪽
+g += R(570,1400,990,190,{fill:C.catBg,stroke:C.cat,sw:2});
+g += T(590,1436,"고양이 쪽 — 숫자 없이 장면으로만 (그냥 잘수록 →)",{size:20,color:C.catD});
+const stages=[["야옹~ 야옹~","배웅 나옴",1],["야옹.","고개만",.7],["…","안 보임",.35],["(조용)","아무도 없음",0]];
+stages.forEach((st,i)=>{const x=600+i*235;
+  g += door(x,1456,70,80)+paws(x+35,1537,st[2]);
+  g += T(x+84,1490,"밤 "+st[0],{size:16,color:st[0]==="(조용)"?C.soft:C.catD});
+  g += T(x+84,1524,"아침 "+st[1],{size:16,color:C.soft});
+  if(i<3) g += T(x+226,1530,"→",{size:20,color:C.red});
+});
+g += T(590,1576,"같이 자면 다시 가까워짐 (두 칸씩)",{size:16,color:C.catD});
+
+/* ===== ④ 실습 ===== */
+g += section(1660,"4","실습: 다시 만나는 대상 = 방문 앞 고양이","같은 문을 밤마다 다시 만난다. 그 사이의 아침이 두 번째 판단을 바꾸는가?");
+const P=(x,w,title,arr,color,fill)=>R(x,1720,w,200,{fill,stroke:color,sw:2.5})+T(x+18,1756,title,{size:20,color})+lines(x+18,1790,arr,{size:16,lh:26});
+g += P(40,340,"첫 만남 · 1번째 밤",["울음과 발 그림자를 본다","아직 판단 근거가 없다","→ 감으로 고른다 ○"],C.ink,C.white);
+g += arrow("M384,1820 L416,1820");
+g += P(420,360,"사이 · 다음 날 아침",["회사: 꾸중이 크게 보임","현관: 배웅은 한 줄뿐","? 고양이 쪽이 약하게 보임"],C.ink,C.white);
+g += arrow("M784,1820 L816,1820",C.red);
+g += T(800,1806,"✂",{size:24,color:C.red,anchor:'middle'});
+g += P(820,340,"두 번째 만남 · 다음 밤",["같은 문, 울음이 줄어 있다","‘괜찮아졌다’로 읽힐 수 있음 ?","목표: ‘멀어지고 있다’"],C.ink,C.white);
+g += P(1180,380,"✚ 보강 (지금 버전)",["밤 문장이 그날 아침을 기억:","‘오늘 아침엔 배웅을 안 나왔다.’","어젯밤과 비교: ‘어제보다 작다.’","→ 아침과 밤이 이어짐"],C.green,C.greenBg);
+g += T(40,1946,"확인 질문: 규칙을 모르는 사람이 조용해진 밤에 문을 열어 볼까?   ★ 테스트로 고친 것: 다시 하기, 팀장 대사, 돌돌이 시기·대가, 굿엔딩 난이도, 누구 표정인지 몰랐음 → ‘체면’ 라벨",{size:16,color:C.soft});
+
+document.getElementById('map').innerHTML = g;
+</script>
+</body>
+</html>
