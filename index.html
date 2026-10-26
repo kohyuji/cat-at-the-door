@@ -13,6 +13,7 @@
   --wall:#d9ddef; --floor:#c3c8e0; --sky:#4b5287; --moon:#fbe7a1;
   --fur:#e9a35c; --fur-dark:#b9732f; --skin:#f2cfae; --hair:#3b2f2f; --suit:#2f3350;
   --blanket:#8fa3d9; --sheet:#f4f1fa; --bowl:#7d8fd1; --kibble:#a9703c; --shirt:#ffffff;
+  --hoodie:#a3a8bd; --shade:#0d0f1f;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -24,6 +25,8 @@
     --line:#3a3f62; --bad:#ef8a80; --good:#8fd1aa;
     --wall:#2b2f4d; --floor:#23263f; --sky:#141629; --moon:#f3dc8f;
     --blanket:#4f5f99; --sheet:#c9c6d9; --suit:#151729; --shirt:#d9d6e8;
+    --hoodie:#6f7494; --shade:#05060d;
+    color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
@@ -32,6 +35,8 @@
   --line:#3a3f62; --bad:#ef8a80; --good:#8fd1aa;
   --wall:#2b2f4d; --floor:#23263f; --sky:#141629; --moon:#f3dc8f;
   --blanket:#4f5f99; --sheet:#c9c6d9; --suit:#151729; --shirt:#d9d6e8;
+  --hoodie:#6f7494; --shade:#05060d;
+  color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -41,7 +46,7 @@ main{max-width:34rem;margin:0 auto;padding:1.25rem 1.25rem 3rem}
 .top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted);min-height:2rem}
 .boss{font-size:1.4rem;display:flex;align-items:center;gap:.4rem}
 .boss-label{font-size:12px;color:var(--muted)}
-.scene{margin:.75rem 0 1.25rem;border-radius:1.2rem;overflow:hidden;border:1.5px solid var(--line);background:var(--wall)}
+.scene{position:relative;margin:.75rem 0 1.25rem;border-radius:1.2rem;overflow:hidden;border:1.5px solid var(--line);background:var(--wall)}
 .scene svg{display:block;width:100%;height:auto}
 .scene text{font-family:'DungGeunMo',monospace}
 strong,b,h1{font-weight:400}
@@ -53,6 +58,7 @@ button:hover:not(:disabled){border-color:var(--lamp)}
 button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
 button:disabled{opacity:.45;cursor:not-allowed}
 button small{display:block;color:var(--muted);font-size:12px}
+button.ghost{background:transparent;border-style:dashed}
 h1{font-size:32px;line-height:1.3;font-weight:400;margin:1.5rem 0 .25rem;text-align:center}
 .sub{text-align:center;color:var(--muted);margin:0 0 1rem}
 .ending-title{font-size:24px;line-height:1.3;margin:.5rem 0}
@@ -66,6 +72,17 @@ h1{font-size:32px;line-height:1.3;font-weight:400;margin:1.5rem 0 .25rem;text-al
 .names input:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
 .hint{margin:0;font-size:12px;color:var(--muted)}
 .cost{color:var(--bad)} .ledger .cost{color:var(--bad)}
+.diary{list-style:none;margin:1rem 0;padding:0;display:flex;flex-direction:column;gap:.6rem}
+.diary li{display:grid;grid-template-columns:2.4rem 1fr;gap:.75rem;align-items:start;font-size:15px;line-height:1.6}
+.diary li > div{min-width:0}
+.diary svg{display:block;width:2.4rem;height:auto}
+.diary .n{display:block;font-size:12px;color:var(--muted)}
+.reveal{border-top:1px dashed var(--line);padding-top:1rem;margin-top:1rem;font-size:14px;color:var(--muted)}
+.reveal p{margin:0 0 .6rem}
+.shade{position:absolute;inset:0;background:var(--shade);opacity:0;pointer-events:none;animation:shade var(--hes,3.4s) ease-in forwards}
+@keyframes shade{to{opacity:.82}}
+.linger{animation:linger var(--hes,3.4s) linear forwards}
+@keyframes linger{to{opacity:.25}}
 .fade{animation:fade .5s ease}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .wag{transform-box:fill-box;transform-origin:0% 100%;animation:wag 1.6s ease-in-out infinite}
@@ -74,28 +91,38 @@ h1{font-size:32px;line-height:1.3;font-weight:400;margin:1.5rem 0 .25rem;text-al
 @keyframes blink{50%{opacity:.35}}
 .rain line{animation:rain .8s linear infinite}
 @keyframes rain{from{transform:translateY(-6px)}to{transform:translateY(8px)}}
-@media (prefers-reduced-motion:reduce){.fade,.wag,.blink,.rain line{animation:none}}
+@media (prefers-reduced-motion:reduce){.fade,.wag,.blink,.rain line,.linger{animation:none}.shade{animation:none;opacity:.6}}
 </style>
 </head>
 <body>
 <main id="app"></main>
 <script>
+/* ================= 이야기 데이터 ================= */
+// 밤마다 바뀌는 회사·생활 이야기 (고양이 쪽 묘사는 상태에 따라 따로 붙는다)
 const NIGHTS = [
-  "내일은 첫 출근날. 알람을 세 개나 맞추고 누웠다.",
-  "첫날을 겨우 버텼다. 불을 끄자마자 문 밖에서 기척이 난다.",
-  "비가 온다. 천둥이 칠 때마다 문 너머가 움찔한다.",
-  "자려는데 문 앞에 뭔가 툭 떨어지는 소리. 장난감 쥐다.",
-  "내일은 중요한 회의가 있다. 문틈으로 하얀 앞발이 쏙 들어온다.",
-  "야근하고 늦게 들어왔다. 현관에서부터 발소리가 졸졸 따라왔다.",
-  "금요일 밤인데 내일도 출근이다. 이불이 유난히 차갑다.",
-  "문 앞에 식빵을 굽고 앉아 있는 그림자가 보인다.",
-  "팀장님이 승진 얘기를 꺼냈다. 내일도 잘해야 한다.",
-  "내일은 첫 월급날. 문 밖에서 마지막으로 소리가 난다."
+  "알람을 세 개나 맞추고 누웠다. 방금 내 손으로 닫은 문이 낯설다.",
+  "첫날을 겨우 버텼다. 열두 명의 이름을 외우느라 머리가 터질 것 같다.",
+  "비가 온다. 천둥이 칠 때마다 창문이 덜컹거린다.",
+  "내일은 첫 보고서 마감이다. 노트북을 덮고 나니 새벽 한 시.",
+  "내일은 처음으로 회의에서 발표를 한다. 대본을 세 번 읽고 누웠다.",
+  "퇴근길에 팀장님이 말했다. “내일 사장님이 팀을 둘러보세요. 다들 옷차림 신경 쓰고요.”",
+  "야근하고 자정이 넘어 들어왔다. 씻고 나니 눈이 저절로 감긴다.",
+  "회식에서 누가 물었다. “집에 기다리는 사람 있어요?” 고양이요, 했더니 다들 웃었다.",
+  "팀장님이 수습 평가 얘기를 꺼냈다. 다음 주에 결과가 나온다고 한다.",
+  "내일은 첫 월급날. 통장 앱을 괜히 몇 번이나 열어 봤다."
 ];
 const FIXED = 130, FOOD_BASIC = 5, FOOD_FAV = 30, ROLLER = 20, REFILL = 20;
-const IS_V2 = true;
+const TOTAL_ENDINGS = 7;
+const KN = ["","한 개","두 개","세 개","네 개","다섯 개","여섯 개","일곱 개","여덟 개","아홉 개","열 개"];
+const KB = ["","한 번","두 번","세 번","네 번","다섯 번","여섯 번","일곱 번","여덟 번","아홉 번","열 번"];
+let HES = 1;          // 망설임 시간 배율 (테스트할 때 줄일 수 있음)
+let hTimer = null;
 let s;
-function reset(){ s = { day:0, salary:3000, slept:0, cold:0, firstSleep:true, roller:false, food:null, offers:0, wantOffer:false, rollerDays:0, scolds:0, refills:0, prevLevel:null, memo:null }; }
+function reset(){
+  s = { day:0, salary:3000, slept:0, cold:0, firstFur:true, roller:false, food:null, offers:0, wantOffer:false,
+        rollerDays:0, scolds:0, refills:0, prevLevel:null, memo:null,
+        streak:0, toys:0, closetDone:false, closet:null, hoodie:false, bossCat:null, hist:[], pend:null };
+}
 const $app = document.getElementById('app');
 
 /* ================= drawing kit ================= */
@@ -140,7 +167,7 @@ function catLoaf(x, y, sc=1){
     <text x="40" y="-38" font-size="13" fill="var(--muted)">z z</text>
   </g>`;
 }
-// 사람 (정장)
+// 사람 (기본은 정장, hoodie면 회색 후드티)
 function person(x, y, opts={}){
   const face = opts.face || "neutral";
   const mouth = face==="sad" ? `<path d="M-5,-62 q5,-4 10,0" stroke="var(--paw)" stroke-width="1.8" fill="none"/>`
@@ -152,11 +179,15 @@ function person(x, y, opts={}){
     const fx = -14 + ((i*37)%28), fy = -46 + ((i*23)%40);
     fur += `<path d="M${fx},${fy} l4,${(i%2?2:-2)}" stroke="var(--fur)" stroke-width="2.2" stroke-linecap="round"/>`;
   }
+  const body = opts.body || (opts.hoodie ? "var(--hoodie)" : "var(--suit)");
+  const collar = opts.hoodie
+    ? `<path d="M-12,-50 q12,9 24,0" stroke="var(--line)" stroke-width="3" fill="none"/><path d="M-3,-46 v9 M3,-46 v9" stroke="var(--sheet)" stroke-width="1.5"/>`
+    : `<polygon points="-5,-50 0,-38 5,-50" fill="var(--shirt)"/>`;
   const sparkle = opts.sparkle ? `<text x="18" y="-60" font-size="16" fill="var(--lamp)">★</text><text x="-30" y="-30" font-size="11" fill="var(--lamp)">★</text>` : "";
   return `<g transform="translate(${x},${y})">
     <rect x="-9" y="-8" width="7" height="8" rx="2" fill="var(--paw)"/><rect x="2" y="-8" width="7" height="8" rx="2" fill="var(--paw)"/>
-    <rect x="-17" y="-50" width="34" height="44" rx="9" fill="var(--suit)"/>
-    <polygon points="-5,-50 0,-38 5,-50" fill="var(--shirt)"/>
+    <rect x="-17" y="-50" width="34" height="44" rx="9" fill="${body}"/>
+    ${collar}
     ${fur}
     <circle cx="0" cy="-68" r="14" fill="var(--skin)"/>
     <path d="M-14,-70 q2,-16 14,-14 q12,-2 14,14 q-8,-8 -28,0" fill="var(--hair)"/>
@@ -166,6 +197,7 @@ function person(x, y, opts={}){
     ${sparkle}
   </g>`;
 }
+// 팀장님
 function boss(x, y, mood){
   const mouth = mood==="angry" ? `<path d="M-5,-62 q5,-5 10,0" stroke="var(--paw)" stroke-width="2" fill="none"/>`
     : mood==="sigh" ? `<ellipse cx="0" cy="-62" rx="3" ry="2" fill="var(--paw)"/>`
@@ -178,6 +210,23 @@ function boss(x, y, mood){
     <path d="M-15,-72 q15,-18 30,0" fill="var(--paw)" opacity=".75"/>
     <circle cx="-5" cy="-68" r="1.7" fill="var(--paw)"/><circle cx="5" cy="-68" r="1.7" fill="var(--paw)"/>
     ${brows}${mouth}
+  </g>`;
+}
+// 사장님 (안경, 흰머리, 휴대폰 속 치즈 고양이)
+function ceo(x, y, phone){
+  return `<g transform="translate(${x},${y})">
+    <rect x="-9" y="-8" width="7" height="8" rx="2" fill="var(--paw)"/><rect x="2" y="-8" width="7" height="8" rx="2" fill="var(--paw)"/>
+    <rect x="-19" y="-52" width="38" height="46" rx="10" fill="var(--door-edge)"/>
+    <polygon points="-5,-52 0,-40 5,-52" fill="var(--shirt)"/>
+    <rect x="-1.5" y="-46" width="3" height="14" fill="var(--good)"/>
+    <circle cx="0" cy="-70" r="14" fill="var(--skin)"/>
+    <path d="M-14,-72 q2,-14 14,-13 q12,-1 14,13 q-4,-6 -14,-7 q-10,1 -14,7" fill="var(--line)"/>
+    <circle cx="-5" cy="-69" r="3.6" fill="none" stroke="var(--paw)" stroke-width="1.4"/><circle cx="5" cy="-69" r="3.6" fill="none" stroke="var(--paw)" stroke-width="1.4"/>
+    <circle cx="-5" cy="-69" r="1.2" fill="var(--paw)"/><circle cx="5" cy="-69" r="1.2" fill="var(--paw)"/>
+    <path d="M-5,-61 q5,4 10,0" stroke="var(--paw)" stroke-width="1.8" fill="none"/>
+    ${phone ? `<line x1="14" y1="-40" x2="26" y2="-56" stroke="var(--door-edge)" stroke-width="6" stroke-linecap="round"/>
+      <rect x="20" y="-84" width="20" height="30" rx="3" fill="var(--paw)"/><rect x="22" y="-81" width="16" height="24" rx="1" fill="var(--surface)"/>
+      <circle cx="30" cy="-67" r="5" fill="var(--fur)"/><polygon points="25.5,-69 26.5,-75 29,-71" fill="var(--fur)"/><polygon points="34.5,-69 33.5,-75 31,-71" fill="var(--fur)"/>` : ""}
   </g>`;
 }
 function roller(x, y, sc=1){
@@ -195,18 +244,23 @@ function bowl(x, y, full, premium){
     ${!full?`<text x="-12" y="-20" font-size="14" fill="var(--muted)">텅…</text>`:""}
   </g>`;
 }
+// 문틈으로 밀려 들어온 쥐 인형들
+function toys(n){
+  const col = ["var(--muted)","var(--bowl)","var(--lamp)"];
+  let g = "";
+  for (let i=0;i<Math.min(n,5);i++){
+    const c = col[i%3], x = 226 + i*13, y = 191 + (i%2)*5;
+    g += `<g transform="translate(${x},${y})"><ellipse cx="0" cy="-3" rx="6" ry="3.5" fill="${c}"/><circle cx="5" cy="-6" r="2" fill="${c}"/><path d="M-6,-3 q-5,-1 -7,3" stroke="${c}" stroke-width="1.4" fill="none"/></g>`;
+  }
+  return g;
+}
+const foodBag = (x, y, fav) => `<g transform="translate(${x},${y})"><path d="M-12,0 h24 l-2,-24 h-20 z" fill="var(--lamp)"/><rect x="-10" y="-28" width="20" height="5" rx="2" fill="var(--door-edge)"/>${fav?`<text x="-6" y="-8" font-size="11" fill="var(--paw)">★</text>`:`<circle cx="0" cy="-12" r="4" fill="var(--paw)" opacity=".5"/>`}</g>`;
 const floor = (y=178) => `<rect x="0" y="${y}" width="320" height="${200-y}" fill="var(--floor)"/>`;
 
-/* ================= scenes ================= */
-function sceneNight(){
-  const n = s.day, c = s.cold;
-  const rainy = n === 2;
-  const pawOp = c<=1?1:c<=3?.75:c<=5?.4:0;
-  const cry = c<=1?"야옹~ 야옹~":c<=3?"야옹.":c<=5?"…":"";
+/* ================= 방 ================= */
+function roomBg(rainy){
   const rain = rainy ? `<g class="rain">${[0,1,2,3,4,5].map(i=>`<line x1="${30+i*11}" y1="${42+(i%2)*10}" x2="${27+i*11}" y2="${52+(i%2)*10}" stroke="var(--sheet)" stroke-width="1.5" opacity=".7"/>`).join('')}</g>` : "";
-  const mouse = n===3 && c<6 ? `<g transform="translate(206,176)"><ellipse cx="0" cy="-4" rx="8" ry="5" fill="var(--muted)"/><circle cx="7" cy="-7" r="2.5" fill="var(--muted)"/><path d="M-8,-4 q-8,-2 -10,4" stroke="var(--muted)" stroke-width="1.5" fill="none"/></g>` : "";
-  return V(`
-    <rect width="320" height="200" fill="var(--wall)"/>
+  return `<rect width="320" height="200" fill="var(--wall)"/>
     <rect x="22" y="28" width="74" height="58" rx="4" fill="var(--sky)" stroke="var(--door-edge)" stroke-width="3"/>
     ${rainy?"":`<circle cx="74" cy="48" r="11" fill="var(--moon)"/><circle cx="80" cy="44" r="10" fill="var(--sky)"/><text x="36" y="48" font-size="10" fill="var(--moon)">★</text>`}
     ${rain}
@@ -217,13 +271,31 @@ function sceneNight(){
     <ellipse cx="46" cy="122" rx="18" ry="9" fill="var(--sheet)" stroke="var(--line)" stroke-width="2"/>
     <circle cx="48" cy="114" r="10" fill="var(--skin)"/><path d="M38,112 q10,-14 20,0" fill="var(--hair)"/>
     <path d="M44,116 q2,2 4,0 M51,116 q2,2 4,0" stroke="var(--paw)" stroke-width="1.4" fill="none"/>
-    <path d="M58,120 q50,-14 106,0 v38 h-106 z" fill="var(--blanket)"/>
-    <rect x="216" y="44" width="74" height="132" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
+    <path d="M58,120 q50,-14 106,0 v38 h-106 z" fill="var(--blanket)"/>`;
+}
+function doorClosed(pawOp, dim){
+  return `<rect x="216" y="44" width="74" height="132" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
     <circle cx="279" cy="114" r="4.5" fill="var(--lamp)"/>
-    <rect x="216" y="175" width="74" height="4" fill="var(--gap)" opacity="${c>=6?.35:1}"/>
-    <g fill="var(--paw)" opacity="${pawOp}"><ellipse cx="243" cy="178" rx="7" ry="3"/><ellipse cx="261" cy="178" rx="7" ry="3"/></g>
-    ${mouse}
-    ${cry?`<text x="306" y="34" text-anchor="end" font-size="20" fill="var(--lamp)" class="${c<=1?'blink':''}">${cry}</text>`:""}
+    <rect x="216" y="175" width="74" height="4" fill="var(--gap)" opacity="${dim?.35:1}"/>
+    ${s.hoodie?`<rect x="242" y="176" width="30" height="4" rx="2" fill="var(--hoodie)"/>`:""}
+    <g fill="var(--paw)" opacity="${pawOp}"><ellipse cx="243" cy="178" rx="7" ry="3"/><ellipse cx="261" cy="178" rx="7" ry="3"/></g>`;
+}
+const doorOpen = () => `<rect x="216" y="44" width="74" height="132" fill="var(--sky)" stroke="var(--door-edge)" stroke-width="3"/>
+  <rect x="219" y="152" width="68" height="23" fill="var(--floor)" opacity=".45"/>
+  <polygon points="216,44 232,54 232,168 216,176" fill="var(--door)" stroke="var(--door-edge)" stroke-width="2"/>`;
+
+/* ================= scenes ================= */
+function sceneNight(o={}){
+  const c = s.cold, lv = cryLevel(c);
+  const rainy = !o.final && s.day === 2;
+  const pawOp = o.final ? (c<=2?1:0) : [1,.75,.4,0][lv];
+  const cry = o.final ? "" : ["야옹~ 야옹~","야옹.","…",""][lv];
+  return V(`
+    ${roomBg(rainy)}
+    ${doorClosed(pawOp, c>=6)}
+    ${toys(s.toys)}
+    ${o.final && s.food ? foodBag(188,194,s.food==="fav") : ""}
+    ${cry?`<text x="306" y="34" text-anchor="end" font-size="20" fill="var(--lamp)" class="${lv===0?'blink':''}">${cry}</text>`:""}
   `);
 }
 function textW(t, fs){ let w=0; for (const ch of t.replace(/&[a-z#0-9]+;/g,'x')) w += ch.charCodeAt(0) < 0x1100 ? fs*0.5 : fs; return w; }
@@ -238,9 +310,10 @@ function speech(t, cx){
     <text x="${x+12}" y="${y+h/2+fs*0.36}" font-size="${fs}" fill="var(--ink)">${t}</text></g>`;
 }
 function sceneOffice(kind, bubbleText){
-  // kind: first | sigh | roller | clean
-  const furN = kind==="first"?16: kind==="sigh"?9: kind==="roller"?1:0;
+  // kind: first | sigh | soft | roller | clean
+  const furN = kind==="first"?16: kind==="sigh"?9: kind==="soft"?7: kind==="roller"?1:0;
   const mood = kind==="first"?"angry": kind==="sigh"?"sigh":"smile";
+  const face = kind==="clean"||kind==="roller"?"happy": kind==="soft"?"neutral":"sad";
   const bubble = bubbleText || (kind==="first"?"첫날부터…?": kind==="sigh"?"하아…": kind==="roller"?"?":"굿!");
   return V(`
     <rect width="320" height="200" fill="var(--wall)"/>
@@ -249,15 +322,28 @@ function sceneOffice(kind, bubbleText){
     ${floor()}
     <rect x="150" y="128" width="150" height="10" rx="2" fill="var(--door-edge)"/>
     <rect x="160" y="138" width="6" height="40" fill="var(--door-edge)"/><rect x="284" y="138" width="6" height="40" fill="var(--door-edge)"/>
-    ${person(110,178,{fur:furN, face: kind==="clean"||kind==="roller"?"happy":"sad", roller: kind==="roller", sparkle: kind==="clean"})}
+    ${person(110,178,{fur:furN, face, roller: kind==="roller", sparkle: kind==="clean"})}
     ${boss(220,178,mood)}
     ${speech(bubble, 220)}
+  `);
+}
+function sceneCeo(fur){
+  return V(`
+    <rect width="320" height="200" fill="var(--wall)"/>
+    <rect x="20" y="24" width="80" height="50" rx="3" fill="var(--surface)" stroke="var(--line)" stroke-width="2"/>
+    <path d="M30,64 l14,-14 l12,8 l16,-20 l18,12" stroke="var(--good)" stroke-width="2.5" fill="none"/>
+    ${floor()}
+    ${person(70,178,{fur: fur?6:0, face: fur?"neutral":"happy"})}
+    ${ceo(160,178,fur)}
+    ${boss(262,178, fur?"sigh":"smile")}
+    ${speech(fur ? "호떡이랑 똑같네!" : "음, 좋네요", 182)}
   `);
 }
 function sceneSeeOff(){
   const c = s.cold;
   let cat = "";
-  if (c<=1) cat = catSit(200,176,.9,{wag:true});
+  if (s.hoodie) cat = `<rect x="214" y="166" width="78" height="12" rx="5" fill="var(--hoodie)"/>${catLoaf(244,170,.7)}`;
+  else if (c<=1) cat = catSit(200,176,.9,{wag:true});
   else if (c<=3) cat = `<rect x="226" y="132" width="80" height="34" rx="10" fill="var(--blanket)"/><rect x="226" y="120" width="80" height="18" rx="8" fill="var(--blanket)" opacity=".8"/>${catLoaf(262,134,.7)}`;
   return V(`
     <rect width="320" height="200" fill="var(--wall)"/>
@@ -266,7 +352,7 @@ function sceneSeeOff(){
     <rect x="34" y="46" width="58" height="126" fill="var(--moon)" opacity=".55"/>
     ${person(64,178,{face:"neutral"})}
     <rect x="18" y="172" width="100" height="6" fill="var(--door-edge)"/>
-    ${c>5?`<text x="180" y="120" font-size="16" fill="var(--muted)">(아무도 없다)</text>`:""}
+    ${!s.hoodie && c>5?`<text x="180" y="120" font-size="16" fill="var(--muted)">(아무도 없다)</text>`:""}
     ${cat}
   `);
 }
@@ -289,6 +375,15 @@ function sceneRoller(){
     <text x="140" y="110" font-size="18" fill="var(--lamp)">★</text>
   `);
 }
+function sceneRollerHome(){
+  return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
+    <rect x="28" y="40" width="70" height="138" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
+    <circle cx="88" cy="112" r="4" fill="var(--lamp)"/>
+    <line x1="150" y1="58" x2="150" y2="70" stroke="var(--door-edge)" stroke-width="3"/>
+    ${roller(150,96,.9)}
+    ${person(230,178,{fur:16,face:"sad"})}
+    <text x="262" y="78" font-size="18" fill="var(--muted)">?</text>`);
+}
 function scenePayday(left){
   return V(`
     <rect width="320" height="200" fill="var(--wall)"/>
@@ -308,57 +403,153 @@ function scenePayday(left){
     </g>
   `);
 }
-function sceneEnding(key){
-  if (key==="mid") return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    ${bowl(70,178,true,s.food==="fav")}${catSit(165,176,.9)}${person(262,178,{face:"neutral"})}
-    <text x="196" y="96" font-size="14" fill="var(--muted)">한 걸음…</text>`);
-  if (key==="broke") return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    ${bowl(110,178,false)}${catSit(200,176,1,{wag:true})}`);
-  if (key==="work") return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    ${bowl(100,178,true,s.food==="fav")}${catAway(230,176,1)}
-    <text x="180" y="60" font-size="14" fill="var(--muted)">(못 본 척)</text>`);
-  if (key==="good") return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    <rect x="160" y="90" width="80" height="12" rx="4" fill="var(--blanket)" opacity=".6"/>
-    ${bowl(80,178,true,s.food==="fav")}
-    <g transform="translate(220,178)">
-      <rect x="-24" y="-30" width="58" height="22" rx="10" fill="var(--suit)"/>
-      <rect x="-17" y="-70" width="34" height="44" rx="9" fill="var(--suit)"/>
-      <circle cx="0" cy="-88" r="14" fill="var(--skin)"/><path d="M-14,-90 q2,-16 14,-14 q12,-2 14,14 q-8,-8 -28,0" fill="var(--hair)"/>
-      <path d="M-6,-88 q2,2 4,0 M3,-88 q2,2 4,0" stroke="var(--paw)" stroke-width="1.6" fill="none"/>
-      <path d="M-5,-82 q5,5 10,0" stroke="var(--paw)" stroke-width="1.8" fill="none"/>
+/* ---- 프롤로그 장면 ---- */
+function sceneStore(){
+  const rain = [...Array(12)].map((_,i)=>`<line x1="${12+i*27}" y1="${10+(i%3)*14}" x2="${8+i*27}" y2="${22+(i%3)*14}" stroke="var(--sheet)" stroke-width="1.5" opacity=".55"/>`).join('');
+  return V(`
+    <rect width="320" height="200" fill="var(--sky)"/>
+    <rect x="150" y="40" width="160" height="138" fill="var(--wall)"/>
+    <rect x="150" y="40" width="160" height="22" fill="var(--good)"/>
+    <text x="162" y="56" font-size="13" fill="var(--sheet)">24시 편의점</text>
+    <rect x="162" y="74" width="64" height="76" fill="var(--gap)" opacity=".9"/>
+    <rect x="236" y="74" width="62" height="104" fill="var(--gap)" opacity=".7" stroke="var(--door-edge)" stroke-width="2"/>
+    <g class="rain">${rain}</g>
+    ${floor()}
+    <rect x="128" y="148" width="16" height="30" rx="3" fill="var(--muted)"/>
+    <line x1="132" y1="148" x2="128" y2="126" stroke="var(--bowl)" stroke-width="2.5"/><line x1="140" y1="148" x2="144" y2="130" stroke="var(--bad)" stroke-width="2.5"/>
+    ${catSit(108,178,.42)}
+    <text x="86" y="138" font-size="12" fill="var(--lamp)" class="blink">야옹…</text>
+    ${person(44,178,{hoodie:true, face:"sad"})}
+    <line x1="84" y1="86" x2="62" y2="142" stroke="var(--paw)" stroke-width="2"/>
+    <path d="M44,98 q34,-38 80,0 q-10,-4 -20,0 q-10,-4 -20,0 q-10,-4 -20,0 q-10,-4 -20,0 z" fill="var(--bowl)"/>
+  `);
+}
+function sceneBaseline(){
+  return V(`${roomBg(false)}${doorOpen()}${catLoaf(112,127,.6)}
+    <rect x="18" y="164" width="44" height="12" rx="5" fill="var(--hoodie)"/>`);
+}
+function wardrobe(){
+  return `<rect x="150" y="22" width="130" height="156" rx="3" fill="var(--door-edge)"/>
+    <rect x="158" y="30" width="114" height="140" fill="var(--floor)"/>
+    <line x1="160" y1="44" x2="270" y2="44" stroke="var(--muted)" stroke-width="3"/>`;
+}
+function scenePass(){
+  return V(`
+    <rect width="320" height="200" fill="var(--wall)"/>
+    ${floor()}
+    ${wardrobe()}
+    <path d="M214,44 l-22,12 h44 z" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <path d="M192,56 h44 l6,72 h-56 z" fill="var(--suit)"/>
+    <polygon points="208,56 214,74 220,56" fill="var(--shirt)"/>
+    <rect x="166" y="152" width="40" height="14" rx="4" fill="var(--hoodie)"/>
+    ${catSit(250,178,.7)}
+    <text x="283" y="130" font-size="12" fill="var(--muted)">에취!</text>
+    <g transform="translate(36,58)">
+      <rect width="72" height="112" rx="10" fill="var(--paw)"/>
+      <rect x="6" y="12" width="60" height="88" rx="4" fill="var(--surface)"/>
+      <rect x="11" y="26" width="50" height="28" rx="6" fill="var(--good)"/>
+      <text x="16" y="45" font-size="11" fill="var(--sheet)">최종 합격</text>
+      <text x="13" y="74" font-size="9" fill="var(--muted)">축하드립니다</text>
     </g>
-    ${catLoaf(222,152,.8)}
-    <text x="150" y="60" font-size="18" fill="var(--bad)">♥</text>`);
-  return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
+  `);
+}
+function sceneCloset(){
+  let fur = "";
+  for (let i=0;i<10;i++) fur += `<path d="M${176+((i*29)%80)},${150+((i*13)%16)} l4,${i%2?2:-2}" stroke="var(--fur)" stroke-width="2.2" stroke-linecap="round"/>`;
+  return V(`
+    <rect width="320" height="200" fill="var(--wall)"/>${floor()}
+    ${wardrobe()}
+    <path d="M214,44 l-22,12 h44 z" fill="none" stroke="var(--muted)" stroke-width="2"/>
+    <path d="M168,148 h94 l4,22 h-102 z" fill="var(--suit)"/>
+    ${fur}
+    ${catLoaf(204,162,.75)}
+    ${person(78,178,{face:"sad", body:"var(--shirt)"})}
+    <text x="100" y="94" font-size="22" fill="var(--lamp)">!</text>
+  `);
+}
+/* ---- 마지막 밤·엔딩 장면 ---- */
+function sceneEnding(key){
+  const bag = s.food ? foodBag(188,194,s.food==="fav") : "";
+  if (key==="secret") return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
     <rect x="140" y="128" width="110" height="50" rx="8" fill="var(--suit)"/>
     <path d="M175,128 q20,-24 40,0" stroke="var(--suit)" stroke-width="6" fill="none"/>
     ${catLoaf(186,132,.95)}
     ${roller(80,150,.9)}
-    <text x="56" y="88" font-size="14" fill="var(--lamp)">리필 ×4</text>`);
+    <text x="56" y="88" font-size="14" fill="var(--lamp)">리필 ×${s.refills}</text>`);
+  const base = roomBg(false) + doorOpen();
+  if (key==="good") return V(`${base}${bag}${catLoaf(112,127,.6)}<text x="104" y="96" font-size="18" fill="var(--bad)">♥</text>`);
+  if (key==="boss") return V(`${base}${bag}${catLoaf(112,127,.6)}
+    <rect x="64" y="96" width="11" height="17" rx="2" fill="var(--paw)"/><rect x="66" y="98" width="7" height="12" fill="var(--gap)"/>
+    <text x="70" y="88" font-size="12" fill="var(--lamp)">찰칵</text>`);
+  if (key==="broke") return V(`${base}${catLoaf(112,127,.6)}${bowl(186,198,false)}`);
+  if (key==="hoodie") return V(`${base}${bag}<rect x="222" y="166" width="62" height="12" rx="5" fill="var(--hoodie)"/>${catLoaf(244,172,.6)}`);
+  if (key==="mid") return V(`${base}${bag}${catSit(252,178,.62)}<text x="150" y="80" font-size="14" fill="var(--muted)">한 걸음…</text>`);
+  // work
+  return V(`${base}${bowl(254,172,true,s.food==="fav")}<text x="246" y="104" font-size="16" fill="var(--muted)">…</text>`);
+}
+/* ---- 문 너머 (고양이 쪽) ---- */
+function sceneOtherSide(){
+  return V(`
+    <rect width="320" height="200" fill="var(--sky)"/>
+    <rect x="0" y="178" width="320" height="22" fill="var(--floor)"/>
+    <rect x="110" y="30" width="100" height="148" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
+    <circle cx="124" cy="108" r="5" fill="var(--lamp)"/>
+    <rect x="110" y="176" width="100" height="4" fill="var(--gap)"/>
+    <ellipse cx="160" cy="186" rx="64" ry="6" fill="var(--gap)" opacity=".25"/>
+    ${s.hoodie?`<rect x="126" y="180" width="68" height="12" rx="5" fill="var(--hoodie)"/>`:""}
+    ${catAway(160,188,.9)}
+    <text x="236" y="70" font-size="12" fill="var(--moon)">★</text>
+  `);
+}
+function doorIcon(r){
+  const cat = (x,y) => `<g transform="translate(${x},${y})"><circle r="4.2" fill="var(--fur)"/><polygon points="-4.2,-1.5 -3.2,-7 0,-4" fill="var(--fur)"/><polygon points="4.2,-1.5 3.2,-7 0,-4" fill="var(--fur)"/></g>`;
+  let g;
+  if (r.open){
+    g = `<rect x="9" y="4" width="18" height="26" fill="var(--gap)" stroke="var(--door-edge)" stroke-width="1.2"/><polygon points="9,4 14,6 14,29 9,30" fill="var(--door)"/>${cat(20,25)}`;
+  } else {
+    g = `<rect x="9" y="4" width="18" height="26" rx="1" fill="var(--door)" stroke="var(--door-edge)" stroke-width="1.2"/><rect x="9" y="29" width="18" height="1.6" fill="var(--gap)"/>`;
+    if (r.place==="hoodie") g += `<rect x="8" y="32" width="20" height="4" rx="2" fill="var(--hoodie)"/>${cat(18,32)}`;
+    else if (r.place==="closet") g += `<path d="M10,33 h16" stroke="var(--suit)" stroke-width="4"/>${cat(18,32)}`;
+    else if (r.place==="door") g += cat(18,34);
+  }
+  return `<svg viewBox="0 0 36 40" aria-hidden="true">${g}</svg>`;
 }
 
-/* ================= flow ================= */
-/* ---- names & Korean particles ---- */
+/* ================= 이름과 조사 ================= */
 const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function hasJong(w){ const c = w.charCodeAt(w.length-1); if (c<0xAC00||c>0xD7A3) return false; return (c-0xAC00)%28 !== 0; }
 const J = (w,a,b) => w + (hasJong(w) ? a : b);
 let ME = "김신입", CAT = "보리";
 const CATi = () => J(CAT,"이","가"), CATe = () => J(CAT,"은","는"), CATo = () => J(CAT,"을","를"), CATw = () => J(CAT,"과","와");
 
+/* ================= 고양이 상태를 문장으로 ================= */
 function bossFace(){
   if (s.salary >= 3800) return "😄"; if (s.salary >= 3000) return "🙂";
   if (s.salary >= 2000) return "😐"; return "😠";
 }
+function cryLevel(c){ return c<=1?0:c<=3?1:c<=5?2:3; }
 function cryLine(){
+  if (s.hoodie){
+    if (s.cold <= 1) return `${CATi()} 문 앞에서 운다. 같이 자자고.`;
+    return `${CATi()} 한 번 울고는, 후드티 위에 몸을 마는 소리가 난다.`;
+  }
   if (s.cold <= 1) return `${CATi()} 문 앞에서 운다. 같이 자자고.`;
   if (s.cold <= 3) return `${CATi()} 한 번, 짧게 운다. 그러고는 기다린다.`;
   if (s.cold <= 5) return "울음소리는 없다. 문 앞에 앉아 있는 기척만 느껴진다.";
   return `문 밖이 조용하다. 오늘은 ${CATi()} 오지 않았다.`;
 }
-function cryLevel(c){ return c<=1?0:c<=3?1:c<=5?2:3; }
+function nightExtra(){
+  if (s.day===2 && s.cold<6) return "천둥이 칠 때마다 문 너머가 움찔한다.";
+  if (s.day===3 && s.cold<4) return "문 앞에 뭔가 툭 떨어지는 소리가 났다. 제일 아끼는 쥐 인형을 물고 온 모양이다.";
+  if (s.toys && s.memo!=="slept" && s.cold>=4 && s.day>0) return "문 앞의 쥐 인형들은 며칠째 그대로다.";
+  return "";
+}
 function memoryLine(){
   if (s.day===0 || s.memo==null) return "";
   if (s.memo==="slept") return `어젯밤엔 ${CATw()} 같이 잤다.`;
+  if (s.memo==="closet") return `오늘 아침엔 옷장 속 정장 위에서 ${CATo()} 발견했다.`;
+  if (s.memo==="hoodie-new") return `오늘 아침, ${CATe()} 후드티 냄새를 한참 맡았다.`;
+  if (s.memo==="hoodie") return `오늘 아침엔 ${CATi()} 후드티 위에서 고개를 들었다.`;
   return [`오늘 아침엔 ${CATi()} 현관까지 배웅 나왔다.`,`오늘 아침엔 ${CATi()} 소파에서 고개만 들었다.`,`오늘 아침엔 ${CATi()} 배웅을 나오지 않았다.`,`요즘은 아침에 ${CATo()} 본 기억이 없다.`][s.memo];
 }
 function compareLine(){
@@ -368,17 +559,49 @@ function compareLine(){
   if (now < prev) return "어제보다 크게 운다.";
   return now===3 ? "오늘도 조용하다." : "";
 }
-function render(html){
+function seeOffLine(){
+  if (s.hoodie) return `나갈 때 ${CATi()} 후드티 위에서 고개를 들었다.`;
+  return s.cold <= 1 ? `나갈 때 ${CATi()} 현관까지 배웅 나왔다.`
+    : s.cold <= 3 ? `나갈 때 ${CATi()} 소파에서 고개만 들었다.`
+    : s.cold <= 5 ? `나갈 때 ${CATe()} 보이지 않았다.`
+    : `언제부턴가 ${CATi()} 배웅을 나오지 않는다. 바빠서 몰랐다.`;
+}
+function openLine(wasCold, late){
+  if (wasCold) return `거실 소파 끝에서 ${CATe()} 혼자 자고 있었다. 옆에 누우니 잠깐 쳐다보더니, 다시 눈을 감았다.`;
+  if (late) return `결국 이불을 걷고 일어났다. 문을 열자 ${CATi()} 잠깐 나를 올려다보고는, 베개 옆으로 갔다.`;
+  if (s.hoodie) return `문을 열자 ${CATi()} 후드티를 반쯤 끌고 들어왔다. 골골 소리를 들으며 잠들었다.`;
+  if (s.day===0) return `문을 열자마자 ${CATi()} 원래 자리인 베개 옆으로 갔다. 골골 소리를 들으며 잠들었다.`;
+  return `문을 열자마자 ${CATi()} 이불 속으로 파고들었다. 골골 소리를 들으며 잠들었다.`;
+}
+const PRAISE = () => [
+  `팀장님이 “${ME}씨, 첫날치고 괜찮네요.” 하고 지나갔다.`,
+  "열두 명의 이름을 다 외웠다. 옆자리 선배가 놀란 눈치다.",
+  "비 오는 출근길에도 지각하지 않았다.",
+  "첫 보고서가 한 번에 통과됐다.",
+  "발표가 무사히 끝났다. 팀장님이 고개를 끄덕였다.",
+  "",
+  "야근 다음 날인데도 머리가 맑다. 팀장님이 커피를 사 주셨다.",
+  "회식 다음 날, 혼자 멀쩡한 얼굴로 출근했다.",
+  `“역시 ${ME}씨, 믿고 맡길 만하네요.” 수습 평가가 기대된다.`,
+  "월급날 아침이라 그런지 사무실 공기가 들떠 있다."
+][s.day];
+
+/* ================= flow ================= */
+function render(html, focus=true){
   $app.innerHTML = `<div class="fade">${html}</div>`;
   window.scrollTo(0,0);
-  const b = $app.querySelector('input, button:not(:disabled)'); if (b) b.focus({preventScroll:true});
+  if (focus){ const b = $app.querySelector('input, button:not(:disabled)'); if (b) b.focus({preventScroll:true}); }
 }
 const topBar = label => `<div class="top"><span>${label}</span><span class="boss" title="체면"><span class="boss-label">체면</span>${bossFace()}</span></div>`;
+const plainTop = label => `<div class="top"><span>${label}</span></div>`;
 const scene = svg => `<div class="scene">${svg}</div>`;
+const paras = lines => lines.map(l=>`<p>${l}</p>`).join('');
 
 function goTitle(){
+  clearTimeout(hTimer); hTimer = null;
   reset();
   let saved = {}; try { saved = JSON.parse(localStorage.getItem('catgame-names')||'{}'); } catch(e){}
+  const played = getFound().length > 0;
   render(`
     <h1>Cat at the Door</h1>
     <p class="sub">내일은 출근날! 고양이와 같이 자도 괜찮을까?</p>
@@ -391,71 +614,207 @@ function goTitle(){
       <label>고양이 이름<input id="cname" maxlength="6" placeholder="보리" value="${esc(saved.cat||'')}" autocomplete="off"></label>
       <p class="hint">비워 두면 김신입, 보리로 시작해요.</p>
     </div>
-    <div class="choices"><button onclick="startGame()">불 끄고 눕기</button></div>
+    <div class="choices">
+      <button onclick="startGame(false)">이야기 시작</button>
+      ${played ? `<button class="ghost" onclick="startGame(true)">프롤로그 건너뛰기<small>첫 출근 전날 밤부터</small></button>` : ""}
+    </div>
     ${foundLine()}
   `);
 }
-function startGame(){
+function startGame(skip){
   const p = document.getElementById('pname').value.trim(), c = document.getElementById('cname').value.trim();
   ME = esc(p || "김신입"); CAT = esc(c || "보리");
   try { localStorage.setItem('catgame-names', JSON.stringify({me:p, cat:c})); } catch(e){}
-  night();
+  skip ? night() : prologue(0);
 }
+
+/* ---- 프롤로그: 문이 늘 열려 있던 시절 ---- */
+function prologue(i){
+  const P = [
+    { tag:"작년 겨울", pic:sceneStore, btn:"우산을 기울여 준다", lines:[
+      "서른한 번째 불합격 문자를 받은 밤이었다.",
+      "편의점 앞 우산꽂이 옆에서, 젖은 치즈색 새끼 고양이가 울고 있었다." ]},
+    { tag:"취준생의 밤들", pic:sceneBaseline, btn:"불을 끄고 같이 잔다", lines:[
+      `${J(CAT,"이라고","라고")} 이름을 붙였다. 그해 겨울 내내, 우리는 베개 하나를 나눠 썼다.`,
+      `자소서를 쓰다 새벽에 누우면 ${CATi()} 베개 옆으로 와서 몸을 말았다. 회색 후드티는 늘 털투성이였지만, 볼 사람도 없었다.`,
+      "방문은 늘 열려 있었다." ]},
+    { tag:"지난주", pic:scenePass, btn:"방문을 닫는다", lines:[
+      "합격 문자가 왔다.",
+      `난생처음 검은 정장을 샀다. ${CATi()} 냄새를 맡더니 재채기를 했다.`,
+      "검은 정장에 치즈색 털은 너무 잘 보인다. 내일은 첫 출근이다." ]}
+  ];
+  const p = P[i];
+  render(`
+    ${plainTop(p.tag)}
+    ${scene(p.pic())}
+    <div class="text">${paras(p.lines)}</div>
+    <div class="choices"><button onclick="${i < P.length-1 ? `prologue(${i+1})` : "night()"}">${p.btn}</button></div>
+  `);
+}
+
+/* ---- 밤: 문을 열까, 이불을 덮어쓸까 ---- */
 function night(){
-  const canFind = s.cold < 6;
-  const mem = IS_V2 ? memoryLine() : "", cmp = IS_V2 ? compareLine() : "";
+  const away = s.cold >= 6;
+  const mem = memoryLine(), cmp = compareLine(), extra = nightExtra();
   render(`
     ${topBar(`${s.day+1}번째 밤 · 월급날까지 ${10-s.day}일`)}
     ${scene(sceneNight())}
-    <div class="text"><p>${NIGHTS[s.day]}</p>${mem?`<p class="quiet">${mem}</p>`:""}<p class="${s.cold>3?'quiet':''}">${cmp?cmp+" ":""}${cryLine()}</p></div>
+    <div class="text"><p>${NIGHTS[s.day]}</p>${mem?`<p class="quiet">${mem}</p>`:""}${extra?`<p>${extra}</p>`:""}<p class="${s.cold>3?'quiet':''}">${cmp?cmp+" ":""}${cryLine()}</p></div>
     <div class="choices">
-      <button onclick="choose(true)">${canFind ? "문을 열고 같이 잔다" : `거실로 나가 ${CATo()} 찾는다`}</button>
-      <button onclick="choose(false)">그냥 잔다<small>내일도 출근이니까</small></button>
+      <button onclick="choose(true)">${away ? `거실로 나가 ${CATo()} 찾는다` : "문을 열고 같이 잔다"}</button>
+      <button onclick="hesitate()">${away ? "그냥 잔다" : "이불을 머리끝까지 덮는다"}<small>내일도 출근이니까</small></button>
     </div>
   `);
 }
-function choose(sleep){
-  let lines = [], pic;
-  if (IS_V2) s.prevLevel = cryLevel(s.cold);
+// 거절은 버튼 한 번으로 끝나지 않는다: 화면이 어두워지는 동안 아직 일어날 수 있다
+function hesitate(){
+  const lv = cryLevel(s.cold), away = lv === 3;
+  const ms = Math.round((away ? 2200 : 3400) * HES);
+  const msg = away ? "조용하다. 이불 속이 이상하게 넓다."
+    : lv===0 ? "이불 속까지 소리가 들린다. 눈을 꼭 감았다."
+    : lv===1 ? (s.hoodie ? "한 번 울고는 조용해졌다. 후드티 위에 자리를 잡는 소리가 난다." : "한 번 울고는 조용해졌다. 그래서 더 신경 쓰인다.")
+    : "소리는 없다. 그래도 문 앞에 있다는 걸 안다.";
+  render(`
+    ${topBar(`${s.day+1}번째 밤`)}
+    <div class="scene" style="--hes:${ms}ms">${sceneNight()}<div class="shade"></div></div>
+    <div class="text"><p>${msg}</p></div>
+    <div class="choices"><button class="linger" style="--hes:${ms}ms" onclick="choose(true,true)">${away ? "…그래도 일어나서 찾아본다" : "…일어나서 문을 연다"}</button></div>
+  `, false);
+  clearTimeout(hTimer);
+  hTimer = setTimeout(()=>{ hTimer = null; choose(false); }, ms);
+}
+function choose(sleep, late=false){
+  clearTimeout(hTimer); hTimer = null;
+  s.prevLevel = cryLevel(s.cold);
+  const rec = { open:sleep, late, cold:s.cold, rain:s.day===2, toy:false, place:"" };
+  s.hist.push(rec);
+  const lines = [];
   if (sleep){
     const wasCold = s.cold >= 6;
-    s.slept++; s.cold = Math.max(0, s.cold - 2); s.memo = "slept";
-    lines.push(wasCold ? `${CATe()} 소파 끝에서 혼자 자고 있었다. 옆에 누우니 잠깐 쳐다보더니, 다시 눈을 감았다.`
-                       : `문을 열자마자 ${CATi()} 이불 속으로 파고들었다. 골골 소리를 들으며 잠들었다.`);
-    if (s.firstSleep){
-      s.salary -= 600; s.firstSleep = false; s.wantOffer = true;
-      if (s.day === 0){
-        pic = sceneOffice("first","첫날부터…?");
-        lines.push(`아침. 검은 정장이 털 범벅이다. 팀장님이 위아래로 훑어보더니 말했다. “${ME}씨, 첫날부터 이러면 곤란한데요.”`);
-      } else {
-        pic = sceneOffice("first","옷이 그게…?");
-        lines.push(`아침. 출근한 지 ${s.day+1}일째, 처음으로 털 범벅이 됐다. 팀장님 눈썹이 꿈틀한다. “${ME}씨, 거래처 미팅 있는 날인데 옷이 그게 뭐예요?”`);
-      }
-    } else if (s.roller){
-      s.pend = lines; return rollerMorning();
-    } else {
-      s.salary -= 250; s.scolds++; s.wantOffer = true;
-      const S = [
-        ["또 털이 붙었다. 팀장님이 말없이 한숨을 쉰다.","하아…"],
-        ["회의 중에 털이 날려 옆 사람이 재채기를 했다. 분위기가 싸해졌다.","에취"],
-        [`“${ME}씨, 고양이 키워요? 티 나네요.” 웃으면서 하는 말인데 눈은 안 웃는다.`,"티 나네요"],
-        ["손으로 털어 봤지만 소용없다. 팀장님이 내 소매를 한참 쳐다본다.","…"]
-      ][(s.scolds-1) % 4];
-      pic = sceneOffice("sigh", S[1]);
-      lines.push("아침. " + S[0]);
-    }
-  } else {
-    s.cold++; s.salary += 200; pic = sceneSeeOff();
-    if (IS_V2) s.memo = cryLevel(s.cold);
-    lines.push("푹 잤다. 정장은 깔끔하고 머리도 맑다.");
-    const seeOff = s.cold <= 1 ? `나갈 때 ${CATi()} 현관까지 배웅 나왔다.`
-      : s.cold <= 3 ? `나갈 때 ${CATi()} 소파에서 고개만 들었다.`
-      : s.cold <= 5 ? `나갈 때 ${CATe()} 보이지 않았다.`
-      : `언제부턴가 ${CATi()} 배웅을 나오지 않는다. 바빠서 몰랐다.`;
-    lines.push(`<span class="quiet">${seeOff}</span>`);
-    lines.push([`팀장님이 “${ME}씨, 일 잘하시네요.” 하고 칭찬했다.`,"보고서가 한 번에 통과됐다.","팀장님이 커피를 사 주셨다.",`“역시 ${ME}씨, 믿고 맡길 만하네요.”`][s.day % 4]);
+    rec.place = wasCold ? "sofa" : "bed";
+    s.slept++; s.cold = Math.max(0, s.cold - 2); s.memo = "slept"; s.streak = 0;
+    lines.push(openLine(wasCold, late));
+    return morningWork(lines, true, false);
   }
-  finishDay(lines, pic);
+  s.streak++;
+  // 이틀 연속 문을 닫으면, 고양이는 내 냄새가 나는 곳을 찾아간다
+  if (!s.closetDone && s.streak >= 2 && s.day >= 1 && s.day <= 7 && s.cold < 6){
+    rec.place = "closet";
+    s.cold++;
+    return closetMorning();
+  }
+  rec.place = s.hoodie ? "hoodie" : s.cold >= 6 ? "away" : "door";
+  if (s.cold <= 3){ s.toys++; rec.toy = true; }
+  s.cold = s.hoodie ? Math.min(3, s.cold + 1) : s.cold + 1;
+  s.memo = s.hoodie ? "hoodie" : cryLevel(s.cold);
+  lines.push("푹 잤다. 정장은 깔끔하고 머리도 맑다.");
+  if (rec.toy) lines.push(s.toys===1 ? "아침에 보니 문틈으로 쥐 인형 하나가 밀려 들어와 있었다." : `문 앞의 쥐 인형이 ${KN[s.toys]}로 늘었다.`);
+  lines.push(`<span class="quiet">${seeOffLine()}</span>`);
+  morningWork(lines, false, false);
+}
+
+/* ---- 곁가지 1: 옷장 속 정장 ---- */
+function closetMorning(){
+  render(`
+    ${topBar(`${s.day+1}일째 아침`)}
+    ${scene(sceneCloset())}
+    <div class="text">
+      <p>출근하려고 옷장을 열었다.</p>
+      <p>바닥에 떨어진 정장 위에서 ${CATi()} 몸을 동그랗게 말고 자고 있었다. 소매에 얼굴을 묻은 채로.</p>
+      <p>어젯밤엔 같이 자지도 않았는데, 검은 정장이 치즈색이 됐다.</p>
+    </div>
+    <div class="choices">
+      <button onclick="closetChoice('lock')">옷장 문을 꼭 닫아 둔다<small>정장은 이제 안전하다</small></button>
+      <button onclick="closetChoice('hoodie')">옷장 맨 아래 회색 후드티를 꺼낸다<small>방문 앞에 깔아 준다</small></button>
+    </div>
+  `);
+}
+function closetChoice(k){
+  s.closetDone = true; s.closet = k;
+  const lines = [];
+  if (k === "lock"){
+    s.cold++; s.memo = "closet";
+    lines.push(`정장을 털어 다시 걸고, 옷장 문을 꼭 닫았다. 닫히는 소리에 ${CATi()} 귀를 납작하게 했다.`);
+  } else {
+    s.hoodie = true; s.memo = "hoodie-new";
+    s.cold = Math.min(3, Math.max(0, s.cold - 1));
+    lines.push("옷장 맨 아래에서 회색 후드티를 꺼냈다. 매일 자소서를 쓰던 그 옷이다.");
+    lines.push(`방문 앞에 깔아 주자 ${CATi()} 한참 냄새를 맡더니, 그 위에서 식빵을 구웠다.`);
+  }
+  morningWork(lines, true, true);
+}
+
+/* ---- 아침: 털이 붙었는지에 따라 회사가 달라진다 ---- */
+function morningWork(lines, fur, viaCloset){
+  if (s.day === 5) return ceoVisit(lines, fur);
+  if (!fur){
+    s.salary += 200;
+    lines.push(PRAISE());
+    return finishDay(lines, sceneSeeOff());
+  }
+  s.wantOffer = true;
+  if (s.firstFur){
+    s.salary -= 600; s.firstFur = false;
+    let pic;
+    if (s.day === 0){
+      pic = sceneOffice("first","첫날부터…?");
+      lines.push(`아침. 검은 정장이 털 범벅이다. 팀장님이 위아래로 훑어보더니 말했다. “${ME}씨, 첫날부터 이러면 곤란한데요.”`);
+    } else {
+      pic = sceneOffice("first","옷이 그게…?");
+      lines.push(`${viaCloset ? "" : "아침. "}출근한 지 ${s.day+1}일째, 처음으로 털 범벅이 됐다. 팀장님 눈썹이 꿈틀한다. “${ME}씨, 거래처 미팅 있는 날인데 옷이 그게 뭐예요?”`);
+    }
+    return finishDay(lines, pic);
+  }
+  if (s.roller){ s.pend = lines; return rollerMorning(); }
+  scold(lines, false);
+}
+function scold(lines, skippedRoller){
+  s.scolds++;
+  let S, kind = "sigh";
+  if (s.bossCat){
+    s.salary -= 100; kind = "soft";
+    S = [
+      ["팀장님이 내 소매를 보더니 “호떡이 생각나네요.” 하고 지나간다.","호떡…"],
+      ["털이 좀 붙었지만, 팀장님은 이제 못 본 척해 준다.","험험"],
+      ["옆자리 선배가 내 어깨의 털을 떼어 주며 웃는다. 팀장님도 피식했다.","…"]
+    ][(s.scolds-1) % 3];
+  } else {
+    s.salary -= 250;
+    S = skippedRoller ? [
+      ["리필을 아끼려고 돌돌이를 두고 나왔다. 팀장님이 말없이 한숨을 쉰다.","하아…"],
+      ["손으로 털어 봤지만 소용없다. 회의 중에 털이 날려 옆 사람이 재채기를 했다.","에취"],
+      [`“${ME}씨, 돌돌이 안 써요? 티 나네요.” 웃으면서 하는 말인데 눈은 안 웃는다.`,"티 나네요"],
+      ["돌돌이는 현관에 걸려만 있다. 팀장님이 내 소매를 한참 쳐다본다.","…"]
+    ][(s.scolds-1) % 4] : [
+      ["또 털이 붙었다. 팀장님이 말없이 한숨을 쉰다.","하아…"],
+      ["회의 중에 털이 날려 옆 사람이 재채기를 했다. 분위기가 싸해졌다.","에취"],
+      [`“${ME}씨, 고양이 키워요? 티 나네요.” 웃으면서 하는 말인데 눈은 안 웃는다.`,"티 나네요"],
+      ["손으로 털어 봤지만 소용없다. 팀장님이 내 소매를 한참 쳐다본다.","…"]
+    ][(s.scolds-1) % 4];
+    if (s.day === 4) S = ["발표하는 내내 팀장님 시선이 내 소매에 가 있었다.","…"];
+  }
+  lines.push("아침. " + S[0]);
+  finishDay(lines, sceneOffice(kind, S[1]));
+}
+/* ---- 곁가지 2: 고양이를 좋아하는 사장님 ---- */
+function ceoVisit(lines, fur){
+  if (fur){
+    if (s.roller){
+      s.salary -= 10; s.refills++;
+      lines.push("아침. 돌돌이로 앞판, 뒤판, 소매까지 싹 밀었다. 오늘은 사장님이 오시는 날이니까.");
+      lines.push(`<span class="cost">돌돌이 리필 한 롤 사용 · 월급날 ${REFILL}만원 청구 (이번 달 ${s.refills}롤째)</span>`);
+    } else {
+      lines.push("아침. 정장에 붙은 털을 손으로 대충 털고 나왔다. 하필 사장님이 오시는 날이다.");
+    }
+    lines.push("사장님이 팀을 한 바퀴 돌다가 내 앞에서 멈췄다. 내 어깨에서 치즈색 털 한 가닥을 집어 든다. 팀장님 얼굴이 하얘졌다.");
+    lines.push("“…치즈 고양이죠? 우리 집 호떡이랑 색이 똑같네.” 사장님이 휴대폰 배경화면을 보여 줬다. 동그란 치즈 고양이가 하품을 하고 있었다.");
+    lines.push("그날 오후, 팀장님이 지나가며 작게 말했다. “…사장님 고양이 이름이 호떡이래요.”");
+    s.bossCat = true; s.firstFur = false; s.salary += 100;
+    return finishDay(lines, sceneCeo(true));
+  }
+  s.bossCat = false; s.salary += 200;
+  lines.push("사장님이 팀을 한 바퀴 돌았다. 깔끔한 내 정장을 보고 고개를 끄덕이고는 지나갔다.");
+  finishDay(lines, sceneCeo(false));
 }
 function finishDay(lines, pic){
   s.day++;
@@ -465,24 +824,16 @@ function finishDay(lines, pic){
   render(`
     ${topBar(`${s.day}일째 출근`)}
     ${scene(pic)}
-    <div class="text">${lines.map(l=>`<p>${l}</p>`).join('')}</div>
+    <div class="text">${paras(lines)}</div>
     <div class="choices"><button onclick="${next}">${s.day>=10?"월급날 아침":"퇴근하고 집으로"}</button></div>
   `);
 }
-function sceneRollerHome(){
-  return V(`<rect width="320" height="200" fill="var(--wall)"/>${floor()}
-    <rect x="28" y="40" width="70" height="138" rx="3" fill="var(--door)" stroke="var(--door-edge)" stroke-width="3"/>
-    <circle cx="88" cy="112" r="4" fill="var(--lamp)"/>
-    <line x1="150" y1="58" x2="150" y2="70" stroke="var(--door-edge)" stroke-width="3"/>
-    ${roller(150,96,.9)}
-    ${person(230,178,{fur:16,face:"sad"})}
-    <text x="262" y="78" font-size="18" fill="var(--muted)">?</text>`);
-}
+/* ---- 돌돌이 ---- */
 function rollerMorning(){
   render(`
     ${topBar(`${s.day+1}일째 아침`)}
     ${scene(sceneRollerHome())}
-    <div class="text">${s.pend.map(l=>`<p>${l}</p>`).join('')}
+    <div class="text">${paras(s.pend)}
       <p>아침. 정장이 털 범벅이다. 현관에 돌돌이가 걸려 있다.</p>
       <p class="cost">리필은 한 롤에 ${REFILL}만원. 이번 달 ${s.refills}롤 썼다.</p></div>
     <div class="choices">
@@ -492,34 +843,22 @@ function rollerMorning(){
   `);
 }
 function useRoller(use){
-  const lines = s.pend; let pic;
-  if (use){
-    s.salary -= 10; s.refills++;
-    const R = [
-      ["돌돌이로 앞판, 뒤판, 소매까지 싹 밀었다. 처음 써 보는데 손맛이 있다.",`${ME}씨, 깔끔하네요?`],
-      [`돌돌이 한 장을 뜯어내니 털이 ${CAT} 한 마리 분량이다. 그래도 정장은 무사.`,"?"],
-      ["지하철에서 귀 뒤에 붙은 털 한 가닥을 발견했다. 아무도 못 본 것 같다.","…"],
-      ["이제 눈 감고도 돌돌이를 민다. 30초 컷.","좋네요"],
-      [`리필이 또 떨어졌다. ${CATe()} 오늘도 이불 한가운데를 차지했다.`,"?"],
-      ["팀장님 바지에 고양이 털이 붙어 있는 걸 봤다. 혹시… 동지?","험험"],
-      [`밤새 ${CAT} 꼬리가 얼굴을 쳤지만, 돌돌이 덕분에 아침은 평화롭다.`,"굿"]
-    ][s.rollerDays % 7];
-    s.rollerDays++;
-    pic = sceneOffice("roller", R[1]);
-    lines.push("아침. " + R[0]);
-    lines.push(`<span class="cost">돌돌이 리필 한 롤 사용 · 월급날 ${REFILL}만원 청구 (이번 달 ${s.refills}롤째)</span>`);
-  } else {
-    s.salary -= 250; s.scolds++;
-    const S = [
-      ["리필을 아끼려고 돌돌이를 두고 나왔다. 팀장님이 말없이 한숨을 쉰다.","하아…"],
-      ["손으로 털어 봤지만 소용없다. 회의 중에 털이 날려 옆 사람이 재채기를 했다.","에취"],
-      [`“${ME}씨, 돌돌이 안 써요? 티 나네요.” 웃으면서 하는 말인데 눈은 안 웃는다.`,"티 나네요"],
-      ["돌돌이는 현관에 걸려만 있다. 팀장님이 내 소매를 한참 쳐다본다.","…"]
-    ][(s.scolds-1) % 4];
-    pic = sceneOffice("sigh", S[1]);
-    lines.push("아침. " + S[0]);
-  }
-  finishDay(lines, pic);
+  const lines = s.pend;
+  if (!use) return scold(lines, true);
+  s.salary -= 10; s.refills++;
+  const R = [
+    ["돌돌이로 앞판, 뒤판, 소매까지 싹 밀었다. 처음 써 보는데 손맛이 있다.",`${ME}씨, 깔끔하네요?`],
+    [`돌돌이 한 장을 뜯어내니 털이 ${CAT} 한 마리 분량이다. 그래도 정장은 무사.`,"?"],
+    ["지하철에서 귀 뒤에 붙은 털 한 가닥을 발견했다. 아무도 못 본 것 같다.","…"],
+    ["이제 눈 감고도 돌돌이를 민다. 30초 컷.","좋네요"],
+    [`리필이 또 떨어졌다. ${CATe()} 오늘도 이불 한가운데를 차지했다.`,"?"],
+    ["팀장님 바지에 고양이 털이 붙어 있는 걸 봤다. 혹시… 동지?","험험"],
+    [`밤새 ${CAT} 꼬리가 얼굴을 쳤지만, 돌돌이 덕분에 아침은 평화롭다.`,"굿"]
+  ][s.rollerDays % 7];
+  s.rollerDays++;
+  lines.push("아침. " + R[0]);
+  lines.push(`<span class="cost">돌돌이 리필 한 롤 사용 · 월급날 ${REFILL}만원 청구 (이번 달 ${s.refills}롤째)</span>`);
+  finishDay(lines, sceneOffice("roller", R[1]));
 }
 function rollerEvent(){
   s.offers++;
@@ -541,6 +880,8 @@ function rollerEvent(){
   `);
 }
 function buyRoller(b){ s.roller = b; night(); }
+
+/* ---- 월급날 ---- */
 function money(){
   const monthly = Math.max(0, Math.round(s.salary/12));
   const rollerCost = s.roller ? ROLLER + REFILL*s.refills : 0;
@@ -555,42 +896,80 @@ function payday(){
       ${s.roller?`<div class="cost"><span>돌돌이 본체</span><span>-${ROLLER}만원</span></div>
       <div class="cost"><span>돌돌이 리필 ×${s.refills}</span><span>-${REFILL*s.refills}만원</span></div>`:''}
       <div><strong>남은 돈</strong><strong>${left}만원</strong></div></div>`;
-  if (left < FOOD_BASIC) return ending("broke", ledger);
+  const broke = left < FOOD_BASIC;
   const short = left < FOOD_FAV;
   const why = short ? (s.roller ? " · 돌돌이 값 때문에 모자라다" : " · 돈이 모자라다") : "";
   render(`
     ${topBar("월급날")}
     ${scene(scenePayday(left))}
     <div class="text">
-      <p>드디어 첫 월급이 들어왔다. 통장을 열어 본다.</p>${ledger}
-      <p>퇴근길에 펫숍에 들렀다. ${CAT}의 사료를 사 가야 한다.</p>
-      ${short && s.roller ? `<p class="cost">${CAT}의 최애 사료가 진열대 맨 앞에 있다. 돌돌이 리필 값만 아니었으면 살 수 있었다.</p>` : ""}
+      <p>드디어 첫 월급이 들어왔다. 취준할 때 몇 번이나 상상했던 숫자다.</p>${ledger}
+      ${broke ? `<p class="cost">월세를 내고 나니 사료 한 봉지 값도 남지 않았다.</p>`
+        : `<p>퇴근길에 펫숍에 들렀다. ${CAT}의 사료를 사 가야 한다.</p>
+      ${short && s.roller ? `<p class="cost">${CAT}의 최애 사료가 진열대 맨 앞에 있다. 돌돌이 리필 값만 아니었으면 살 수 있었다.</p>` : ""}`}
     </div>
     <div class="choices">
+      ${broke ? `<button onclick="buyFood(null)">빈손으로 집에 간다</button>` : `
       <button onclick="buyFood('fav')" ${short?'disabled':''}>${CAT}의 최애 사료<small>${FOOD_FAV}만원${why}</small></button>
-      <button onclick="buyFood('cheap')">저렴한 사료<small>${FOOD_BASIC}만원</small></button>
+      <button onclick="buyFood('cheap')">저렴한 사료<small>${FOOD_BASIC}만원</small></button>`}
     </div>
   `);
 }
-function buyFood(f){
-  s.food = f;
-  if (s.slept <= 2) return ending("work");
-  const close = s.cold <= 3;              // 마지막에 고양이가 멀어져 있지 않은지
-  if (s.slept === 6 && close) return ending(!s.roller ? "good" : s.refills >= 3 ? "secret" : "mid");
-  return ending("mid");
+function buyFood(f){ s.food = f; finalNight(); }
+function endingKey(){
+  if (money().left < FOOD_BASIC) return "broke";
+  if (s.cold >= 6 || (s.slept <= 1 && !s.hoodie)) return "work";
+  if (s.hoodie && s.slept <= 3) return "hoodie";
+  // 사장님 일을 겪은 뒤에도 숨지 않고 문을 연 경우 (남은 네 밤 중 세 밤 이상)
+  if (s.bossCat && s.cold <= 2 && s.hist.slice(6).filter(r => r.open).length >= 3) return "boss";
+  if (s.roller && s.refills >= 3 && s.cold <= 2) return "secret";
+  if (s.cold <= 2 && s.slept >= 3) return "good";
+  return "mid";
 }
+/* ---- 마지막 밤: 처음과 같은 문, 다른 의미 ---- */
+function finalNight(){
+  const key = endingKey();
+  const tier = {broke:0, good:0, boss:0, secret:0, mid:1, hoodie:1, work:2}[key];
+  const L = [];
+  if (key === "broke") L.push(`빈손으로 현관문을 열었다. ${CATi()} 먼저 달려 나와 다리에 몸을 비볐다.`);
+  else if (tier === 0) L.push(`현관문을 열자 ${CATi()} 먼저 달려 나왔다. 사료 봉지에 머리를 박는다.`);
+  else if (tier === 1) L.push(s.hoodie ? `현관문을 열자 ${CATi()} 방문 앞 후드티 위에서 고개를 들었다.` : `현관문을 열자 ${CATi()} 거실 끝에서 나를 봤다. 다가오지는 않는다.`);
+  else L.push("집이 조용하다. 사료를 부어 두고 방에 들어왔다.");
+  L.push(tier === 0 ? `밤. 오늘은 ${CATi()} 울기 전에, 내가 먼저 일어났다.`
+    : tier === 1 ? "밤. 문 너머가 조용하다. 가끔 발소리가 지나간다."
+    : "밤. 열흘 전에는 이 문 너머가 시끄러웠다.");
+  const btn = tier === 0 ? "방문을 활짝 열어 둔다" : tier === 1 ? "방문을 열고 기다린다" : `방문을 열고 ${CATo()} 부른다`;
+  render(`
+    ${topBar("월급날 밤")}
+    ${scene(sceneNight({final:true}))}
+    <div class="text">${paras(L)}</div>
+    <div class="choices"><button onclick="ending('${key}')">${btn}</button></div>
+  `);
+}
+const foodLine = () => s.food==="fav" ? `${CAT}의 최애 사료를 그릇 가득 부었다.` : "저렴한 사료를 그릇에 부었다.";
 const ENDINGS = {
   broke:{cls:"bad", title:"배드엔딩 · 사랑만으로는", body:()=>[
-    "월세를 내고 나니 사료 한 봉지 값도 남지 않았다.",
-    `${CATe()} 오늘도 빈 그릇 옆에서 나를 올려다본다. 아무것도 모르고 꼬리를 흔든다.`,
+    `방문을 열자 ${CATi()} 한달음에 들어와 베개 옆에 누웠다. 빈 그릇은 모르는 얼굴로 꼬리를 흔든다.`,
+    "통장에는 다음 달 월세도 남지 않았다.",
     `${CATo()} 지키려면, 나도 버텨야 했다.`]},
-  work:{cls:"bad", title:"배드엔딩 · 돈으로는 못 돌린다", body:()=> s.food==="fav" ? [
-    `${CAT}의 최애 사료를 그릇 가득 부었다.`,
-    `${CATe()} 냄새만 한 번 맡고 돌아선다. 이름을 불러도 귀만 까딱.`,
-    "언제부터 문 앞에서 울지 않았더라. 기억이 나지 않는다."] : [
-    `저렴한 사료를 부었다. ${CATe()} 내가 방에 들어간 뒤에야 그릇으로 온다.`,
-    "통장엔 돈이 남았는데, 쓸 데가 없다.",
+  work:{cls:"bad", title:"배드엔딩 · 돈으로는 못 돌린다", body:()=>[
+    s.food==="fav" ? `${CAT}의 최애 사료를 그릇 가득 부었다. ${CATe()} 냄새만 한 번 맡고 돌아섰다.`
+                   : `사료를 부어 두었다. ${CATe()} 내가 방에 들어간 뒤에야 그릇으로 온다.`,
+    "방문을 열고 이름을 불렀다. 거실 어딘가에서 소파가 한 번 삐걱였다. 그뿐이었다.",
     "언제부터 문 앞에서 울지 않았더라. 기억이 나지 않는다."]},
+  hoodie:{cls:"good", title:"엔딩 · 문 앞의 후드티", body:()=>[
+    `${foodLine()} ${CATe()} 다 먹고는 방문 앞으로 돌아간다.`,
+    `방문을 열었다. ${CATe()} 들어오지 않고, 문턱의 후드티 위에 앉아 나를 올려다본다.`,
+    "같이 자지 않아도 곁에 있는 방법이 있었다. 회색 후드티에는 다시 털이 수북하다."]},
+  boss:{cls:"secret", title:"히든엔딩 · 호떡이 친구", body:()=>[
+    `${foodLine()} ${CATe()} 와그작와그작 먹고는 내 무릎으로 올라왔다.`,
+    `방문을 활짝 열어 두고 누웠다. 사장님한테 보낼 ${CAT} 사진을 고르다가, 하품하는 사진을 보냈다.`,
+    "다음 날 아침, 내 책상 위에 새 돌돌이가 하나 놓여 있었다. 팀장님 자리 쪽에서 헛기침 소리가 났다."]},
+  secret:{cls:"secret", title:"히든엔딩 · 돌돌이 장인", body:()=>[
+    s.food==="fav" ? `정장엔 털 한 가닥 없다. ${CAT}의 최애 사료까지 샀다. 리필 영수증이 지갑에 수북하지만.`
+                   : `정장엔 털 한 가닥 없다. 대신 이번 달은 리필 값 때문에 ${CAT}의 최애 사료를 못 샀다.`,
+    `방문을 열어 두자 ${CATi()} 들어와서는, 내 출근 가방 위에 올라가 잔다.`,
+    `체면도 ${CAT}도 지켰다. 돌돌이도 이제 가족이다.`]},
   good:{cls:"good", title:"굿엔딩 · 둘 다 지켰다", body:()=> s.food==="fav" ? [
     `${CAT}의 최애 사료를 부었다. 와그작와그작 먹더니 내 무릎으로 올라와 식빵을 굽는다.`,
     "정장엔 털이 좀 붙겠지만, 그건 털고 다니면 된다.",
@@ -598,43 +977,90 @@ const ENDINGS = {
     `저렴한 사료를 부었다. ${CATe()} 잠깐 그릇을 보다가 먹고는, 내 무릎으로 올라온다.`,
     "최애 사료는 다음 달에. 그래도 무릎 자리는 늘 비워 두기로 했다.",
     "오늘 밤엔 내가 먼저 문을 열어 둔다."]},
-  mid:{cls:"mid", title:"노멀엔딩 · 앞으로 더 노력해야지", body:()=> (s.roller && s.slept===6) ? [
-    `돌돌이 값은 나갔는데 털은 털대로 붙었다. 이번 달은 ${CAT}의 최애 사료를 못 샀다.`,
-    `저렴한 사료를 부었다. ${CATe()} 먹고는 내 옆에 앉는다. 그래도 무릎까지는 안 온다.`,
-    "체면도 사료도 반쯤씩. 앞으로 더 노력해야 할 것 같다."] : s.food==="fav" ? [
+  mid:{cls:"mid", title:"노멀엔딩 · 앞으로 더 노력해야지", body:()=> s.food==="fav" ? [
     `${CAT}의 최애 사료를 부었다. ${CATe()} 몇 입 먹고는 내 쪽을 한 번 본다.`,
-    "오라고 손을 내밀자, 반 걸음만 다가오다 멈춘다.",
+    `방문을 열고 기다렸다. ${CATe()} 문턱까지 왔다가, 거기 앉았다.`,
     "아직 한 걸음쯤 남은 거리. 앞으로 더 노력해야 할 것 같다."] : [
     `저렴한 사료를 부었다. ${CATe()} 다 먹고 내 옆을 지나가다 잠깐 멈춘다.`,
-    "다리에 몸을 비빌 듯하다가, 그냥 소파로 간다.",
-    "아직 한 걸음쯤 남은 거리. 앞으로 더 노력해야 할 것 같다."]},
-  secret:{cls:"secret", title:"히든엔딩 · 돌돌이 장인", body:()=>[
-    `정장엔 털 한 가닥 없다. 대신 이번 달은 리필 값 때문에 ${CAT}의 최애 사료를 못 샀다.`,
-    `저렴한 사료를 부었다. ${CATe()} 조금 먹더니, 내 출근 가방 위에 올라가 잔다.`,
-    `체면도 ${CAT}도 지켰지만, 다음 달엔 최애 사료부터 사야겠다.`]}
+    `방문을 열고 기다렸다. ${CATe()} 문턱까지 왔다가, 거기 앉았다.`,
+    "아직 한 걸음쯤 남은 거리. 앞으로 더 노력해야 할 것 같다."]}
 };
-function ending(key, ledger){
+// 엔딩에서 다시 떠오르는 밤 하나 (내가 실제로 한 선택에서 고른다)
+function callback(key){
+  const rainNight = s.hist[2];
+  const lates = s.hist.filter(r => r.open && r.late).length;
+  if (rainNight && !rainNight.open) return key==="work" ? "천둥 치던 셋째 밤에도, 나는 이불을 덮어썼었다." : "그런데 천둥 치던 셋째 밤, 문을 열지 않았던 게 자꾸 생각난다.";
+  if (lates) return `이불 속에서 망설이다 일어난 밤이 ${KB[lates]} 있었다.`;
+  if (s.closet === "lock") return "옷장 문은 아직 꼭 닫혀 있다.";
+  if (s.toys >= 3) return `문 앞의 쥐 인형 ${KN[s.toys]}는 아직 치우지 못했다.`;
+  return "";
+}
+function ending(key){
   const e = ENDINGS[key];
   saveFound(key);
+  const cb = callback(key);
   render(`
     ${topBar("엔딩")}
     ${scene(sceneEnding(key))}
     <p class="ending-title ${e.cls}">${e.title}</p>
     <div class="text">
-      ${ledger||''}
-      ${e.body().map(l=>`<p>${l}</p>`).join('')}
+      ${paras(e.body())}
+      ${cb ? `<p class="quiet">${cb}</p>` : ""}
       <div class="ledger">
         <div><span>${CATw()} 같이 잔 밤</span><span>${s.slept} / 10</span></div>
         <div><span>최종 연봉</span><span>${Math.max(0,s.salary).toLocaleString()}만원</span></div>
       </div>
     </div>
-    <div class="choices"><button onclick="goTitle()">다시 하기</button></div>
+    <div class="choices">
+      <button onclick="otherSide()">문 너머의 열 밤<small>${CAT}의 쪽에서 다시 보기</small></button>
+      <button class="ghost" onclick="goTitle()">처음부터 다시</button>
+    </div>
     ${foundLine()}
   `);
 }
-function getFound(){ try{ return JSON.parse(localStorage.getItem('catgame-found')||'[]'); }catch(e){ return []; } }
-function saveFound(k){ try{ const f=getFound(); if(!f.includes(k)){f.push(k); localStorage.setItem('catgame-found',JSON.stringify(f));} }catch(e){} }
-function foundLine(){ const f = getFound(); return f.length ? `<p class="found">찾은 엔딩 ${f.length} / 5</p>` : ''; }
+/* ---- 관점 바꾸기: 같은 열 밤을 고양이 쪽에서 ---- */
+function catSide(r, i){
+  if (r.place === "sofa") return "소파 끝에서 혼자 자는데, 그 사람이 나왔다. 옆에 누웠다. 오랜만이었다.";
+  if (r.open){
+    if (r.rain) return "하늘이 쾅 했다. 문이 열렸다. 이불 속으로 숨었다.";
+    if (r.late) return "오래 불렀다. 늦게, 문이 열렸다.";
+    if (i === 0) return "문이 닫혔다가, 다시 열렸다. 베개 옆, 원래 내 자리.";
+    return ["문이 열렸다. 베개 옆, 내 자리.","문이 열렸다. 그 사람 숨소리를 들으며 잤다.","문이 열렸다. 이불 속이 따뜻했다."][i % 3];
+  }
+  if (r.place === "closet") return "문이 열리지 않아서 옷장에 들어갔다. 까만 옷에서 그 사람 냄새가 났다.";
+  if (r.place === "hoodie") return r.rain ? "하늘이 쾅 했다. 그 사람 옷에 얼굴을 묻었다." : "문 앞에 그 사람 옷이 있었다. 거기서 잤다.";
+  if (r.place === "away") return i % 2 ? "문 앞에 가지 않았다." : "오늘은 문 앞에 가지 않았다. 소파도 괜찮다.";
+  if (r.rain) return "하늘이 쾅 했다. 문에 등을 붙이고 있었다. 문은 열리지 않았다.";
+  if (i === 0) return "문이 닫혔다. 처음이다. 오래 불렀다.";
+  if (r.toy && r.cold <= 1) return s.hist.slice(0, i).some(x => x.toy) ? "쥐를 또 문 밑으로 넣어 줬다. 이번에도 문은 열리지 않았다." : "제일 좋아하는 쥐를 문 밑으로 넣어 줬다. 문은 열리지 않았다.";
+  if (r.cold <= 1) return "문 앞에서 불렀다. 문틈의 불빛이 꺼졌다.";
+  if (r.cold <= 3) return r.toy ? "쥐를 하나 더 넣어 줬다. 한 번만 불렀다." : "한 번만 불렀다. 그리고 기다렸다.";
+  return "부르지 않았다. 문 앞에 앉아만 있었다.";
+}
+function reveals(){
+  const r = [];
+  if (s.bossCat === false) r.push("사장님 휴대폰 배경화면은 동그란 치즈 고양이다. 이름은 호떡. 이번에는 끝내 몰랐다.");
+  if (s.closet === "lock") r.push("옷장 맨 아래의 회색 후드티는 이번에도 꺼내지 않았다.");
+  if (s.toys) r.push(`문 밑으로 들어온 쥐 인형은 모두 ${KN[s.toys]}였다.`);
+  return r;
+}
+function otherSide(){
+  const items = s.hist.map((r,i)=>`<li>${doorIcon(r)}<div><span class="n">${i+1}번째 밤${r.rain?" · 비":""}</span>${catSide(r,i)}</div></li>`).join('');
+  const rv = reveals();
+  render(`
+    ${plainTop("문 너머")}
+    ${scene(sceneOtherSide())}
+    <p class="ending-title">${CAT}의 열 밤</p>
+    <ol class="diary">${items}</ol>
+    ${rv.length ? `<div class="reveal">${paras(rv)}</div>` : ""}
+    <div class="text"><p>처음 문을 닫던 밤과 마지막 밤. 같은 문이었다.</p></div>
+    <div class="choices"><button onclick="goTitle()">처음부터 다시</button></div>
+    ${foundLine()}
+  `);
+}
+function getFound(){ try{ return JSON.parse(localStorage.getItem('catgame4-found')||'[]'); }catch(e){ return []; } }
+function saveFound(k){ try{ const f=getFound(); if(!f.includes(k)){f.push(k); localStorage.setItem('catgame4-found',JSON.stringify(f));} }catch(e){} }
+function foundLine(){ const f = getFound(); return f.length ? `<p class="found">찾은 엔딩 ${f.length} / ${TOTAL_ENDINGS}</p>` : ''; }
 goTitle();
 </script>
 </body>
