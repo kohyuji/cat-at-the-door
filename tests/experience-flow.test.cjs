@@ -12,23 +12,36 @@ function game(){
     if(!nodes.has(id))nodes.set(id,{id,value:'',disabled:false,innerHTML:'',textContent:'',style:{},dataset:{},classList:{add(){}},focus(){},insertAdjacentHTML(){},addEventListener(k,fn){listeners.set(id+':'+k,fn);},setAttribute(){},querySelector(sel){return node(sel==='.actions button'?'rollDone':sel);},getBoundingClientRect(){return {left:0,top:0,width:640,height:400};}});
     return nodes.get(id);
   }
-  const ctx=vm.createContext({document:{getElementById:node,activeElement:node('heading'),body:{appendChild(){}},createElement:()=>node('dialog')},window:{scrollTo(){}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},performance:{now:()=>now},setTimeout:(fn)=>{const k=++serial;timers.set(k,fn);return k;},clearTimeout:k=>timers.delete(k),console});
+  const ctx=vm.createContext({document:{getElementById:node,activeElement:node('heading'),body:{appendChild(){}},createElement:()=>node('dialog')},window:{scrollTo(){}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},performance:{now:()=>now},setTimeout:(fn,delay=0)=>{const k=++serial;timers.set(k,{fn,at:now+Math.max(0,delay)});return k;},clearTimeout:k=>timers.delete(k),console});
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],ctx);
-  vm.runInContext(fs.readFileSync(path.join(root,'experience.js'),'utf8'),ctx);
+  const scripts=[...html.matchAll(/<script(?:\s+src="([^"]+)")?>([\s\S]*?)<\/script>/g)];
+  for(const [,src,inline] of scripts)vm.runInContext(src?fs.readFileSync(path.join(root,src),'utf8'):inline,ctx);
   const read=expr=>vm.runInContext(expr,ctx);
-  function buttons(){return [...node('app').innerHTML.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].map(m=>({key:m[1].match(/data-action="([^"]+)"/)?.[1],epoch:Number(m[1].match(/data-epoch="([^"]+)"/)?.[1]),disabled:/\sdisabled\b/.test(m[1]),text:m[2].replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()})).filter(b=>b.key);}
+  const plain=html=>html.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  function buttons(){return [...node('app').innerHTML.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].map(m=>({key:m[1].match(/data-action="([^"]+)"/)?.[1],epoch:Number(m[1].match(/data-epoch="([^"]+)"/)?.[1]),disabled:/\sdisabled\b/.test(m[1]),submit:/type="submit"/.test(m[1]),hotspot:/class="hotspot\b/.test(m[1]),visibleText:plain(m[2]),text:m[1].match(/aria-label="([^"]+)"/)?.[1]||plain(m[2])})).filter(b=>b.key||b.submit);}
+  function advance(ms=600){
+    const until=now+ms;
+    for(let count=0;count<10000;count++){
+      const next=[...timers].filter(([,t])=>t.at<=until).sort((a,b)=>a[1].at-b[1].at||a[0]-b[0])[0];
+      if(!next){now=until;return;}
+      const [id,timer]=next;timers.delete(id);now=timer.at;timer.fn();
+    }
+    throw Error('Fake timer loop did not settle');
+  }
   function press(text,{advance=true,detail=1,epoch}={}){
     const b=buttons().find(b=>b.text.includes(text));assert.ok(b,`Missing action ${text} on ${read('XS.screen')}`);
-    if(advance)now+=600;
+    if(advance)waitReady();
+    if(b.submit){assert.match(node('app').innerHTML,/onsubmit="event.preventDefault\(\);nameCat\(\)"/);return read('nameCat()');}
     ctx.input={disabled:b.disabled&&!b.text.startsWith('다 뗐다'),dataset:{action:b.key,epoch:epoch??b.epoch}};
     read(`runAction(input,{detail:${detail}})`);
   }
-  function flush(){const pending=[...timers.values()];timers.clear();now+=4000;pending.forEach(fn=>fn());}
-  return {read,press,flush,buttons,advance:()=>{now+=600;},node,fire:(type,event)=>listeners.get('app:'+type)(event)};
+  function waitReady(){advance(Math.max(1,read('XS.readyAt')-now+1));}
+  function flush(){advance(4000);}
+  return {read,press,flush,buttons,advance,waitReady,node,html:()=>node('app').innerHTML,visibleText:()=>plain(node('app').innerHTML),fire:(type,event)=>listeners.get('app:'+type)(event)};
 }
 function play(g,mask,roller,hoodie,skipRoller=false){
-  g.read('goTitle()');g.press('이야기 시작');g.press('우산을 기울여');g.press('불을 끄고');g.press('방문을 닫는다');
+  // The introduction has its own timed presentation tests below.
+  g.read('reset();night()');
   for(let steps=0;steps<180;steps++){
     const screen=g.read('XS.screen'),day=g.read('s.day'),open=!!(mask&(1<<day));
     if(screen==='ending')return {ending:g.read('endingKey()'),days:g.read('s.day'),history:g.read('s.hist.length'),cold:g.read('s.cold')};
@@ -62,12 +75,63 @@ function play(g,mask,roller,hoodie,skipRoller=false){
   }
   throw Error('Flow did not finish');
 }
+test('the shared head helper loads after the engine and before the experience',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const scripts=[...html.matchAll(/<script(?:\s+src="([^"]+)")?>([\s\S]*?)<\/script>/g)];
+  assert.deepEqual(scripts.map(m=>m[1]||'inline'),['inline','character.js','experience.js']);
+  const g=game();assert.equal(g.read('typeof drawHead'),'function');
+});
+test('the title has one title, the player name, and start; cat naming comes after rescue',()=>{
+  const g=game();
+  assert.equal(g.visibleText(),'Cat at the Door 내 이름 시작');
+  assert.doesNotMatch(g.html(),/id="cname"|INTERACTIVE STORY|같은 문 앞에서|한 사람과 한 고양이|내 생활을 지키는|열 번의 밤/);
+  assert.equal(g.buttons().length,1);
+  g.node('pname').value='하늘';g.press('시작');
+  assert.equal(g.read('XS.screen'),'prologue-0');assert.equal(g.read('ME'),'하늘');
+  g.press('우산을 기울여');assert.equal(g.read('XS.screen'),'umbrella-result');
+  assert.match(g.html(),/class="umbrella-tilt"/);assert.match(g.html(),/class="sheltered-cat"/);
+  g.press('고양이를 데려간다',{advance:false});assert.equal(g.read('XS.screen'),'umbrella-result');
+  g.advance(1799);g.press('고양이를 데려간다',{advance:false});assert.equal(g.read('XS.screen'),'umbrella-result');
+  g.advance(1);g.press('고양이를 데려간다',{advance:false});assert.equal(g.read('XS.screen'),'cat-name');
+  assert.match(g.html(),/id="cname"/);assert.doesNotMatch(g.html(),/id="pname"/);
+  g.node('cname').value='두부';g.press('불러본다');
+  assert.equal(g.read('CAT'),'두부');assert.equal(g.read('XS.screen'),'prologue-1');
+  assert.match(g.html(),/두부…\?/);
+});
+test('fur, sleeping, and the first closed door remain visible before the next scene',()=>{
+  const g=game();g.read('prologue(1)');
+  assert.doesNotMatch(g.html(),/id="hoodieFur"/);
+  g.press('고양이를 쓰다듬는다');assert.equal(g.read('XS.screen'),'hoodie-result');
+  assert.match(g.html(),/id="hoodieFur" class="fur-appears"/);
+  g.advance(1599);g.press('불을 끄고 같이 잔다',{advance:false});assert.equal(g.read('XS.screen'),'hoodie-result');
+  g.advance(1);g.press('불을 끄고 같이 잔다',{advance:false});assert.equal(g.read('XS.screen'),'home-sleep');
+  g.advance(2299);assert.equal(g.read('XS.screen'),'home-sleep');
+  g.advance(1);assert.equal(g.read('XS.screen'),'prologue-2');
+  g.press('합격 문자를 내려놓는다');assert.equal(g.read('XS.screen'),'prologue-3');
+  g.press('정장을 준비한다');assert.equal(g.read('XS.screen'),'first-door');
+  g.press('방문을 닫는다');assert.equal(g.read('XS.screen'),'first-door-closed');
+  g.advance(1499);assert.equal(g.read('XS.screen'),'first-door-closed');
+  g.advance(1);assert.equal(g.read('XS.screen'),'night');assert.equal(g.read('s.hist.length'),0);
+});
+test('scene objects have accessible names without visible button labels',()=>{
+  const g=game();
+  for(const screen of ['prologue(0)','prologue(1)','hoodiePet()','beforeFirstNight()','night()']){
+    g.read(screen);
+    const targets=g.buttons().filter(b=>b.hotspot);assert.ok(targets.length,screen);
+    for(const target of targets){assert.equal(target.visibleText,'',target.text);assert.ok(target.text.length>0);}
+    assert.match(g.html(),/<h2 id="storyHeading" class="sr-only"/);
+    assert.match(g.html(),/<p id="stageNote"[^>]* hidden>/);
+    assert.doesNotMatch(g.html(),/class="masthead"|class="eyebrow"|class="chapter"|나의 쪽|문이 닫히기 전/);
+  }
+  g.read('night()');assert.equal(g.buttons().filter(b=>b.hotspot).length,2);
+  assert.match(g.visibleText(),/첫 출근 전날 밤/);
+});
 test('input lock rejects rapid clicks, stale screens, and a double-click',()=>{
-  const g=game();g.press('이야기 시작');assert.equal(g.read('XS.screen'),'prologue-0');
+  const g=game();g.press('시작');assert.equal(g.read('XS.screen'),'prologue-0');
   g.press('우산을 기울여',{advance:false});assert.equal(g.read('XS.screen'),'prologue-0');
   g.press('우산을 기울여',{detail:2});assert.equal(g.read('XS.screen'),'prologue-0');
   g.press('우산을 기울여',{epoch:0});assert.equal(g.read('XS.screen'),'prologue-0');
-  g.press('우산을 기울여');assert.equal(g.read('XS.screen'),'prologue-1');
+  g.press('우산을 기울여');assert.equal(g.read('XS.screen'),'umbrella-result');
 });
 test('cat perspective cannot repair the relationship by itself',()=>{
   const g=game();g.read('reset();s.cold=3');
