@@ -1,0 +1,13 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+let html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+let css=fs.readFileSync(path.join(root,'life.css'),'utf8');
+css=css.replace("url('fonts/DungGeunMo.woff')",`url('data:font/woff;base64,${fs.readFileSync(path.join(root,'fonts/DungGeunMo.woff')).toString('base64')}')`);
+html=html.replace('<link rel="stylesheet" href="life.css">',`<style>${css}</style>`);
+const assets=Object.fromEntries(['rooms','places'].map(k=>[k,'data:image/png;base64,'+fs.readFileSync(path.join(root,'assets',k+'-pixel.png')).toString('base64')]));
+html=html.replace('<script src="life-state.js">',`<script>window.__LIFE_ASSETS=${JSON.stringify(assets)};</script><script src="life-state.js">`);
+html=html.replace(/<script src="([^"]+)"><\/script>/g,(_,file)=>'<script>\n'+fs.readFileSync(path.join(root,file),'utf8').replace(/<\/script/gi,'<\\/script')+'\n</script>');
+const out=path.resolve(root,'../.preview/Cat-at-the-Door-life-review.html');
+fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,html);
+console.log(out);
