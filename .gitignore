@@ -1,0 +1,4 @@
+dist/
+.publish/
+.preview/
+node_modules/

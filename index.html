@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Cat at the Door</title><link rel="stylesheet" href="life.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Cat at the Door</title><link rel="stylesheet" href="src/life.css"></head>
 <body>
 <main id="app">
  <section id="titleScreen" class="title-screen"><canvas id="titleCanvas" width="640" height="360" aria-hidden="true"></canvas><div class="title-menu"><h1>Cat at the Door</h1><label>내 이름<input id="playerName" maxlength="8" placeholder="김신입" autocomplete="off"></label><button id="startButton" disabled>시작</button></div></section>
@@ -17,5 +17,5 @@
  <section id="naming" class="modal" hidden><form id="nameForm"><label for="catName">이름을 뭐라고 부를까?</label><input id="catName" placeholder="보리" maxlength="8" autocomplete="off"><button>불러본다</button></form></section>
  <section id="endingScreen" class="ending" hidden><canvas id="endingCanvas" width="640" height="360" role="img" aria-label="마지막 날 집의 모습"></canvas><h1 id="endingTitle"></h1><div id="endingText"></div><button id="restartButton">다시 시작</button></section>
 </main>
-<script src="life-state.js"></script><script src="life-story.js"></script><script src="pixel-render.js"></script><script src="life-view.js"></script><script src="life-game.js"></script>
+<script src="src/life-state.js"></script><script src="src/life-story.js"></script><script src="src/pixel-render.js"></script><script src="src/life-view.js"></script><script src="src/life-game.js"></script>
 </body></html>

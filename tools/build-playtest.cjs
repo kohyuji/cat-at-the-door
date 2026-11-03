@@ -1,7 +1,7 @@
-// Separate test scenarios; these shortcuts are excluded from the normal game.
-require('./build-review.cjs');
-const fs=require('node:fs'),path=require('node:path'),dir=path.resolve(__dirname,'../../.preview');
-let html=fs.readFileSync(path.join(dir,'Cat-at-the-Door-r2-review.html'),'utf8');
+// 검사용 바로가기입니다. 일반 게임과 공개 배포에는 포함하지 않습니다.
+const {buildReview}=require('./build-review.cjs');
+const fs=require('node:fs'),path=require('node:path'),dir=path.resolve(__dirname,'../.preview');
+let html=fs.readFileSync(buildReview(),'utf8');
 const harness=`
 function fixtures(){const bar=document.createElement('nav');bar.style.cssText='position:fixed;bottom:0;left:0;z-index:50;background:#edf3f1;padding:4px;display:flex;gap:4px;font-size:12px';
  for(const [label,scene,day,phase]of [['집','living',0,'evening'],['아침','bedroom',1,'morning'],['회사','office',2,'work'],['비','living',3,'evening'],['책상','bedroom',2,'evening'],['고양이','living',5,'morning'],['수면','bedroom',1,'evening'],['주말','living',6,'evening'],['야간','living',1,'morning'],['엔딩','living',12,'ending']]){
@@ -9,4 +9,4 @@ function fixtures(){const bar=document.createElement('nav');bar.style.cssText='p
  }document.body.appendChild(bar);}
 loadAssets();fixtures();requestAnimationFrame(frame);`;
 html=html.replace('loadAssets();offerResume();requestAnimationFrame(frame);',harness);
-fs.writeFileSync(path.join(dir,'life-playtest-r2.html'),html);console.log(path.join(dir,'life-playtest-r2.html'));
+fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'life-playtest.html'),html);console.log(path.join(dir,'life-playtest.html'));

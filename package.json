@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "start": "python -m http.server 8765 --bind 127.0.0.1",
-    "review": "node tools/build-review.cjs"
+    "start": "node tools/serve.cjs",
+    "build": "node tools/build-web.cjs",
+    "review": "node tools/build-review.cjs",
+    "deploy": "node tools/deploy-pages.cjs"
   }
 }

@@ -3,11 +3,11 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const Life=require('../life-state.js');
+const Life=require('../src/life-state.js');
 
 // The real controller, story, model and renderer run together. The DOM/Canvas
 // doubles collect output; they do not complete activities or alter game state.
-async function game(saved){
+async function game(saved,{autoStart=true}={}){
  const nodes=new Map(),all=[],events={},storage=new Map(),paint={},audio={constructors:0,resumes:0,starts:0};let frame,time=0;
  class FakeAudioContext{
   constructor(){audio.constructors++;this.currentTime=0;this.sampleRate=3000;this.destination={};}
@@ -35,7 +35,7 @@ async function game(saved){
  const document={getElementById:get,createElement:tag=>new Node(tag),createTextNode:t=>({textContent:String(t)}),addEventListener:(k,fn)=>events[k]=fn,querySelectorAll:s=>all.filter(n=>n.matches(s)),fonts:{ready:Promise.resolve()}};
  if(saved)storage.set('catdoor-life-v2',JSON.stringify({state:saved.state,scene:saved.scene||'bedroom',doorOpen:true,officeTalk:{},officeFeedback:false}));
  const sandbox={document,console,Math,JSON,Map,Set,requestAnimationFrame:fn=>frame=fn,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{addEventListener(){},AudioContext:FakeAudioContext},Image:class{constructor(){this.complete=true;this.width=this.naturalWidth=1280;this.height=this.naturalHeight=1440;}set src(v){this.onload?.();}}};
- const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),c,{filename:file});
+ const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c,{filename:file});
  await Promise.resolve();await Promise.resolve();
  const snap=()=>sandbox.window.CatDoorReview.snapshot();
  const step=(seconds=.4)=>{for(let i=0;i<Math.ceil(seconds*30);i++){time+=1000/30;frame(time);}};
@@ -62,8 +62,9 @@ async function game(saved){
   for(const slot of snap().slots){const current=snap(),cardId=current.task.solution[slot.id],placed=current.slots.find(s=>s.cardId===cardId),live=current.cards.find(c=>c.id===cardId),from=[live.x+55,live.y+35];drag(from,[slot.x+65,slot.y+33]);}
  };
  const review=()=>{button('miniActions',snap().mini==='prepare'?'메모 저장':find('miniActions','최종 확인')?'최종 확인':'검수하고 공유',1.1);};
- step(.3);if(saved){const resume=all.find(n=>n.textContent==='이어서'&&typeof n.onclick==='function');assert.ok(resume);resume.onclick();step(.8);}else{get('playerName').value='하늘';get('startButton').onclick();step(.6);}
- return{get,snap,step,key,press,pointer,drag,button,find,ack,clearAck,dialogues,target,officeDesk,toRoom,fillTask,review,paint,audio,all};
+ const start=()=>{if(saved){const resume=all.find(n=>n.textContent==='이어서'&&typeof n.onclick==='function');assert.ok(resume);resume.onclick();step(.8);}else{get('playerName').value='하늘';get('startButton').onclick();step(.6);}};
+ step(.3);if(autoStart)start();
+ return{get,snap,step,key,press,pointer,drag,button,find,ack,clearAck,dialogues,target,officeDesk,toRoom,fillTask,review,paint,audio,all,start};
 }
 async function prologue(g){
  assert.equal(g.snap().intro,'rejection');assert.equal(g.snap().menu,true);assert.match(g.get('phoneBody').textContent,/지원 결과|함께하지/);assert.equal(g.snap().dialogue,undefined);
@@ -88,12 +89,17 @@ function commute(g,withBag=true){g.toRoom('bedroom');g.target('이불과 베개'
 test('the actual phone, rescue, purchase, naming and gestures reach the first real evening',async()=>{
  const g=await game();await prologue(g);assert.equal(g.snap().scene,'bedroom');assert.equal(g.snap().state.me,'하늘');assert.equal(g.snap().state.cat,'보리');assert.ok(g.paint.drawImage>0);assert.ok(g.paint.fillRect>0);
 });
-test('audio stays uncreated by default and only the explicit sound toggle enables it',async()=>{
- const g=await game();assert.equal(g.audio.constructors,0);assert.equal(g.audio.starts,0);
- g.button('phoneBody','확인');g.target('고양이에게');g.dialogues();g.drag([190,150],[320,150],2.3);assert.equal(g.audio.constructors,0);assert.equal(g.audio.starts,0);
- g.get('soundButton').onclick();assert.equal(g.audio.constructors,1);assert.ok(g.audio.resumes>=1);assert.equal(g.get('soundButton').getAttribute('aria-label'),'소리 끄기');
+test('sound starts with the start gesture, remains silent on the title, and can be muted',async()=>{
+ const g=await game(undefined,{autoStart:false});assert.equal(g.audio.constructors,0);assert.equal(g.audio.starts,0);g.step(5);assert.equal(g.audio.constructors,0);
+ g.start();assert.equal(g.audio.constructors,1);assert.ok(g.audio.resumes>=1);assert.ok(g.audio.starts>0);assert.equal(g.get('soundButton').getAttribute('aria-label'),'소리 끄기');
  g.get('soundButton').onclick();const resumes=g.audio.resumes;g.pointer('pointerdown',100,320);g.pointer('pointerup',100,320);g.step(1);
  assert.equal(g.audio.constructors,1);assert.equal(g.audio.resumes,resumes);assert.equal(g.get('soundButton').getAttribute('aria-label'),'소리 켜기');
+ g.get('soundButton').onclick();assert.equal(g.audio.constructors,1);assert.ok(g.audio.resumes>resumes);assert.equal(g.get('soundButton').getAttribute('aria-label'),'소리 끄기');
+});
+test('continue enables sound on its own gesture and a chosen mute survives starting',async()=>{
+ const resumed=await game({state:resumeState(),scene:'living'},{autoStart:false});assert.equal(resumed.audio.constructors,0);resumed.start();assert.equal(resumed.audio.constructors,1);assert.ok(resumed.audio.resumes>=1);assert.equal(resumed.get('soundButton').getAttribute('aria-label'),'소리 끄기');
+ resumed.target('보리 밥을');resumed.drag([180,170],[385,155],3.4);assert.ok(resumed.audio.starts>0);
+ const muted=await game(undefined,{autoStart:false});muted.get('soundButton').onclick();muted.start();muted.button('phoneBody','확인');muted.target('고양이에게');muted.dialogues();assert.equal(muted.audio.constructors,0);assert.equal(muted.audio.starts,0);assert.equal(muted.get('soundButton').getAttribute('aria-label'),'소리 켜기');
 });
 test('a physical food gesture cannot be replaced by E and the next object guide advances',async()=>{
  const g=await game({state:resumeState(),scene:'living'});assert.equal(g.snap().guideId,'food');g.target('보리 밥을');g.key('e');g.step(3);assert.equal(g.snap().state.needs.fed,false);

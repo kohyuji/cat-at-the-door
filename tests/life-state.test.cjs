@@ -3,19 +3,19 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const Life=require('../life-state.js');
+const Life=require('../src/life-state.js');
 function stocked(){const s=Life.create('하늘','보리');assert.equal(Life.act(s,'buyFood').ok,true);return s;}
 function basic(s){if(s.food===0)assert.equal(Life.act(s,'buyFood').ok,true);assert.equal(Life.act(s,'feed').ok,true);assert.equal(Life.act(s,'water').ok,true);}
 function care(s){basic(s);assert.equal(Life.act(s,'play').ok,true);}
 function depart(s){assert.equal(Life.act(s,'dress').ok,true);assert.equal(Life.act(s,'makeBed').ok,true);if(!s.bagPacked)assert.equal(Life.act(s,'packBag').ok,true);assert.equal(Life.act(s,'pickBag').ok,true);assert.equal(Life.act(s,'leaveHome').ok,true);s.phase='work';}
 
 test('browser script exposes the same API without a browser or module',()=>{
-  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../life-state.js'),'utf8'),c);
+  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/life-state.js'),'utf8'),c);
   assert.equal(vm.runInContext('typeof Life.create',c),'function');assert.equal(vm.runInContext("Life.create('하늘','보리').cash",c),58000);
   assert.equal(vm.runInContext('typeof Life.workTask',c),'function');
 });
 test('ordinary-office task slots and persistent missing-data keys agree on every workday',()=>{
-  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../life-story.js'),'utf8'),c);
+  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/life-story.js'),'utf8'),c);
   for(const item of Life.schedule.filter(day=>day.day>0&&!day.weekend)){
     const s=Life.create();s.day=item.day;s.phase='work';const task=c.LifeStory.task(s,'work');
     assert.deepEqual(Array.from(task.slots,slot=>slot.id),item.required,`day ${item.day}`);
