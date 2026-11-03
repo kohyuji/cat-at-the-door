@@ -26,14 +26,15 @@ var PixelArt = (function () {
   }
   function shadow(c,x,y,w) { oval(c,x,y,w,2,'#263a4933'); }
   function head(c,x,y,kind,dir,closed) {
-    var hair=kind==='boss'?'#8b999d':kind==='peer'?'#61524b':C.hair;
+    var hair=kind==='boss'?'#8b999d':kind==='peer'?'#61524b':kind==='commuterA'?'#434b48':kind==='commuterB'?'#8a8071':kind==='commuterC'?'#59626a':C.hair;
     var side=dir!==0;
     r(c,x-7,y-9,14,19,C.ink); r(c,x-9,y-6,18,13,C.ink);
     r(c,x-7,y-7,14,15,C.skin); r(c,x-8,y-4,16,9,C.skinLight);
     r(c,x-6,y-10,12,3,hair);r(c,x-8,y-8,16,5,hair);
     r(c,x-9,y-6,3,7,hair);r(c,x+6,y-6,3,7,hair);
     r(c,x-6,y-4,5,2,hair);r(c,x,y-5,6,2,hair);r(c,x-3,y-3,3,1,hair);
-    if(kind==='peer'){r(c,x-10,y-4,2,12,hair);r(c,x+8,y-4,2,12,hair);}
+    if(kind==='peer'||kind==='commuterB'){r(c,x-10,y-4,2,12,hair);r(c,x+8,y-4,2,12,hair);}
+    if(kind==='commuterC'){r(c,x-8,y-10,16,4,C.navy);r(c,x-9,y-6,18,2,C.blue);}
     if(kind==='boss'||kind==='lead') {
       box(c,x-6,y,5,4,C.skinLight,C.line);box(c,x+2,y,5,4,C.skinLight,C.line);r(c,x-1,y+1,3,1,C.line);
     } else if(closed) { r(c,x-5,y+1,3,1,C.ink);r(c,x+3,y+1,3,1,C.ink); }
@@ -44,16 +45,24 @@ var PixelArt = (function () {
   function person(c,x,y,variant,dir,walk,pose) {
     variant=variant||'me';dir=dir===-1?-1:dir===0?0:1;walk=walk||0;pose=pose||'stand';
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir<0?-1:1,1);
-    var suit=variant==='suit'||variant==='lead'||variant==='boss';
-    var body=suit?C.navy:variant==='peer'?C.green:C.grey;
-    var shade=suit?'#273f52':variant==='peer'?'#68836c':C.greyDark;
+    var suit=variant==='suit'||variant==='lead'||variant==='boss'||variant==='commuterA';
+    var commuter=variant.indexOf('commuter')===0;
+    var body=variant==='commuterA'?'#81959f':variant==='commuterB'?'#aaa995':variant==='commuterC'?'#688797':suit?C.navy:variant==='peer'?'#c8d8c0':C.grey;
+    var shade=variant==='commuterA'?'#607884':variant==='commuterB'?'#8b927f':variant==='commuterC'?'#496b80':suit?'#273f52':variant==='peer'?'#87a38c':C.greyDark;
     if(pose==='sleep') {
-      shadow(c,0,0,29);r(c,-13,-13,38,12,C.ink);r(c,-11,-12,34,9,C.blue);
-      r(c,17,-5,12,4,C.blueDark);head(c,-20,-11,variant,0,true);
-      r(c,-12,-10,8,3,C.skinLight);r(c,-8,-9,23,1,'#a7c2c3');
+      shadow(c,0,0,30);r(c,-15,-21,28,19,C.ink);r(c,-13,-19,24,15,body);
+      r(c,-19,-17,8,7,C.skin);r(c,10,-16,18,13,C.ink);r(c,11,-14,15,9,C.navy);
+      r(c,26,-14,5,5,C.ink);r(c,26,-7,5,4,C.ink);head(c,-23,-17,variant,0,true);
+      r(c,-12,-10,16,5,shade);r(c,1,-10,6,4,C.skinLight);
       c.restore();return;
     }
-    var moving=pose==='walk', cycle=walk*8, step=moving?Math.sin(cycle):0;
+    if(pose==='kneel'){
+      shadow(c,2,0,18);r(c,-11,-13,22,12,C.ink);r(c,-9,-12,18,9,C.navy);r(c,7,-8,15,7,C.ink);r(c,8,-7,12,4,C.blueDark);
+      r(c,-10,-26,20,17,C.ink);r(c,-9,-25,18,14,body);r(c,-6,-28,12,5,shade);r(c,-3,-27,1,6,C.paper);r(c,3,-27,1,6,C.paper);
+      r(c,-3,-33,6,8,C.skin);r(c,-2,-32,4,7,C.skinLight);r(c,-13,-23,4,13,C.ink);r(c,-12,-22,2,10,body);r(c,-12,-12,5,4,C.skinLight);
+      r(c,9,-23,7,6,body);r(c,14,-20,7,4,C.skinLight);head(c,-1,-38,variant,1,false);c.restore();return;
+    }
+    var moving=pose==='walk'||pose==='umbrellaWalk', cycle=walk*8, step=moving?Math.sin(cycle):0;
     var bob=moving?Math.round(Math.abs(Math.sin(cycle))*1):0;
     shadow(c,0,0,12);c.translate(0,-bob);
     var left=step>.15?-2:0,right=step<-.15?-2:0,spread=Math.round(step*2);
@@ -67,13 +76,19 @@ var PixelArt = (function () {
       r(c,-3,-33,6,9,C.paper);r(c,-1,-32,2,13,variant==='boss'?C.teal:C.blue);
       r(c,-6,-33,3,3,shade);r(c,3,-33,3,3,shade);r(c,-4,-29,2,6,shade);r(c,3,-29,2,6,shade);
       r(c,5,-23,3,1,C.grey);r(c,0,-18,1,1,C.grey);
+    } else if(variant==='peer') {
+      r(c,-4,-33,8,19,C.paper);r(c,-5,-33,2,8,shade);r(c,4,-33,2,8,shade);r(c,-2,-32,4,2,C.white);
+      r(c,2,-23,1,1,C.green);r(c,2,-19,1,1,C.green);
+    } else if(commuter){
+      r(c,-2,-33,4,19,shade);r(c,0,-28,1,1,C.paper);r(c,0,-22,1,1,C.paper);if(variant==='commuterC')r(c,-7,-35,14,4,C.grey);
     } else {
       r(c,-5,-34,10,3,shade);r(c,-3,-32,1,6,C.paper);r(c,3,-32,1,6,C.paper);
       r(c,-5,-23,10,5,shade);r(c,-4,-23,8,1,body);
     }
     var arm=Math.round(step*3);
     r(c,-13,-29+arm,4,14,C.ink);r(c,-12,-28+arm,2,11,body);r(c,-12,-16+arm,3,4,C.skinLight);
-    r(c,9,-29-arm,4,14,C.ink);r(c,10,-28-arm,2,11,body);r(c,10,-16-arm,3,4,C.skinLight);
+    if(pose==='umbrella'||pose==='umbrellaWalk'){r(c,9,-29,5,10,C.ink);r(c,10,-28,3,7,body);r(c,12,-26,7,5,C.ink);r(c,13,-25,5,3,body);r(c,17,-29,4,5,C.skinLight);}
+    else{r(c,9,-29-arm,4,14,C.ink);r(c,10,-28-arm,2,11,body);r(c,10,-16-arm,3,4,C.skinLight);}
     if(pose==='sit') {r(c,-8,-12,14,7,shade);r(c,4,-9,12,5,C.ink);r(c,9,-5,8,3,C.ink);}
     head(c,0,-47,variant,dir,pose==='tired');
     if(pose==='carry'){item(c,'briefcase',14,-9,.65);}
@@ -139,6 +154,14 @@ var PixelArt = (function () {
       r(c,-13,-34,26,34,C.ink);r(c,-12,-33,24,32,C.paper);r(c,-13,-34,26,4,C.green);
       r(c,-11,-9,22,7,C.teal);r(c,-6,-25,12,12,C.navy);r(c,-7,-28,4,5,C.navy);r(c,3,-28,4,5,C.navy);
       r(c,-3,-18,1,1,C.paper);r(c,3,-18,1,1,C.paper);break;
+    case 'wetFood':
+      oval(c,0,-3,13,4,C.ink);r(c,-13,-24,26,21,C.ink);r(c,-12,-23,24,20,C.paper);r(c,-12,-19,24,13,C.teal);
+      oval(c,0,-24,13,4,C.ink);oval(c,0,-25,12,3,C.grey);r(c,-5,-27,10,2,C.white);r(c,2,-27,4,4,C.line);
+      r(c,-5,-16,10,6,C.paper);r(c,-7,-17,3,3,C.paper);r(c,5,-18,3,5,C.paper);r(c,-4,-14,1,1,C.navy);break;
+    case 'laundryBasket':
+      box(c,-21,-25,42,24,'#b7d0c5');r(c,-23,-28,46,5,C.line);r(c,-21,-27,42,3,C.paper);
+      for(var by=0;by<3;by++)for(var bx=0;bx<5;bx++)r(c,-17+bx*8,-20+by*6,5,3,'#7d9c94');
+      r(c,-15,-30,12,3,C.grey);r(c,-6,-34,17,7,C.white);r(c,8,-29,8,3,C.blue);break;
     case 'bowlEmpty':case 'bowlFull':case 'water':
       oval(c,0,-5,15,6,C.ink);r(c,-13,-5,26,5,type==='water'?C.blue:C.paper);
       oval(c,0,-7,14,5,type==='water'?C.blue:C.white);oval(c,0,-8,11,3,type==='water'?'#74b9cf':C.greyDark);
@@ -155,13 +178,24 @@ var PixelArt = (function () {
       box(c,-9,-31,18,31,C.ink);r(c,-7,-27,14,22,C.glass);r(c,-4,-21,9,2,C.paper);
       r(c,-4,-17,7,1,C.paper);r(c,-4,-13,10,1,C.paper);r(c,-2,-3,4,1,C.grey);break;
     case 'umbrella':
-      r(c,-1,-27,2,24,C.ink);r(c,-1,-4,6,3,C.ink);r(c,4,-8,2,6,C.ink);
-      for(var yy=0;yy<13;yy++){var ww=Math.min(23,3+yy*2);r(c,-ww,-40+yy,ww*2,1,C.ink);r(c,-ww+1,-40+yy,ww*2-2,1,yy<4?C.blue:C.blueDark);}
-      r(c,-1,-44,2,4,C.ink);r(c,-10,-34,1,8,C.blue);r(c,10,-34,1,8,C.blue);break;
+      r(c,-1,-31,2,28,C.ink);r(c,-1,-4,6,3,C.ink);r(c,4,-8,2,6,C.ink);
+      for(var yy=0;yy<19;yy++){var ww=Math.round(28*Math.sqrt(Math.max(0,1-Math.pow((18-yy)/18,2))));r(c,-ww,-49+yy,ww*2+1,1,C.ink);if(ww>2)r(c,-ww+1,-49+yy,ww*2-1,1,yy<5?'#ffc36b':'#ed7c45');}
+      for(var rib=-1;rib<=1;rib++){for(var z=0;z<17;z++)r(c,rib*z*.7,-48+z,1,1,rib?'#ffe5b2':'#b95135');}
+      [-20,0,20].forEach(function(xx){r(c,xx-7,-31,14,2,C.ink);r(c,xx-5,-30,10,2,'#ed7c45');});r(c,-1,-53,2,5,C.ink);break;
+    case 'folder':
+      r(c,-22,-28,18,8,C.ink);r(c,-20,-26,15,5,C.blue);box(c,-22,-23,44,23,C.blueDark);
+      r(c,-17,-29,32,15,C.paper);r(c,-14,-25,24,1,C.grey);r(c,-14,-21,20,1,C.grey);
+      box(c,-22,-18,44,18,C.blue);r(c,-20,-16,40,2,C.glass);r(c,-7,-11,17,5,C.paper);break;
+    case 'calendar':
+      box(c,-20,-34,40,34,C.paper);r(c,-19,-33,38,8,C.teal);r(c,-12,-38,3,9,C.line);r(c,9,-38,3,9,C.line);
+      for(var cy=0;cy<3;cy++)for(var cx=0;cx<4;cx++)r(c,-14+cx*8,-20+cy*6,5,3,cx===2&&cy===1?C.blueDark:'#bdcdc0');break;
+    case 'chart':
+      box(c,-19,-34,38,34,C.paper);r(c,-15,-29,26,2,C.blueDark);r(c,-13,-6,27,1,C.line);r(c,-13,-23,1,18,C.line);
+      r(c,-8,-14,5,8,C.blue);r(c,0,-21,5,15,C.teal);r(c,8,-25,5,19,C.green);break;
     case 'hand':
       r(c,-5,-10,10,9,C.ink);r(c,-4,-10,8,8,C.skinLight);r(c,-4,-16,2,7,C.ink);r(c,-3,-15,1,7,C.skinLight);
       r(c,4,-8,3,6,C.ink);r(c,4,-7,2,4,C.skin);break;
-    case 'document':
+    case 'sheet':case 'document':
       box(c,-13,-29,24,29,C.paper);r(c,-10,-25,15,2,C.blueDark);r(c,-10,-20,17,1,C.greyDark);
       r(c,-10,-16,17,1,C.greyDark);r(c,-10,-12,12,1,C.greyDark);r(c,2,-8,5,3,C.teal);break;
     case 'chair':

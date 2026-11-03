@@ -1,287 +1,171 @@
-/* Shared rules for the life game. No drawing, browser, timer, or audio dependencies. */
+/* Persistent game rules; no drawing or browser dependencies. */
 var Life = (function () {
   'use strict';
-  var EVENING_LIMIT = 180;
-  var SHEET_CAPACITY = 8;
-  var schedule = [
-    { day: 0, task: '첫 출근 준비', deadline: false },
-    { day: 1, task: '인수인계 자료', deadline: false },
-    { day: 2, task: '월간 보고 자료의 표 정리', deadline: false },
-    { day: 3, task: '근거 자료 대조', deadline: false },
-    { day: 4, task: '첫 보고', deadline: true },
-    { day: 5, task: '다음 주 일정 확인', deadline: false },
-    { day: 6, task: '토요일', deadline: false, weekend: true },
-    { day: 7, task: '일요일', deadline: false, weekend: true },
-    { day: 8, task: '발표 초안 공유', deadline: false },
-    { day: 9, task: '최종 보고', deadline: true },
-    { day: 10, task: '수정본 정리', deadline: false },
-    { day: 11, task: '동료 인수인계', deadline: false },
-    { day: 12, task: '두 주 업무 정리', deadline: true }
+  var BEDTIME=1380, MORNING_START=440, DEPARTURE=490;
+  var DURATIONS={dress:5,makeBed:3,packBag:5,pickBag:0,feed:10,water:5,play:30,prepare:60,rest:30,hoodie:15,storeSuit:10,deskSpace:15,calmRain:30,weekendSpace:45,phonePlan:10,requestFiles:15,openReference:15,workReview:5,dishes:20,laundry:60,tidy:45};
+  var schedule=[
+    {day:0,task:'내일 입을 옷과 가방 준비',required:[],deadline:false},
+    {day:1,task:'메일과 공유 폴더 확인',required:['mail','folder','messenger'],deadline:false},
+    {day:2,task:'날짜별 파일 정리',required:['file0911','file0914','file0915'],deadline:false},
+    {day:3,task:'진행 현황 합계 확인',required:['completedCount','pendingCount','totalCount'],deadline:false},
+    {day:4,task:'팀 회의 자료 초안 작성',required:['meetingDate','completedCount','pendingCount'],deadline:true},
+    {day:5,task:'동료와 담당 업무 확인',required:['myPart','peerPart','checkBy'],deadline:false},
+    {day:6,task:'집안일과 휴식',required:[],weekend:true},
+    {day:7,task:'월요일 준비',required:[],weekend:true},
+    {day:8,task:'변경된 회의 시각 확인',required:['meetingTime','arriveBy','updateNotice'],deadline:false},
+    {day:9,task:'회의에 쓸 원본 파일 대조',required:['rowsFile','agendaFile','timeNotice'],deadline:true},
+    {day:10,task:'회의 자료 두 장 고르기',required:['coverPage','tablePage','discardPage'],deadline:false},
+    {day:11,task:'회의 자료 최종 확인',required:['meetingHeader','summaryRow','finalFile'],deadline:false},
+    {day:12,task:'09:20까지 회의 자료 준비',required:['reportCopy','receiver','meetingTime'],deadline:true}
   ];
-  function clamp(n, low, high) { return Math.max(low, Math.min(high, n)); }
-  function number(n, fallback) { return Number.isFinite(n) ? n : fallback; }
-  function name(value, fallback) { return String(value || '').trim().slice(0, 20) || fallback; }
-  function needs() { return { fed: false, played: false, comfort: false }; }
-  function result(ok, message, cash, minutes, extra) {
-    var out = { ok: ok, message: message, cost: { cash: cash || 0, minutes: minutes || 0 }, minutes: minutes || 0 };
-    if (extra) Object.keys(extra).forEach(function (key) { out[key] = extra[key]; });
-    return out;
+  function clamp(n,lo,hi){return Math.max(lo,Math.min(hi,n));}
+  function num(n,fallback){return Number.isFinite(n)?n:fallback;}
+  function name(n,fallback){return String(n||'').trim().slice(0,20)||fallback;}
+  function needs(){return{fed:false,played:false,comfort:false};}
+  function weekend(day){return day===6||day===7;}
+  function nextWorkDay(day){do{day+=1;}while(weekend(day));return Math.min(12,day);}
+  function valid(s){return !!(s&&s.needs&&s.flags&&s.roller&&Array.isArray(s.log));}
+  function result(ok,message,cash,minutes,extra){var out={ok:ok,message:message,cost:{cash:cash||0,minutes:minutes||0},minutes:minutes||0};if(extra)Object.keys(extra).forEach(function(key){out[key]=extra[key];});return out;}
+  function create(me,cat){return{
+    version:2,me:name(me,'김신입'),cat:name(cat,'보리'),day:0,phase:'evening',cash:58000,food:0,favoriteFood:0,water:false,energy:3,prep:0,trust:4,strain:0,routine:0,
+    hoodie:false,suitStored:false,needs:needs(),done:{},dailyDone:{},flags:{},log:[],work:[],eveningMin:60,eveningStartMin:1200,morningMin:0,dayMinutes:60,commuteMin:0,workMin:0,workActionsUsed:0,
+    roller:{owned:false,active:false,dirty:0,usedToday:false},fur:0,dressed:false,bedMade:false,bagPacked:false,bagPrepared:false,hasBag:false,packedForDay:null,
+    preparedDays:[],planDays:[],issueQueue:[],transactions:[],lastNight:null,nightIssue:null,lastArrivedDay:0,project:{title:'첫 팀 회의',meetingDay:12,meetingTime:'09:30',materialsBy:'09:20',presented:false,finished:false,launched:false},support:false
+  };}
+  function clock(s){var minute;if(s.phase==='morning')minute=MORNING_START+s.morningMin;else if(s.phase==='work')minute=540+(s.workMin||0)+(s.flags.lateMinutes||0)+(s.flags.borrowedLaptop?45:0);else if(s.phase==='afterWork')minute=1140+(s.commuteMin||0);else minute=num(s.eveningStartMin,weekend(s.day)?600:1200)+s.eveningMin;
+    return{minutes:minute,text:String(Math.floor(minute/60)%24).padStart(2,'0')+':'+String(minute%60).padStart(2,'0'),remaining:Math.max(0,(s.phase==='morning'?DEPARTURE:BEDTIME)-minute),daytime:minute<1200,lateMinutes:s.phase==='morning'?Math.max(0,minute-DEPARTURE):Math.max(0,minute-BEDTIME),departureAt:'08:10',bedtime:'23:00'};}
+  function fatigue(s){return s.energy<=0||s.strain>=7?'exhausted':s.energy<=1||s.strain>=4?'tired':'normal';}
+  function duration(s,type){if(type==='play'&&s.flags.catEager)return 20;if(type==='prepare'&&s.flags.deskSeat)return 50;return DURATIONS[type];}
+  function repeated(s,type,message){return s.done[type]?result(false,message||'오늘은 이미 했다.',0,0,{reason:'alreadyDone'}):null;}
+  function canSpend(s,minutes,essential){if(s.phase!=='evening'||essential||minutes<=clock(s).remaining)return null;return result(false,'이 일을 마치면 취침 시간을 넘긴다. 오늘 할 일부터 고르자.',0,0,{reason:'notEnoughTime',remainingMinutes:clock(s).remaining,alternatives:['feed','water','sleep']});}
+  function spend(s,type,minutes,cash){var before=clock(s).text;if(cash){s.cash-=cash;s.transactions.push({day:s.day,type:type,cash:-cash});}s.dayMinutes+=minutes;if(s.phase==='evening')s.eveningMin+=minutes;else if(s.phase==='afterWork')s.commuteMin+=minutes;else if(s.phase==='work')s.workMin+=minutes;else s.morningMin+=minutes;s.done[type]=true;return{before:before,after:clock(s).text};}
+  function purchase(s,type,price,portions,favorite){if(s.cash<price)return result(false,'돈이 모자란다. 남은 사료와 살 수 있는 양을 확인하자.',0,0,{reason:'notEnoughCash',needed:price,alternatives:['buyFood','smallFood']});var time=spend(s,type,15,price);s.food+=portions;if(favorite)s.favoriteFood+=portions;s.flags.initialShopDone=true;s.flags.foodLowAcknowledged=false;return result(true,favorite?'좋아하는 습식 사료를 샀다.':'평소 먹는 건사료를 샀다.',price,15,{clock:time,portions:portions,favorite:favorite});}
+  function preparedFor(s,day){return s.preparedDays.indexOf(day)!==-1;}
+  function ready(s){var c=clock(s),problems=[];if(weekend(s.day))problems.push('weekend');if(s.phase!=='morning')problems.push('wrongPhase');if(!s.dressed)problems.push('notDressed');if(!s.hasBag&&!s.flags.borrowedLaptop)problems.push('noBag');return{ok:problems.length===0,problems:problems,dressed:s.dressed,hasBag:s.hasBag,bagPacked:s.bagPacked,prepared:!!(s.hasBag&&s.bagPrepared),minutesUntilDeparture:c.remaining,lateMinutes:Math.max(0,MORNING_START+s.morningMin-DEPARTURE),alternatives:!s.hasBag?['packBag','pickBag','borrowLaptop']:[]};}
+  function unresolved(s){return s.issueQueue.filter(function(issue){return !issue.resolved;});}
+  function workTask(s){
+    var task=schedule[clamp(s.day,0,12)],carried=unresolved(s).filter(function(issue){return issue.fromDay<s.day;});
+    var prepared=!!(s.hasBag&&s.bagPrepared&&preparedFor(s,s.day)),late=num(s.flags.lateMinutes,Math.max(0,s.morningMin-50)),extra=[];
+    var available=(s.day===12?20:120)-late-(s.flags.borrowedLaptop?45:0)-(s.workMin||0);
+    var missingFiles=!!(s.flags.missingFiles||s.flags.missingPhotos);
+    if(!prepared&&!s.flags.referenceOpened)extra.push({id:'findReference',label:'원본 자료를 찾아 확인한다',minutes:15});
+    if(s.flags.borrowedLaptop)extra.push({id:'borrowLaptop',label:'공용 노트북을 설정한다',minutes:45});
+    if(missingFiles)extra.push({id:'requestFiles',label:'집에 둔 자료 파일을 요청한다',minutes:15});
+    carried.forEach(function(issue){extra.push({id:issue.id,label:issue.label,issue:true});});
+    return{day:s.day,title:task.task,deadline:!!task.deadline,required:task.required.slice(),prepared:prepared,clueAvailable:prepared,sourceAvailable:prepared||!!s.flags.referenceOpened,lateMinutes:late,borrowedLaptop:!!s.flags.borrowedLaptop,missingFiles:missingFiles,missingPhotos:missingFiles,spentMinutes:s.workMin||0,availableMinutes:Math.max(0,available),deadlineAt:s.day===12?'09:20':null,meetingAt:s.day===12?'09:30':null,extraSteps:extra,carryover:carried.map(function(issue){return Object.assign({},issue);})};
   }
-  function create(me, cat) {
-    return {
-      me: name(me, '김신입'), cat: name(cat, '보리'), day: 0, phase: 'evening',
-      cash: 82000, food: 4, water: false, energy: 3, prep: 0, trust: 4,
-      strain: 0, routine: 0, support: false, hoodie: false, suitStored: false,
-      needs: needs(), done: {}, flags: {}, log: [], work: [], eveningMin: 0,
-      roller: { owned: false, sheets: 0, active: false, dirty: 0, usedToday: false, sheetOpen: false },
-      fur: 0, monthlySalary: 2450000, firstPay: 1110000, transactions: [],
-      dayMinutes: 0, commuteMin: 0, morningMin: 0, lastArrivedDay: 0,
-      dailyDone: {}, planDays: [], lastNight: null, payday: null
-    };
-  }
-  function valid(s) { return s && typeof s === 'object' && s.needs && s.roller && Array.isArray(s.log); }
-  function finished(s) { return s.phase === 'ending'; }
-  function repeated(s, type, message) { return s.done[type] ? result(false, message || '이번에는 이미 마쳤다.', 0, 0, { reason: 'alreadyDone' }) : null; }
-  function canSpend(s, minutes, essential) {
-    if (s.phase !== 'evening' || essential || s.eveningMin + minutes <= EVENING_LIMIT) return null;
-    return result(false, '오늘 남은 시간에는 다 하기 어렵다. 꼭 필요한 돌봄을 먼저 하고, 나머지는 내일로 미루거나 도움을 청할 수 있다.', 0, 0, {
-      reason: 'notEnoughTime', remainingMinutes: Math.max(0, EVENING_LIMIT - s.eveningMin),
-      alternatives: ['feed', 'water', 'askFood', 'askSupport', 'sleep']
-    });
-  }
-  function spend(s, type, minutes, cash) {
-    if (cash) {
-      s.cash -= cash;
-      s.transactions.push({ day: s.day, type: type, cash: -cash });
-    }
-    s.dayMinutes += minutes;
-    if (s.phase === 'evening') s.eveningMin += minutes;
-    else if (s.phase === 'afterWork') s.commuteMin += minutes;
-    else s.morningMin += minutes;
-    s.done[type] = true;
-  }
-  function purchase(s, type, cash, minutes, essential, apply, message) {
-    if (s.cash < cash) {
-      var foodPurchase = type === 'buyFood' || type === 'smallFood';
-      return result(false, foodPurchase ? '현금이 모자란다. 작은 봉지를 사거나, 필요한 만큼 나눠 받을 수 있다.' : '지금은 살 돈이 모자란다. 오늘은 남은 털을 정리할 다른 방법을 찾거나 그대로 출근할 수 있다.', 0, 0, {
-        reason: 'notEnoughCash', needed: cash, alternatives: foodPurchase ? ['smallFood', 'askFood'] : ['stopRoller']
+  function workBudget(s,definition){
+    var task=workTask(s),condition=fatigue(s),base=condition==='exhausted'?2:condition==='tired'?3:4;
+    var total=Math.max(0,base-Math.ceil(task.lateMinutes/15)-(task.borrowedLaptop?2:0));
+    var remaining=Math.max(0,total-(s.workActionsUsed||0)),hints=[];
+    if(task.prepared&&definition&&definition.slots&&definition.cards){
+      definition.slots.forEach(function(slot){
+        var card=definition.cards.find(function(item){return item.id===definition.solution[slot.id];});
+        var source=card&&definition.sources.find(function(item){return item.id===card.sourceId;});
+        hints.push({slotId:slot.id,sourceId:card&&card.sourceId,text:source?source.title:slot.hint||'전날 확인한 메모'});
       });
     }
-    var blocked = canSpend(s, minutes, essential);
-    if (blocked) return blocked;
-    spend(s, type, minutes, cash); apply();
-    return result(true, message, cash, minutes, { overtime: s.phase === 'evening' && s.eveningMin > EVENING_LIMIT });
+    return{total:total,remaining:remaining,spent:s.workActionsUsed||0,fatigue:condition,prepared:task.prepared,sourceAvailable:task.sourceAvailable,hints:hints,availableMinutes:task.availableMinutes,deadlineAt:task.deadlineAt,meetingAt:task.meetingAt,canReview:remaining>0&&task.availableMinutes>=DURATIONS.workReview,canOpenReference:!task.sourceAvailable&&remaining>0&&task.availableMinutes>=DURATIONS.openReference};
   }
-  function act(s, type, opts) {
-    opts = opts || {};
-    if (!valid(s)) return result(false, '진행 상태를 확인할 수 없다.', 0, 0, { reason: 'invalidState' });
-    if (finished(s)) return result(false, '이 이야기는 마지막 밤에 도착했다.', 0, 0, { reason: 'finished' });
-    var again, blocked;
-    if (type === 'secureWindow') {
-      if (s.flags.windowSecured) return result(false, '창문과 커튼은 이미 닫았다.', 0, 0, { reason: 'alreadyDone' });
-      s.flags.windowSecured = true;
-      return result(true, '창문을 잠그고 커튼을 닫았다. 바람 소리가 한결 작아졌다.', 0, 0);
+  function act(s,type,opts){opts=opts||{};if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});if(s.phase==='ending')return result(false,'마지막 밤이 지났다.',0,0,{reason:'finished'});var again,blocked,time,targetDay;
+    if(type==='askFood'||type==='askSupport'||type==='buyRefill'||type==='peelRoller')return result(false,'지금은 할 수 없는 일이다.',0,0,{reason:'removedAction'});
+    if(type==='openReference'||type==='workReview'){
+      if(s.phase!=='work')return result(false,'회사에서 할 일이다.',0,0,{reason:'wrongPhase'});
+      var budget=workBudget(s);
+      if(type==='openReference'&&budget.sourceAvailable)return result(false,'원본 자료는 열려 있다.',0,0,{reason:'alreadyAvailable'});
+      if(type==='workReview'&&!budget.sourceAvailable)return result(false,'원본 자료부터 열어 확인하자.',0,0,{reason:'referenceClosed',alternatives:['openReference']});
+      if(!budget.remaining)return result(false,'오늘 집중해서 검수할 힘을 다 썼다. 남은 항목은 팀장에게 알리자.',0,0,{reason:'noWorkActions',budget:budget,alternatives:['reportUnfinished']});
+      if(budget.availableMinutes<DURATIONS[type])return result(false,'자료를 놓아야 할 시간이 됐다. 지금 확인한 부분과 남은 부분을 알리자.',0,0,{reason:'notEnoughWorkTime',budget:budget,alternatives:['reportUnfinished']});
+      time=spend(s,type,DURATIONS[type],0);s.workActionsUsed=(s.workActionsUsed||0)+1;
+      if(type==='openReference')s.flags.referenceOpened=true;
+      return result(true,type==='openReference'?'공유 폴더에서 원본 자료를 찾았다.':'놓은 자료를 검수했다.',0,DURATIONS[type],{clock:time,budget:workBudget(s)});
     }
-    if (type === 'startRoller') {
-      if (!s.roller.owned) return result(false, '아직 돌돌이가 없다.', 0, 0, { reason: 'noRoller' });
-      if (s.fur <= 0) return result(false, '지금 정장에는 뗄 털이 없다.', 0, 0, { reason: 'noFur' });
-      if (s.roller.active) return result(true, '같은 접착면으로 계속 정리한다.', 0, 0, { alreadyActive: true });
-      if (s.roller.sheetOpen && s.roller.dirty >= SHEET_CAPACITY) return result(false, '접착면이 털로 가득 찼다. 모서리를 벗기면 새 면이 나온다.', 0, 0, { reason: 'dirtySheet', alternatives: ['peelRoller', 'stopRoller'] });
-      if (!s.roller.sheetOpen) {
-        if (s.roller.sheets <= 0) return result(false, '새 접착면이 남지 않았다. 교체롤을 끼우거나, 오늘은 남은 털을 감수하고 나갈 수 있다.', 0, 0, { reason: 'noSheets', alternatives: ['buyRefill', 'stopRoller'] });
-        s.roller.sheets -= 1;
-        s.roller.sheetOpen = true;
-        s.roller.dirty = 0;
-      }
-      s.roller.active = true; s.roller.usedToday = true;
-      return result(true, '정장 위를 쓸기 시작했다.', 0, 0);
-    }
-    if (type === 'roll' || type === 'rollerStroke') {
-      if (!s.roller.active || !s.roller.sheetOpen) return result(false, '먼저 돌돌이를 정장에 대야 한다.', 0, 0, { reason: 'rollerNotActive' });
-      var capacity = Math.max(0, SHEET_CAPACITY - s.roller.dirty);
-      if (!capacity) return result(false, '이 면에는 더 붙지 않는다. 더러워진 접착면을 벗길 수 있다.', 0, 0, { reason: 'dirtySheet', alternatives: ['peelRoller', 'stopRoller'] });
-      var removed = Math.min(s.fur, capacity, Math.max(1, Math.floor(number(opts.amount, 1))));
-      s.fur -= removed; s.roller.dirty += removed;
-      return result(true, s.fur ? '지나간 자리의 털이 돌돌이에 붙었다.' : '정장이 다시 깔끔해졌다.', 0, 0, { removed: removed, left: s.fur, sheetFull: s.roller.dirty >= SHEET_CAPACITY });
-    }
-    if (type === 'peelRoller') {
-      if (!s.roller.sheetOpen || s.roller.dirty <= 0) return result(false, '아직 벗겨 낼 더러운 면이 없다.', 0, 0, { reason: 'unusedSheet' });
-      s.roller.active = false; s.roller.sheetOpen = false; s.roller.dirty = 0;
-      return result(true, '털 묻은 접착면을 벗겼다. 다시 쓸면 새 면 한 장을 사용한다.', 0, 0);
-    }
-    if (type === 'stopRoller') {
-      s.roller.active = false;
-      return result(true, s.roller.usedToday ? '돌돌이를 내려놓았다. 사용한 접착면과 남은 털은 그대로다.' : '오늘은 돌돌이를 쓰지 않고 내려놓았다.', 0, 0);
-    }
-    if (type === 'feed') {
-      again = repeated(s, type, '이번에는 이미 밥을 주었다. 더 붓는 대신 그릇과 고양이를 살펴본다.'); if (again) return again;
-      if (s.food <= 0) {
-        s.flags.foodWarningSeen = true; s.flags.emptyBowl = true;
-        return result(false, '봉지가 비었다. 가게에서 사거나 필요한 만큼 나눠 받아야 한다. 돈이 없어도 도움을 청할 수 있다.', 0, 0, { reason: 'noFood', alternatives: ['buyFood', 'smallFood', 'askFood'] });
-      }
-      spend(s, type, 5, 0); s.food -= 1; s.needs.fed = true; s.flags.emptyBowl = false;
-      if (s.food <= 1) s.flags.foodWarningSeen = true;
-      return result(true, s.food <= 1 ? '그릇이 채워졌다. 봉지의 바닥이 보인다. 다음 밥도 마련해야 한다.' : '그릇에 사료가 담겼다. 고양이가 냄새를 맡고 먹기 시작한다.', 0, 5, { foodLow: s.food <= 1, overtime: s.phase === 'evening' && s.eveningMin > EVENING_LIMIT });
-    }
-    if (type === 'water') {
-      again = repeated(s, type, '이번에는 이미 깨끗한 물로 갈았다.'); if (again) return again;
-      spend(s, type, 3, 0); s.water = true;
-      return result(true, '그릇에 깨끗한 물이 찼다.', 0, 3, { overtime: s.phase === 'evening' && s.eveningMin > EVENING_LIMIT });
-    }
-    if (type === 'buyFood' || type === 'smallFood' || type === 'askFood') {
-      if (s.dailyDone.foodSupply) return result(false, '오늘 필요한 사료는 이미 마련했다. 들고 온 봉지부터 정리한다.', 0, 0, { reason: 'alreadyDone' });
-      var price = type === 'buyFood' ? 18000 : type === 'smallFood' ? 6000 : 0;
-      var minutes = type === 'buyFood' ? 60 : type === 'smallFood' ? 35 : 40;
-      var portions = type === 'buyFood' ? 6 : 2;
-      return purchase(s, type, price, minutes, true, function () {
-        s.food += portions; s.dailyDone.foodSupply = true;
-        if (type === 'askFood') { s.support = true; s.flags.foodHelpReceived = true; }
-      }, type === 'askFood' ? '필요한 만큼 사료를 나눠 받았다. 혼자 해결하지 않아도 오늘 밥은 줄 수 있다.' : '사료를 마련했다. 봉지 안에 다음 밥들이 남아 있다.');
-    }
-    if (type === 'buyRoller') {
-      if (s.roller.owned) return result(false, '돌돌이 본체는 이미 있다. 필요한 것은 교체롤이다.', 0, 0, { reason: 'alreadyOwned', alternatives: ['buyRefill'] });
-      return purchase(s, type, 4000, 0, true, function () { s.roller.owned = true; s.roller.sheets = 20; s.dailyDone.buyRoller = true; }, '4,000원에 본체와 첫 롤을 샀다. 접착면 20장이 들어 있다.');
-    }
-    if (type === 'buyRefill') {
-      if (!s.roller.owned) return result(false, '먼저 돌돌이 본체가 필요하다.', 0, 0, { reason: 'noRoller' });
-      if (s.dailyDone.buyRefill) return result(false, '교체롤은 오늘 이미 샀다.', 0, 0, { reason: 'alreadyDone' });
-      return purchase(s, type, 2000, 0, true, function () { s.roller.sheets += 20; s.dailyDone.buyRefill = true; }, '교체롤 한 개를 샀다. 새 접착면 20장이 더 생겼다.');
-    }
-    if (type === 'hoodie' && s.hoodie) return result(false, '후드티 자리는 이미 마련되어 있다.', 0, 0, { reason: 'alreadyDone' });
-    if (type === 'storeSuit' && s.suitStored) return result(false, '정장은 이미 따로 걸어 두었다.', 0, 0, { reason: 'alreadyDone' });
-    if (type === 'deskSpace' && s.flags.deskSeat) return result(false, '책상 옆자리에 옷을 깔아 두었다. 다음에도 그 자리를 쓸 수 있다.', 0, 0, { reason: 'alreadyDone' });
-    if (type === 'askSupport' && s.support) return result(false, '도움을 청할 사람과 방법을 이미 정했다.', 0, 0, { reason: 'alreadyDone' });
-    if (type === 'phonePlan') {
-      if (s.dailyDone.phonePlan) return result(false, '오늘의 업무 일정은 이미 확인했다.', 0, 0, { reason: 'alreadyDone' });
-    } else { again = repeated(s, type); if (again) return again; }
-    var times = { play: 35, prepare: 50, rest: 40, hoodie: 25, storeSuit: 15, deskSpace: 15, calmRain: 30, askSupport: 20, weekendSpace: 45, phonePlan: 15 };
-    if (!Object.prototype.hasOwnProperty.call(times, type)) return result(false, '지금 할 수 없는 행동이다.', 0, 0, { reason: 'unknownAction' });
-    if (type === 'weekendSpace' && s.day !== 6 && s.day !== 7) return result(false, '집을 크게 정리할 일은 주말에 시간을 잡기로 했다.', 0, 0, { reason: 'notWeekend' });
-    blocked = canSpend(s, times[type], type === 'askSupport'); if (blocked) return blocked;
-    spend(s, type, times[type], 0);
-    var messages = {};
-    if (type === 'play') { s.needs.played = true; messages.play = '고양이가 장난감을 붙잡고 한동안 놓지 않는다.'; }
-    if (type === 'prepare') { s.prep = clamp(s.prep + 1, 0, 3); messages.prepare = '내일 필요한 자료를 정리해 가방 곁에 두었다.'; }
-    if (type === 'rest') { s.energy = clamp(s.energy + 1, 0, 3); s.strain = clamp(s.strain - 1, 0, 10); messages.rest = '잠깐 몸을 쉬게 했다. 어깨의 힘이 조금 풀린다.'; }
-    if (type === 'hoodie') { s.hoodie = true; s.flags.hoodiePlaced = true; s.needs.comfort = true; messages.hoodie = '회색 후드티를 접어 자리를 마련했다. 고양이가 냄새를 맡는다.'; }
-    if (type === 'storeSuit') { s.suitStored = true; s.flags.suitProtected = true; messages.storeSuit = '정장을 고양이가 눕는 옷과 떨어진 곳에 걸었다.'; }
-    if (type === 'deskSpace') { s.flags.deskSeat = true; messages.deskSpace = '책상 옆 빈자리에 오래 입던 옷을 깔았다. 자료를 펼칠 자리는 비워 두었다.'; }
-    if (type === 'calmRain') { s.needs.comfort = true; s.flags.rainComforted = true; messages.calmRain = '작은 몸의 떨림이 잦아들 때까지 곁에 있었다.'; }
-    if (type === 'askSupport') { s.support = true; s.flags.supportAsked = true; s.strain = clamp(s.strain - 1, 0, 10); messages.askSupport = '어려운 날 어떻게 도움을 받을지 이야기를 나눴다.'; }
-    if (type === 'weekendSpace') { s.routine = clamp(s.routine + 1, 0, 6); s.needs.comfort = true; s.flags.cozyBox = true; messages.weekendSpace = '고양이 자리와 내 물건의 자리를 함께 정리했다.'; }
-    if (type === 'phonePlan') {
-      var plannedDay = Math.floor(number(opts.day, s.phase === 'morning' ? s.day : s.day + 1));
-      while (plannedDay === 6 || plannedDay === 7) plannedDay += 1;
-      plannedDay = clamp(plannedDay, 1, 12);
-      if (s.planDays.indexOf(plannedDay) === -1) s.planDays.push(plannedDay);
-      s.flags.workPlanAsked = true; s.flags.planForDay = plannedDay;
-      s.dailyDone.phonePlan = true;
-      messages.phonePlan = '업무의 마감과 필요한 준비를 확인하고, 일정 조정을 부탁했다.';
-    }
-    return result(true, messages[type], 0, times[type], { overtime: s.phase === 'evening' && s.eveningMin > EVENING_LIMIT });
+    if(type==='buyFood')return purchase(s,type,12000,4,false);if(type==='buyFavorite')return purchase(s,type,15000,3,true);if(type==='smallFood')return purchase(s,type,5000,1,true);
+    if(type==='buyRoller'){if(s.roller.owned)return result(false,'돌돌이는 이미 있다.',0,0,{reason:'alreadyOwned'});if(s.cash<4000)return result(false,'돌돌이를 살 돈이 모자란다. 털이 남은 채 출근할 수 있다.',0,0,{reason:'notEnoughCash'});time=spend(s,type,0,4000);s.roller.owned=true;return result(true,'돌돌이를 샀다. 당분간 새로 살 필요는 없다.',4000,0,{clock:time});}
+    if(type==='startRoller'){if(!s.roller.owned)return result(false,'돌돌이가 없다.',0,0,{reason:'noRoller'});if(s.fur<=0)return result(false,'정장에 털이 없다.',0,0,{reason:'noFur'});s.roller.active=true;s.roller.usedToday=true;return result(true,'돌돌이를 정장에 댔다.',0,0);}
+    if(type==='roll'||type==='rollerStroke'){if(!s.roller.active)return result(false,'돌돌이를 정장에 대자.',0,0,{reason:'rollerNotActive'});var removed=Math.min(s.fur,Math.max(0,Math.floor(num(opts.amount,1))));s.fur-=removed;s.roller.dirty+=removed;return result(true,s.fur?'털이 돌돌이에 붙었다.':'정장에 붙은 털을 뗐다.',0,0,{removed:removed,left:s.fur,sheetFull:false});}
+    if(type==='stopRoller'){s.roller.active=false;return result(true,'돌돌이를 내려놓았다.',0,0);}
+    if(type==='secureWindow'){if(s.flags.windowSecured)return result(false,'창문과 커튼은 닫혀 있다.',0,0,{reason:'alreadyDone'});s.flags.windowSecured=true;return result(true,'창문을 잠그고 커튼을 닫았다.',0,0);}
+    if(type==='acknowledgeFood'){s.flags.foodLowAcknowledged=true;return result(true,'남은 사료를 확인했다.',0,0,{food:s.food});}
+    if(type==='leaveHome'){if(s.phase!=='morning'||weekend(s.day))return result(false,'오늘은 출근할 때가 아니다.',0,0,{reason:'wrongPhase'});if(!s.dressed)return result(false,'출근할 옷부터 입자.',0,0,{reason:'notDressed',alternatives:['dress']});if(!s.hasBag&&!opts.borrowLaptop)return result(false,'가방을 두고 왔다. 돌아가거나 회사 노트북을 빌릴 수 있다.',0,0,{reason:'noBag',alternatives:['pickBag','borrowLaptop'],borrowedDelay:45});s.flags.borrowedLaptop=!s.hasBag&&!!opts.borrowLaptop;s.flags.missingFiles=s.flags.borrowedLaptop&&(s.day===9||s.day===12);s.flags.missingPhotos=s.flags.missingFiles;s.flags.departureRecorded=true;s.flags.lateMinutes=Math.max(0,s.morningMin-50);return result(true,s.flags.borrowedLaptop?'회사에서 노트북을 빌리기로 했다. 설정에 45분이 필요하다.':s.flags.lateMinutes?'출발 시간을 넘겼다. 도착하면 밀린 일부터 확인하자.':'가방을 들고 나왔다.',0,0,{lateMinutes:s.flags.lateMinutes,borrowLaptop:s.flags.borrowedLaptop,workTask:workTask(s)});}
+    if(type==='feed'){again=repeated(s,type,'밥은 이미 주었다.');if(again)return again;if(s.food<=0){s.flags.emptyBowl=true;s.flags.foodWarningSeen=true;return result(false,'사료가 없다. 휴대폰이나 가방에서 가게를 확인하자.',0,0,{reason:'noFood',alternatives:['buyFood','buyFavorite'],mandatoryShop:true});}var favorite=opts.kind==='favorite'||opts.favorite===true,dry=s.food-s.favoriteFood;if(favorite&&s.favoriteFood<=0)return result(false,'좋아하는 습식 사료가 없다.',0,0,{reason:'noFavoriteFood',alternatives:['feed','buyFavorite']});if(!favorite&&dry<=0)favorite=true;time=spend(s,type,DURATIONS.feed,0);s.food-=1;if(favorite)s.favoriteFood-=1;s.needs.fed=true;s.flags.emptyBowl=false;s.flags.catEager=favorite;if(s.food<=1){s.flags.foodWarningSeen=true;s.flags.foodLowAcknowledged=false;}return result(true,favorite?'봉지를 열자 고양이가 다가왔다. 그릇을 놓기도 전에 코를 내민다.':'그릇을 놓자 고양이가 먹기 시작했다.',0,DURATIONS.feed,{clock:time,reaction:favorite?'eager':'eat',favorite:favorite,foodLow:s.food<=1});}
+    if(type==='water'){again=repeated(s,type,'물은 이미 갈았다.');if(again)return again;time=spend(s,type,DURATIONS.water,0);s.water=true;return result(true,'그릇에 깨끗한 물을 담았다.',0,DURATIONS.water,{clock:time});}
+    if(type==='dress'||type==='makeBed'||type==='pickBag'){if(s.phase!=='morning')return result(false,'아침에 할 일이다.',0,0,{reason:'wrongPhase'});if(type==='dress'&&s.dressed||type==='makeBed'&&s.bedMade||type==='pickBag'&&s.hasBag)return result(false,'이미 준비했다.',0,0,{reason:'alreadyDone'});if(type==='pickBag'&&!s.bagPacked)return result(false,'가방에 필요한 물건부터 넣자.',0,0,{reason:'bagNotPacked',alternatives:['packBag']});}
+    else if(type==='packBag'){targetDay=s.phase==='morning'?s.day:nextWorkDay(s.day);if(s.bagPacked&&s.packedForDay===targetDay)return result(false,'가방은 챙겼다.',0,0,{reason:'alreadyDone'});}
+    else{if(type==='hoodie'&&s.hoodie||type==='storeSuit'&&s.suitStored||type==='deskSpace'&&s.flags.deskSeat)return result(false,'자리는 이미 마련했다.',0,0,{reason:'alreadyDone'});if(type==='prepare'){targetDay=num(opts.day,s.phase==='morning'?s.day:nextWorkDay(s.day));if(preparedFor(s,targetDay))return result(false,'그날 쓸 자료는 정리했다.',0,0,{reason:'alreadyPrepared'});}if(type==='phonePlan'){if(s.dailyDone.phonePlan)return result(false,'오늘 일정은 확인했다.',0,0,{reason:'alreadyDone'});}else{again=repeated(s,type);if(again)return again;}}
+    if(!Object.prototype.hasOwnProperty.call(DURATIONS,type))return result(false,'지금은 할 수 없는 일이다.',0,0,{reason:'unknownAction'});if(type==='weekendSpace'&&!weekend(s.day))return result(false,'주말에 하기로 한 일이다.',0,0,{reason:'notWeekend'});if(type==='requestFiles'&&!s.flags.missingFiles&&!s.flags.missingPhotos)return result(false,'필요한 자료 파일이 있다.',0,0,{reason:'notNeeded'});var minutes=duration(s,type);blocked=canSpend(s,minutes,false);if(blocked)return blocked;time=spend(s,type,minutes,0);var message='';
+    if(type==='dress'){s.dressed=true;message='출근할 옷을 입었다.';}if(type==='makeBed'){s.bedMade=true;message='이불을 펴고 베개를 정리했다.';}if(type==='packBag'){s.bagPacked=true;s.packedForDay=targetDay;s.bagPrepared=preparedFor(s,targetDay);message=s.bagPrepared?'정리한 자료와 노트북을 가방에 넣었다.':'노트북을 가방에 넣었다. 자료는 아직 정리하지 않았다.';}if(type==='pickBag'){s.hasBag=true;message=s.bagPrepared?'자료가 든 가방을 집었다.':'가방을 집었다. 회사에서 원본 자료부터 찾아야 한다.';}
+    if(type==='play'){s.needs.played=true;message=s.flags.catEager?'장난감을 꺼내자 금세 다가와 놀았다.':'고양이가 장난감을 잡고 한동안 놓지 않는다.';}if(type==='prepare'){targetDay=num(opts.day,s.phase==='morning'?s.day:nextWorkDay(s.day));if(s.preparedDays.indexOf(targetDay)===-1)s.preparedDays.push(targetDay);s.prep=clamp(s.prep+1,0,3);if(s.bagPacked&&s.packedForDay===targetDay)s.bagPrepared=true;message='내일 쓸 원본과 확인할 항목을 정리했다.';}if(type==='rest'){s.energy=clamp(s.energy+1,0,3);s.strain=clamp(s.strain-2,0,10);message='눈을 감고 몸을 쉬었다.';}if(type==='hoodie'){s.hoodie=true;s.needs.comfort=true;s.flags.hoodiePlaced=true;message='입던 후드티를 접어 고양이가 누울 곳에 뒀다.';}if(type==='storeSuit'){s.suitStored=true;s.flags.suitProtected=true;message='정장을 옷장에 걸었다.';}if(type==='deskSpace'){s.flags.deskSeat=true;message='상자를 옆 의자에 뒀다. 보리가 서류 대신 그쪽에 앉았다.';}if(type==='calmRain'){s.needs.comfort=true;s.flags.rainComforted=true;message='몸의 떨림이 멎을 때까지 곁에 앉았다.';}if(type==='weekendSpace'){s.routine=clamp(s.routine+1,0,6);s.needs.comfort=true;s.flags.cozyBox=true;message='상자에 담요를 깔고 주변 물건을 정리했다.';}if(type==='phonePlan'){targetDay=num(opts.day,s.phase==='morning'?s.day:nextWorkDay(s.day));if(s.planDays.indexOf(targetDay)===-1)s.planDays.push(targetDay);s.dailyDone.phonePlan=true;s.flags.workPlanAsked=true;message='내일 필요한 자료와 마감 시간을 확인했다.';}if(type==='requestFiles'){s.flags.missingFiles=false;s.flags.missingPhotos=false;s.flags.photosRecovered=true;message='요청한 자료 파일을 받았다.';}if(type==='dishes')message='설거지를 하고 그릇을 말렸다.';if(type==='laundry'){s.flags.petFurToday=false;s.flags.laundryDone=true;message='옷을 세탁하고 널었다.';}if(type==='tidy'){s.flags.tidyDone=true;message='바닥과 책상 위를 정리했다.';}
+    return result(true,message,0,minutes,{clock:time,fatigue:fatigue(s),prepared:s.bagPrepared});
   }
-  function sleep(s, open) {
-    if (!valid(s)) return result(false, '진행 상태를 확인할 수 없다.', 0, 0, { reason: 'invalidState' });
-    if (finished(s)) return result(false, '마지막 밤의 기록은 이미 남았다.', 0, 0, { reason: 'finished' });
-    if (s.phase !== 'evening') return result(false, '집에 돌아와 잠자리를 정할 때가 아니다.', 0, 0, { reason: 'wrongPhase' });
-    open = !!open;
-    var oldDay = s.day, beforeTrust = s.trust, beforeEnergy = s.energy;
-    var storm = oldDay === 3 || oldDay === 11 || !!s.flags.raining;
-    var safePlace = s.hoodie || s.routine > 0 || s.needs.comfort;
-    var contact = s.needs.played || s.needs.comfort || open;
-    var comforted = s.needs.comfort || (open && s.needs.fed) || (safePlace && s.needs.played) || (s.flags.windowSecured && (s.hoodie || s.needs.played));
-    var missedCare = !s.needs.fed;
-    var late = Math.max(0, s.eveningMin - EVENING_LIMIT);
-    var latePenalty = Math.min(2, Math.ceil(late / 45));
-    var recovery = 2 - (missedCare ? 3 : 0) - (!s.water ? 1 : 0) - (storm && !comforted ? 1 : 0) - latePenalty;
-    var restedLimit = latePenalty >= 2 ? 1 : latePenalty === 1 ? 2 : 3;
-    s.energy = clamp(s.energy + recovery, 0, restedLimit);
-    // Basic supplies maintain safety. They do not make a relationship grow by themselves.
-    var trustChange = (s.needs.fed ? 0 : -1.1) + (s.water ? 0 : -.2) + (s.needs.played ? .6 : 0) + (s.needs.comfort ? .4 : 0);
-    if (open) trustChange += .3;
-    else if (!safePlace && !s.needs.played) trustChange -= .6;
-    else if (!contact) trustChange -= .1;
-    if (storm && !comforted) trustChange -= .6;
-    s.trust = Math.round(clamp(s.trust + trustChange, 0, 10) * 10) / 10;
-    if (late > 0 || s.energy <= 1) s.strain = clamp(s.strain + 1, 0, 10);
-    else if (s.done.rest && s.energy >= 2) s.strain = clamp(s.strain - 1, 0, 10);
-    if (s.needs.fed && s.water && (contact || safePlace)) s.routine = clamp(s.routine + 1, 0, 6);
-    var note = {
-      day: oldDay, open: open, fed: s.needs.fed, played: s.needs.played, comfort: s.needs.comfort,
-      water: s.water, hoodie: s.hoodie, minutes: s.eveningMin, lateMinutes: late,
-      energyBefore: beforeEnergy, energyAfter: s.energy, trustBefore: beforeTrust, trustAfter: s.trust,
-      storm: storm, comforted: comforted, windowSecured: !!s.flags.windowSecured, cash: s.cash, food: s.food, missedCare: missedCare
-    };
-    s.log.push(note); s.lastNight = note;
-    s.roller.active = false; s.roller.usedToday = false;
-    s.flags.emptyBowl = missedCare; s.flags.rainComforted = false; s.flags.raining = false; s.flags.windowSecured = false;
-    s.fur = s.suitStored ? (open ? 1 : 0) : open ? 10 + Math.min(6, s.log.filter(function (r) { return r.open; }).length) : s.flags.catInCloset ? 6 : 0;
-    s.flags.catInCloset = false;
-    if (oldDay >= 12) {
-      s.phase = 'ending';
-      return result(true, '마지막 밤의 문을 정했다.', 0, 0, { ending: ending(s), night: note });
+  function sleep(s,open){if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});if(s.phase!=='evening')return result(false,'집에서 잠자리를 정하자.',0,0,{reason:s.phase==='ending'?'finished':'wrongPhase'});open=!!open;var oldDay=s.day,c=clock(s),beforeEnergy=s.energy,beforeTrust=s.trust,storm=oldDay===3||!!s.flags.raining,safePlace=s.hoodie||s.flags.cozyBox||s.needs.comfort,comforted=s.needs.comfort||(open&&s.needs.fed)||(s.flags.windowSecured&&(safePlace||s.needs.played)),hunger=!s.needs.fed,thirst=!s.water,calling=!open&&!safePlace&&!s.needs.played,playing=open&&!s.needs.played&&!safePlace,late=Math.max(0,c.minutes-BEDTIME),latePenalty=Math.min(2,Math.ceil(late/45)),recovery=2-(hunger?2:0)-(thirst?1:0)-(calling?1:0)-(playing?1:0)-(storm&&!comforted?1:0)-latePenalty,maximum=latePenalty>=2?1:latePenalty===1?2:3;
+    if(hunger)maximum=Math.min(maximum,1);else if(thirst||calling||playing||storm&&!comforted)maximum=Math.min(maximum,2);
+    s.energy=clamp(s.energy+recovery,0,maximum);var change=(hunger?-1.2:0)+(thirst?-.4:0)+(calling?-.5:0)+(s.needs.played?.5:0)+(s.needs.comfort?.3:0)+(open?.15:0)-(storm&&!comforted?.4:0);s.trust=Math.round(clamp(s.trust+change,0,10)*100)/100;if(late||s.energy<=1)s.strain=clamp(s.strain+1,0,10);if(!hunger&&!thirst&&(safePlace||open||s.needs.played))s.routine=clamp(s.routine+1,0,6);var wakeReasons=[];if(hunger)wakeReasons.push('hunger');if(thirst)wakeReasons.push('thirst');if(calling)wakeReasons.push('calling');if(playing)wakeReasons.push('play');if(storm&&!comforted)wakeReasons.push('rain');
+    var note={day:oldDay,open:open,fed:s.needs.fed,played:s.needs.played,comfort:s.needs.comfort,water:s.water,hoodie:s.hoodie,minutes:s.eveningMin,bedtime:c.text,lateMinutes:late,earlySleep:c.daytime,energyBefore:beforeEnergy,energyAfter:s.energy,trustBefore:beforeTrust,trustAfter:s.trust,storm:storm,comforted:!!comforted,windowSecured:!!s.flags.windowSecured,cash:s.cash,food:s.food,missedCare:hunger,wakeReasons:wakeReasons};s.log.push(note);s.lastNight=note;s.nightIssue={day:oldDay,reasons:wakeReasons.slice(),hunger:hunger,thirst:thirst,calling:calling,playing:playing,rain:storm&&!comforted};s.flags.nightHunger=hunger;s.flags.nightThirst=thirst;s.flags.nightCalling=calling;s.flags.nightPlay=playing;s.flags.emptyBowl=hunger;s.flags.catEager=false;s.flags.windowSecured=false;s.flags.rainComforted=false;s.flags.raining=false;s.roller.active=false;s.roller.usedToday=false;s.fur=s.suitStored?(open?1:0):open?10+Math.min(6,s.log.filter(function(night){return night.open;}).length):s.flags.catInCloset?6:0;s.flags.catInCloset=false;
+    if(oldDay>=12){s.phase='ending';return result(true,'마지막 밤이 지났다.',0,0,{ending:ending(s),night:note});}s.day+=1;s.phase='morning';s.morningMin=0;s.dayMinutes=0;s.commuteMin=0;s.workMin=0;s.workActionsUsed=0;s.dailyDone={};s.flags.referenceOpened=false;s.dressed=false;s.bedMade=false;s.hasBag=false;s.bagPacked=s.packedForDay===s.day;s.bagPrepared=s.bagPacked&&preparedFor(s,s.day);s.flags.workDelayMinutes=0;s.flags.borrowedLaptop=false;s.flags.missingFiles=false;s.flags.missingPhotos=false;s.flags.photosRecovered=false;s.flags.departureRecorded=false;s.flags.lateMinutes=0;
+    return result(true,hunger?'밤중에 빈 밥그릇을 긁는 소리가 났다.':thirst?'물을 찾는 소리에 잠에서 깼다.':calling?'닫힌 문 앞에서 울음이 이어졌다.':storm&&!comforted?'천둥에 몇 번이나 잠이 깼다.':'알람이 울렸다.',0,0,{night:note,weekend:weekend(s.day),earlySleep:c.daytime,fatigue:fatigue(s)});
+  }
+  function addIssue(s,day,key,label,reason,deadline){var id=day+':'+key,existing=s.issueQueue.find(function(issue){return issue.id===id;});if(!existing)s.issueQueue.push({id:id,key:key,fromDay:day,label:label||key,reason:reason,deadline:!!deadline,resolved:false});}
+  function actAtNight(s,type,opts){
+    if(!valid(s)||s.phase!=='morning'||!s.lastNight||!s.nightIssue||s.nightIssue.day!==s.day-1)return result(false,'밤중에 할 일이 아니다.',0,0,{reason:'wrongPhase'});
+    if(type!=='feed'&&type!=='water')return result(false,'밥이나 물을 챙긴 뒤 다시 눕자.',0,0,{reason:'wrongAction'});
+    var morning=s.morningMin,dayMinutes=s.dayMinutes,nightBefore=s.lastNight.nightCareMinutes||0,r=act(s,type,opts);
+    if(r.ok){
+      s.morningMin=morning;s.dayMinutes=dayMinutes;
+      s.lastNight.nightCareMinutes=(s.lastNight.nightCareMinutes||0)+r.minutes;
+      if(!s.lastNight.nightCare)s.lastNight.nightCare=[];
+      s.lastNight.nightCare.push({type:type,minutes:r.minutes});
+      function nightTime(minutes){return String(Math.floor((160+minutes)/60)).padStart(2,'0')+':'+String((160+minutes)%60).padStart(2,'0');}
+      r.clock={before:nightTime(nightBefore),after:nightTime(nightBefore+r.minutes)};r.atNight=true;
     }
-    s.day += 1; s.phase = 'morning'; s.dailyDone = {}; s.dayMinutes = 0; s.commuteMin = 0; s.morningMin = 0; s.flags.workDelayMinutes = 0;
-    return result(true, missedCare ? '빈 그릇을 찾는 소리에 밤중에 깼다.' : storm && !comforted ? '비바람 속에 몇 번이나 잠이 끊겼다.' : latePenalty ? '늦게 누웠다. 알람이 유난히 빨리 울렸다.' : '밤이 지나고 알람이 울린다.', 0, 0, { night: note, weekend: s.day === 6 || s.day === 7 });
+    return r;
   }
-  function finishWork(s, opts) {
-    opts = opts || {};
-    if (!valid(s)) return result(false, '진행 상태를 확인할 수 없다.', 0, 0, { reason: 'invalidState' });
-    var previous = s.work.find(function (item) { return item.day === s.day; });
-    if (previous) return result(true, previous.reason, 0, 0, { alreadyDone: true, work: previous });
-    if (s.day < 1 || s.day > 12 || finished(s)) return result(false, '오늘의 출근 기록을 만들 수 없다.', 0, 0, { reason: 'wrongDay' });
-    if (s.day === 6 || s.day === 7) return result(false, '주말에는 출근하지 않는다.', 0, 0, { reason: 'weekend', weekend: true });
-    if (s.phase !== 'morning' && s.phase !== 'work') return result(false, '출근한 뒤에 오늘의 업무를 마칠 수 있다.', 0, 0, { reason: 'wrongPhase' });
-    var item = schedule[s.day], planned = s.planDays.indexOf(s.day) !== -1, prepared = s.prep >= 1;
-    var energy = s.energy, status = 'steady', reason, completed = opts.completed !== false, extraMinutes = 0;
-    if (!completed) {
-      status = 'missed';
-      reason = '끝낸 부분과 아직 남은 부분을 동료에게 알리고 퇴근했다. 이어서 마칠 일을 메모해 두었다.';
-    } else {
-      if (item.deadline && !prepared) extraMinutes += planned ? 15 : 30;
-      if (energy <= 1) extraMinutes += prepared ? 10 : 20;
-      if (energy <= 1) {
-        status = 'strained';
-        reason = '자료를 정리해 공유했다. 같은 부분을 다시 확인하느라 예정보다 오래 걸렸다.';
-      } else if (item.deadline && prepared) {
-        status = 'good';
-        reason = '준비한 자료로 질문에 답했다. 정리한 내용을 동료에게 건넸다.';
-      } else if (item.deadline) {
-        reason = planned ? '이야기해 둔 순서대로 필요한 자료를 찾아 일을 마쳤다. 정리한 내용을 공유했다.' : '필요한 자료를 찾아 일을 마치고 공유했다. 준비해 뒀다면 조금 일찍 끝낼 수 있었겠다.';
-      } else { reason = '오늘 맡은 일을 마치고 내일 이어 할 부분을 남겼다.'; }
+  function finishWork(s,opts){
+    opts=opts||{};
+    if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});
+    var previous=s.work.find(function(work){return work.day===s.day;});
+    if(previous)return result(true,previous.reason,0,0,{alreadyDone:true,work:previous});
+    if(s.day<1||s.day>12||s.phase==='ending')return result(false,'오늘의 업무를 기록할 수 없다.',0,0,{reason:'wrongDay'});
+    if(weekend(s.day))return result(false,'오늘은 출근하지 않는다.',0,0,{reason:'weekend',weekend:true});
+    if(s.phase!=='morning'&&s.phase!=='work')return result(false,'출근한 뒤 업무를 마치자.',0,0,{reason:'wrongPhase'});
+    var task=workTask(s),item=schedule[s.day],condition=fatigue(s),completed=opts.completed!==false;
+    var missing=Array.isArray(opts.missing)?opts.missing.slice():completed?[]:item.required.slice();
+    var fileKey=s.day===9?'rowsFile':s.day===12?'reportCopy':null;
+    if(task.missingFiles&&fileKey&&missing.indexOf(fileKey)===-1)missing.push(fileKey);
+    missing=missing.filter(function(key,index){return typeof key==='string'&&missing.indexOf(key)===index;});
+    var resolved=Array.isArray(opts.resolved)?opts.resolved:[];
+    s.issueQueue.forEach(function(issue){if(!issue.resolved&&resolved.indexOf(issue.id)!==-1){issue.resolved=true;issue.resolvedDay=s.day;}});
+    missing.forEach(function(key){addIssue(s,s.day,key,opts.labels&&opts.labels[key],!completed?'unfinished':'missingData',item.deadline);});
+    var planned=s.planDays.indexOf(s.day)!==-1;
+    var referenceTime=!task.prepared&&!s.flags.referenceOpened?(planned?5:15):0;
+    var delay=(s.workMin||0)+task.lateMinutes+(task.borrowedLaptop?45:0)+referenceTime;
+    var onTime=s.day!==12||delay<=20;
+    var status=!completed?'missed':missing.length?'partial':!onTime?'late':condition!=='normal'?'strained':task.prepared?'good':'steady';
+    var reason=status==='missed'?'남은 항목을 적고 퇴근했다. 내일 먼저 확인해야 한다.':status==='partial'?'자료를 공유했지만 빠진 항목이 있다. 다음에 고칠 일을 적었다.':status==='late'?'자료는 완성했지만 09:20을 넘겼다. 회의에서 준비가 늦어진 것을 알렸다.':status==='strained'?'자료를 공유했다. 집중하기 어려워 다시 확인할 힘이 적었다.':task.prepared?'챙겨 온 원본을 확인하며 자료를 공유했다.':'공유 폴더에서 원본을 찾아 자료를 공유했다.';
+    var report={day:s.day,task:item.task,deadline:!!item.deadline,status:status,prepared:task.prepared,energy:s.energy,fatigue:condition,reason:reason,planned:planned,completed:completed,onTime:onTime,missing:missing,resolved:resolved.slice(),carryover:unresolved(s).map(function(issue){return issue.id;}),lateMinutes:task.lateMinutes,borrowedLaptop:task.borrowedLaptop,extraMinutes:delay,reviewsUsed:s.workActionsUsed||0};
+    s.work.push(report);s.workMin=delay;
+    if(preparedFor(s,s.day)){s.preparedDays=s.preparedDays.filter(function(day){return day!==s.day;});s.prep=Math.max(0,s.prep-1);}
+    s.energy=Math.max(0,s.energy-1);
+    s.strain=clamp(s.strain+1+(!task.prepared||missing.length||!completed||condition!=='normal'?1:0),0,10);
+    s.flags.workDelayMinutes=delay;
+    if(s.day===12){s.project.presented=completed&&onTime&&missing.length===0&&unresolved(s).length===0;s.project.finished=s.project.presented;s.project.launched=s.project.presented;}
+    s.phase='afterWork';
+    return result(true,reason,0,0,{work:report,issues:unresolved(s),project:s.project});
+  }
+  function arriveHome(s){if(!valid(s)||s.phase==='ending'||s.phase==='evening'&&s.lastArrivedDay===s.day)return;s.phase='evening';s.eveningMin=weekend(s.day)?0:60+(s.flags.workDelayMinutes||0);s.eveningStartMin=weekend(s.day)?600:1200;s.needs=needs();s.water=false;s.done={};s.lastArrivedDay=s.day;s.hasBag=false;s.bagPacked=false;s.bagPrepared=false;s.packedForDay=null;s.roller.active=false;}
+  function objective(s){if(!s.flags.initialShopDone)return{key:'firstFood',text:'휴대폰에서 사료를 산다.',actions:['buyFood','buyFavorite'],mandatory:true};if(s.phase==='morning'){if(!s.dressed)return{key:'dress',text:'출근할 옷을 입는다. 08:10까지 집을 나선다.',actions:['dress']};if(!s.hasBag)return{key:'bag',text:s.bagPacked?'챙긴 가방을 집는다.':'노트북과 자료를 가방에 넣는다.',actions:s.bagPacked?['pickBag']:['packBag']};return{key:'commute',text:'08:10까지 집을 나선다.',actions:['leaveHome']};}if(s.phase==='work')return{key:'work',text:schedule[s.day].task,actions:['work'],task:workTask(s)};if(s.phase==='afterWork')return{key:'home',text:'집으로 돌아간다.',actions:['commuteHome']};if(s.food<=1&&!s.flags.foodLowAcknowledged)return{key:'foodLow',text:'남은 사료를 확인하고 다음 밥을 준비한다.',actions:['acknowledgeFood','buyFood','buyFavorite'],mandatory:true};if(!s.needs.fed)return{key:'feed',text:'고양이 밥을 준비한다.',actions:['feed']};if(!s.water)return{key:'water',text:'물을 갈아 준다.',actions:['water']};return{key:'evening',text:weekend(s.day)?'집안일, 고양이와 놀기, 내일 준비 중 할 일을 고른다.':'남은 시간에 할 일을 고르고 23:00 전에 눕는다.',actions:['play','prepare','rest','sleep']};}
+  function ending(s){
+    if(!valid(s))return{key:'finding',title:'첫 두 주가 끝났다',lines:['내일 할 일을 적었다.']};
+    var pending=unresolved(s),presented=s.project.presented;
+    var projectLine=presented?'금요일 아침, 준비한 자료로 첫 팀 회의를 마쳤다.':'첫 팀 회의에서 준비가 부족한 부분을 알렸다. 남은 자료는 월요일에 보완하기로 했다.';
+    if(s.strain>=8||s.energy<=0)return{key:'worn',title:'첫 두 주가 끝났다',presented:presented,lines:[projectLine,s.cat+' 곁에 앉아 알람을 다시 맞췄다. 주말 일정은 비워 뒀다.']};
+    if(s.trust<=3)return{key:'distance',title:'첫 두 주가 끝났다',presented:presented,lines:[projectLine,s.cat+'는 소파 끝에서 나를 봤다. 이번에는 내가 가까이 앉아 기다렸다.']};
+    if(presented&&s.routine>=3&&s.trust>=5&&s.strain<=5){
+      var resting=s.lastNight&&!s.lastNight.open?'문을 닫았다. '+s.cat+(s.hoodie?'는 후드티 위에서':s.flags.cozyBox?'는 담요를 깐 상자에서':'는 소파에서')+' 잠들었다.':s.cat+'가 베개 옆에 누웠다. 나는 휴대폰을 내려놓았다.';
+      return{key:'settled',title:'첫 두 주가 끝났다',presented:true,lines:[projectLine,resting]};
     }
-    var report = { day: s.day, task: item.task, deadline: item.deadline, status: status, prepared: prepared, energy: energy, reason: reason, planned: planned, completed: completed, extraMinutes: extraMinutes };
-    s.work.push(report);
-    if (item.deadline && prepared) s.prep -= 1;
-    s.energy = Math.max(0, s.energy - 1);
-    if (status === 'missed') s.strain = clamp(s.strain + (planned || s.support ? 1 : 2), 0, 10);
-    else if (status === 'strained') s.strain = clamp(s.strain + 1, 0, 10);
-    else if (status === 'good' && energy === 3) s.strain = clamp(s.strain - 1, 0, 10);
-    s.flags.workDelayMinutes = extraMinutes;
-    if (s.day === 12 && !s.flags.paydayPaid) {
-      s.cash += s.firstPay; s.flags.paydayPaid = true;
-      s.transactions.push({ day: 12, type: 'firstPay', cash: s.firstPay });
-      s.payday = { monthlySalary: s.monthlySalary, firstPay: s.firstPay, supplySpending: s.transactions.filter(function (t) { return t.cash < 0; }).reduce(function (sum, t) { return sum - t.cash; }, 0), balance: s.cash };
-    }
-    s.phase = 'afterWork';
-    return result(true, reason, 0, 0, { work: report, payday: s.day === 12 ? s.payday : null });
+    return{key:'finding',title:'첫 두 주가 끝났다',presented:presented,pending:pending.length,lines:[projectLine,s.lastNight&&!s.lastNight.open?s.cat+'는 거실에서, 나는 방에서 잤다. 내일은 출근하지 않는다.':s.cat+'가 베개 옆에 누웠다. 내일은 출근하지 않는다.']};
   }
-  function arriveHome(s) {
-    if (!valid(s) || finished(s) || (s.phase === 'evening' && s.lastArrivedDay === s.day)) return;
-    s.phase = 'evening'; s.eveningMin = 0; s.needs = needs(); s.water = false; s.done = {}; s.lastArrivedDay = s.day;
-    s.roller.active = false;
-  }
-  function ending(s) {
-    if (!valid(s)) return { key: 'finding', title: '아직 배우는 중', lines: ['조금 더 시간을 두고 돌아보기로 했다.'] };
-    var missed = s.work.filter(function (r) { return r.status === 'missed'; }).length;
-    var neglected = s.log.filter(function (r) { return !r.fed || (!r.played && !r.comfort && !r.open && !r.hoodie); }).length;
-    var last = s.lastNight || { open: true };
-    if (s.strain >= 8 && (missed >= 2 || s.energy <= 1)) return { key: 'worn', title: '잠깐 멈추는 밤', lines: [s.trust >= 4 ? s.cat + '가 무릎에 몸을 말았다. 나는 알람을 다시 맞췄다.' : '열린 문 너머를 바라보다가, 회사에서 가져온 메모를 접었다.', '다음 주 일정에 비워 둘 시간을 적었다. 오늘은 나도 쉬어야 했다.'] };
-    if (s.trust <= 3 && neglected >= 3) return { key: 'distance', title: '기다리는 쪽', lines: ['밥그릇과 나 사이에서 ' + s.cat + '가 소파 끝에 앉아 고개만 들었다.', '이번에는 내가 가까이 앉아 기다렸다. 먼저 손을 뻗지는 않았다.'] };
-    if (s.support && s.routine >= 2 && s.trust >= 4) return { key: 'shared', title: '함께 버티는 법', lines: ['힘든 날 부탁할 사람의 번호가 휴대폰에 남았다.', s.cat + '가 늘 눕던 자리에 몸을 말았다. 내일 가져갈 가방도 현관에 놓여 있다.'] };
-    if (s.routine >= 3 && s.trust >= 5 && s.strain <= 5) return { key: 'settled', title: '우리의 자리', lines: [last.open ? s.cat + '가 들어와 베개 옆에 누웠다. ' + (s.suitStored ? '정장은 옷걸이에 걸려 있다.' : '내일 입을 옷은 아침에 정리하기로 했다.') : '닫힌 문 앞의 ' + (s.hoodie ? '후드티 위에서 ' : s.flags.cozyBox ? '상자 안에서 ' : '매트 위에서 ') + s.cat + '가 조용히 잠들었다.', '알람을 맞춘 손을 내려놓았다. 내일도 돌아올 집이었다.'] };
-    return { key: 'finding', title: '아직 배우는 중', lines: [last.open ? s.cat + '가 문턱에 앉았다. 나는 이불을 조금 옆으로 밀었다.' : s.cat + '가 문턱에 앉았다. 나는 내일 챙길 것들을 메모했다.', '다 잘한 날은 아니었다. 내일 바꿔 볼 것은 조금 알 것 같았다.'] };
-  }
-  return { create: create, act: act, sleep: sleep, finishWork: finishWork, arriveHome: arriveHome, ending: ending, schedule: schedule, EVENING_LIMIT: EVENING_LIMIT, SHEET_CAPACITY: SHEET_CAPACITY };
+  return{create:create,act:act,actAtNight:actAtNight,sleep:sleep,finishWork:finishWork,arriveHome:arriveHome,ending:ending,ready:ready,clock:clock,fatigue:fatigue,duration:duration,objective:objective,workTask:workTask,workBudget:workBudget,schedule:schedule,DURATIONS:DURATIONS,EVENING_LIMIT:180,SHEET_CAPACITY:Number.MAX_SAFE_INTEGER};
 }());
-if (typeof module !== 'undefined' && module.exports) module.exports = Life;
+if(typeof module!=='undefined'&&module.exports)module.exports=Life;
