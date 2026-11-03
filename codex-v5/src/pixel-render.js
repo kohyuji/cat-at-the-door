@@ -1,5 +1,5 @@
-/* Crisp, original pixel sprites. All anchors are feet/bottom-centre except train (top-left).
-   Coordinates are native 640x360 pixels. t / walk are seconds; no DOM or external assets. */
+/* 인물·고양이·소품의 픽셀 그림. 기차 외에는 발/바닥 중앙을 기준으로 그린다.
+   좌표는 640×360 기준이고 t와 walk는 초 단위다. */
 var PixelArt = (function () {
   'use strict';
   var C = {
@@ -25,6 +25,7 @@ var PixelArt = (function () {
     }
   }
   function shadow(c,x,y,w) { oval(c,x,y,w,2,'#263a4933'); }
+  function line(c,x1,y1,x2,y2,col,width) {var steps=Math.max(Math.abs(x2-x1),Math.abs(y2-y1));for(var i=0;i<=steps;i++)r(c,x1+(x2-x1)*i/(steps||1),y1+(y2-y1)*i/(steps||1),width||1,width||1,col);}
   function head(c,x,y,kind,dir,closed) {
     var hair=kind==='boss'?'#8b999d':kind==='peer'?'#61524b':kind==='commuterA'?'#434b48':kind==='commuterB'?'#8a8071':kind==='commuterC'?'#59626a':C.hair;
     var side=dir!==0;
@@ -47,8 +48,16 @@ var PixelArt = (function () {
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir<0?-1:1,1);
     var suit=variant==='suit'||variant==='lead'||variant==='boss'||variant==='commuterA';
     var commuter=variant.indexOf('commuter')===0;
-    var body=variant==='commuterA'?'#81959f':variant==='commuterB'?'#aaa995':variant==='commuterC'?'#688797':suit?C.navy:variant==='peer'?'#c8d8c0':C.grey;
-    var shade=variant==='commuterA'?'#607884':variant==='commuterB'?'#8b927f':variant==='commuterC'?'#496b80':suit?'#273f52':variant==='peer'?'#87a38c':C.greyDark;
+    var body=variant==='commuterA'?'#81959f':variant==='commuterB'?'#aaa995':variant==='commuterC'?'#688797':suit?C.navy:variant==='peer'?'#dfd8c7':C.grey;
+    var shade=variant==='commuterA'?'#607884':variant==='commuterB'?'#8b927f':variant==='commuterC'?'#496b80':suit?'#273f52':variant==='peer'?'#a99f8b':C.greyDark;
+    if(pose==='bedSleep') {
+      // 침대에 놓인 베개를 기준으로 머리와 어깨만 그린다. 이불·침대는 장면에 하나다.
+      var breath=Math.round((Math.sin(walk*1.7)+1)*.3);
+      r(c,-12,-23+breath,24,14,C.ink);r(c,-10,-22+breath,20,12,body);
+      r(c,-3,-29,6,9,C.skin);r(c,-2,-28,4,7,C.skinLight);
+      r(c,-11,-13,9,4,shade);r(c,5,-14,7,5,C.skinLight);head(c,0,-35,variant,0,true);
+      c.restore();return;
+    }
     if(pose==='sleep') {
       shadow(c,0,0,30);r(c,-15,-21,28,19,C.ink);r(c,-13,-19,24,15,body);
       r(c,-19,-17,8,7,C.skin);r(c,10,-16,18,13,C.ink);r(c,11,-14,15,9,C.navy);
@@ -78,6 +87,7 @@ var PixelArt = (function () {
       r(c,5,-23,3,1,C.grey);r(c,0,-18,1,1,C.grey);
     } else if(variant==='peer') {
       r(c,-4,-33,8,19,C.paper);r(c,-5,-33,2,8,shade);r(c,4,-33,2,8,shade);r(c,-2,-32,4,2,C.white);
+      r(c,-3,-33,3,4,C.white);r(c,1,-33,3,4,C.white);r(c,0,-27,1,1,C.greyDark);
       r(c,2,-23,1,1,C.green);r(c,2,-19,1,1,C.green);
     } else if(commuter){
       r(c,-2,-33,4,19,shade);r(c,0,-28,1,1,C.paper);r(c,0,-22,1,1,C.paper);if(variant==='commuterC')r(c,-7,-35,14,4,C.grey);
@@ -127,7 +137,7 @@ var PixelArt = (function () {
       r(c,13,hy-4,4,5,C.ink);r(c,14,hy-3,2,4,C.gingerDark);
     } else {r(c,1,hy-1,5,2,C.ink);r(c,14,hy-1,5,2,C.ink);}
     r(c,8,hy+1,2,3,C.gingerDark);r(c,12,hy+1,2,2,C.gingerDark);
-    r(c,6,hy+5,2,2,C.ink);r(c,13,hy+5,2,2,C.ink);r(c,10,hy+8,2,1,C.brown);
+    r(c,6,hy+5,2,pose==='purr'?1:2,C.ink);r(c,13,hy+5,2,pose==='purr'?1:2,C.ink);r(c,10,hy+8,2,1,C.brown);
     r(c,0,hy+8,4,1,C.furWhite);r(c,16,hy+8,4,1,C.furWhite);
     c.restore();
   }
@@ -171,6 +181,17 @@ var PixelArt = (function () {
     case 'toy':
       r(c,-9,-6,15,5,C.ink);r(c,-8,-7,12,5,C.green);r(c,3,-8,5,5,C.paper);r(c,6,-6,1,1,C.ink);
       r(c,-15,-3,7,1,C.grey);r(c,-17,-2,3,1,C.grey);r(c,-16,-1,2,1,C.grey);break;
+    case 'laptop':
+      box(c,-24,-33,48,30,C.navy);r(c,-20,-29,40,22,'#a7cbd2');r(c,-15,-25,23,3,C.white);r(c,-15,-19,30,2,'#76a2ae');
+      r(c,-28,-3,56,5,C.ink);r(c,-26,-3,52,3,C.grey);r(c,-7,-3,14,2,C.white);break;
+    case 'charger':
+      line(c,-9,-18,-17,-26,C.ink,2);line(c,-17,-26,-25,-20,C.ink,2);line(c,-25,-20,-18,-7,C.ink,2);line(c,-18,-7,7,-5,C.ink,2);
+      box(c,-5,-23,23,21,C.paper);r(c,-1,-19,15,2,C.grey);r(c,17,-18,7,3,C.ink);r(c,22,-20,2,7,C.greyDark);break;
+    case 'notebook':
+      box(c,-15,-36,31,36,'#95baaa');r(c,-14,-35,5,34,'#497b75');r(c,-5,-28,16,4,C.paper);r(c,-4,-20,14,2,'#cde3d4');r(c,-4,-14,12,2,'#cde3d4');break;
+    case 'shoes':
+      box(c,-16,-8,13,8,C.navy);r(c,-18,-5,16,5,C.ink);r(c,-15,-10,10,4,C.blueDark);r(c,-15,-8,7,1,C.white);
+      box(c,4,-9,13,9,C.navy);r(c,3,-5,17,5,C.ink);r(c,6,-11,9,4,C.blueDark);r(c,7,-9,6,1,C.white);break;
     case 'briefcase':
       box(c,-14,-22,28,20,C.navy);r(c,-7,-27,14,6,C.ink);r(c,-5,-25,10,3,C.floor);
       r(c,-12,-13,24,1,C.blueDark);r(c,-2,-15,4,4,C.grey);break;
