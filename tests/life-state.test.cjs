@@ -4,216 +4,113 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const Life=require('../src/life-state.js');
-function stocked(){const s=Life.create('하늘','보리');assert.equal(Life.act(s,'buyFood').ok,true);return s;}
-function basic(s){if(s.food===0)assert.equal(Life.act(s,'buyFood').ok,true);assert.equal(Life.act(s,'feed').ok,true);assert.equal(Life.act(s,'water').ok,true);}
-function care(s){basic(s);assert.equal(Life.act(s,'play').ok,true);}
-function depart(s){assert.equal(Life.act(s,'dress').ok,true);assert.equal(Life.act(s,'makeBed').ok,true);if(!s.bagPacked)assert.equal(Life.act(s,'packBag').ok,true);assert.equal(Life.act(s,'pickBag').ok,true);assert.equal(Life.act(s,'leaveHome').ok,true);s.phase='work';}
+const Story=require('../src/life-story.js');
+function stock(s=Life.create()){if(s.food<1)assert.equal(Life.act(s,'buyFood').ok,true);return s;}
+function care(s){stock(s);assert.equal(Life.act(s,'feed').ok,true);assert.equal(Life.act(s,'water').ok,true);}
+function morning(s){Life.finishNight(s);care(s);Life.act(s,'dress');Life.act(s,'packBag');Life.act(s,'pickBag');assert.equal(Life.act(s,'leaveHome').ok,true);s.phase='work';}
+function toDay(day){const s=Life.create('하늘','보리');s.day=day;s.phase='work';s.hasBag=true;return s;}
 
-test('browser script exposes the same API without a browser or module',()=>{
-  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/life-state.js'),'utf8'),c);
-  assert.equal(vm.runInContext('typeof Life.create',c),'function');assert.equal(vm.runInContext("Life.create('하늘','보리').cash",c),58000);
-  assert.equal(vm.runInContext('typeof Life.workTask',c),'function');
+test('the browser model has the same API as the Node model',()=>{
+ const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/life-state.js'),'utf8'),context);
+ assert.equal(vm.runInContext('typeof Life.timeBand',context),'function');assert.equal(vm.runInContext('typeof Life.finishNight',context),'function');assert.equal(vm.runInContext('Life.create().cash',context),58000);
 });
-test('ordinary-office task slots and persistent missing-data keys agree on every workday',()=>{
-  const c=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/life-story.js'),'utf8'),c);
-  for(const item of Life.schedule.filter(day=>day.day>0&&!day.weekend)){
-    const s=Life.create();s.day=item.day;s.phase='work';const task=c.LifeStory.task(s,'work');
-    assert.deepEqual(Array.from(task.slots,slot=>slot.id),item.required,`day ${item.day}`);
-  }
+test('only two office days ask for file sorting and every file has one matching date',()=>{
+ for(const day of Life.schedule.filter(d=>d.day>0&&!d.weekend)){
+  const task=Story.task({day:day.day},'work');assert.equal(task.kind,[2,9].includes(day.day)?'sort':'routine');
+  assert.deepEqual(task.slots.map(s=>s.id),day.required);
+  for(const slot of task.slots){const card=task.cards.find(c=>c.id===task.solution[slot.id]);assert.ok(card);assert.match(card.text,new RegExp(slot.id.slice(4)));}
+ }
 });
-test('the story begins with an empty food bag and an explicit first shopping objective',()=>{
-  const s=Life.create();assert.equal(s.food,0);assert.equal(s.cash,58000);assert.equal(Life.objective(s).key,'firstFood');
-  const empty=Life.act(s,'feed');assert.equal(empty.reason,'noFood');assert.equal(empty.mandatoryShop,true);assert.ok(empty.alternatives.includes('buyFood'));
-  assert.equal('monthlySalary' in s,false);assert.equal('firstPay' in s,false);
+test('the first food purchase never claims an already familiar diet',()=>{
+ const s=Life.create();assert.equal(Life.objective(s).key,'firstFood');assert.equal(Life.act(s,'feed').reason,'noFood');
+ const first=Life.act(s,'buyFood');assert.equal(first.firstPurchase,true);assert.doesNotMatch(first.message,/평소|먹이던|좋아하/);assert.equal(s.food,8);assert.equal(s.cash,46000);
+ const next=Life.act(s,'buyFood');assert.equal(next.firstPurchase,false);assert.match(next.message,/먹이던/);
 });
-test('normal and favorite food have a visible price and quantity tradeoff, without buying affection',()=>{
-  const a=Life.create(),b=Life.create();Life.act(a,'buyFood');Life.act(b,'buyFavorite');
-  assert.equal(a.cash,46000);assert.equal(a.food,4);assert.equal(a.favoriteFood,0);
-  assert.equal(b.cash,43000);assert.equal(b.food,3);assert.equal(b.favoriteFood,3);
-  const ordinary=Life.act(a,'feed'),favorite=Life.act(b,'feed',{kind:'favorite'});
-  assert.equal(ordinary.reaction,'eat');assert.equal(favorite.reaction,'eager');assert.equal(b.favoriteFood,2);assert.equal(b.flags.catEager,true);
-  assert.equal(a.trust,b.trust);Life.act(a,'water');Life.act(b,'water');Life.sleep(a,true);Life.sleep(b,true);
-  assert.equal(a.trust,b.trust);assert.equal(b.flags.catEager,false);
+test('the whole morning and evening diet remains affordable with the roller',()=>{
+ const s=Life.create();Life.act(s,'buyFavorite');Life.act(s,'buyFavorite');Life.act(s,'buyFood');Life.act(s,'buyFood');Life.act(s,'buyRoller');
+ assert.equal(s.cash,0);assert.equal(s.food,28);assert.equal(s.favoriteFood,12);assert.equal(s.roller.owned,true);
+ assert.equal(Life.act(s,'buyFood').reason,'notEnoughCash');assert.equal(Life.act(s,'askSupport').reason,'removedAction');
 });
-test('food variants remain separate and an unavailable favorite cannot spend a meal or time',()=>{
-  const s=stocked();const before=JSON.stringify(s);assert.equal(Life.act(s,'feed',{kind:'favorite'}).reason,'noFavoriteFood');assert.equal(JSON.stringify(s),before);
-  Life.act(s,'smallFood');assert.equal(s.food,5);assert.equal(s.favoriteFood,1);assert.equal(s.cash,41000);
-  Life.act(s,'feed');assert.equal(s.food,4);assert.equal(s.favoriteFood,1);
-  const time=s.eveningMin;assert.equal(Life.act(s,'feed').reason,'alreadyDone');assert.equal(s.eveningMin,time);
+test('food varieties stay separate and cannot buy permanent affection',()=>{
+ const s=stock();const trust=s.trust,before=s.food;assert.equal(Life.act(s,'feed',{kind:'favorite'}).reason,'noFavoriteFood');assert.equal(s.food,before);
+ Life.act(s,'smallFood');assert.equal(s.favoriteFood,1);Life.act(s,'feed',{kind:'favorite'});assert.equal(s.favoriteFood,0);assert.equal(s.trust,trust);assert.equal(s.flags.catEager,true);assert.equal(Life.duration(s,'play'),20);
 });
-test('a favorite meal makes play take twenty minutes that day, without an extra trust reward',()=>{
-  const normal=stocked(),favorite=Life.create();Life.act(favorite,'buyFavorite');
-  Life.act(normal,'feed');Life.act(favorite,'feed',{kind:'favorite'});
-  assert.equal(Life.duration(normal,'play'),30);assert.equal(Life.duration(favorite,'play'),20);
-  normal.eveningMin=160;favorite.eveningMin=160;
-  assert.equal(Life.act(normal,'play').reason,'notEnoughTime');assert.equal(Life.act(favorite,'play').minutes,20);
-  assert.equal(favorite.eveningMin,180);assert.equal(favorite.trust,4);
-  Life.act(favorite,'water');Life.sleep(favorite,true);assert.equal(Life.duration(favorite,'play'),30);
+test('two evening choices replace minute arithmetic while basic care remains possible',()=>{
+ const s=stock();assert.deepEqual([Life.timeBand(s).slots,Life.timeBand(s).used],[2,0]);
+ care(s);assert.equal(Life.timeBand(s).used,0);Life.act(s,'play');assert.equal(Life.timeBand(s).label,'늦은 저녁');Life.act(s,'rest');assert.equal(Life.timeBand(s).label,'잘 시간');
+ const before=JSON.stringify(s);assert.equal(Life.act(s,'prepare').reason,'notEnoughTime');assert.equal(JSON.stringify(s),before);
+ assert.equal(Life.act(s,'secureWindow').ok,true);assert.ok(!/분/.test(Life.timeBand(s).label));
 });
-test('zero cash cannot generate free food or an automatic bankruptcy ending',()=>{
-  const s=Life.create();s.cash=0;const before=JSON.stringify(s);
-  assert.equal(Life.act(s,'buyFood').reason,'notEnoughCash');assert.equal(JSON.stringify(s),before);
-  for(const action of ['askFood','askSupport'])assert.equal(Life.act(s,action).reason,'removedAction');
-  assert.equal(s.food,0);assert.equal(s.support,false);assert.notEqual(Life.ending(s).key,'broke');
+test('weekend choices move through morning afternoon evening and night',()=>{
+ const s=stock();s.day=6;s.phase='morning';Life.arriveHome(s);assert.equal(Life.clock(s).text,'10:00');assert.equal(Life.timeBand(s).slots,4);
+ Life.act(s,'laundry');assert.equal(Life.timeBand(s).label,'주말 오후');Life.act(s,'play');assert.equal(Life.timeBand(s).label,'해 질 무렵');Life.act(s,'prepare');assert.equal(Life.timeBand(s).label,'주말 저녁');Life.act(s,'rest');assert.equal(Life.timeBand(s).label,'잘 시간');assert.equal(Life.timeBand(s).remaining,0);
+ assert.equal(Life.finishWork(s).reason,'weekend');
 });
-test('activity durations advance the visible clock exactly once',()=>{
-  const s=stocked();assert.equal(Life.clock(s).text,'21:15');
-  const r=Life.act(s,'prepare');assert.deepEqual(r.clock,{before:'21:15',after:'22:15'});assert.equal(r.minutes,60);
-  assert.equal(Life.act(s,'packBag').minutes,5);basic(s);assert.equal(Life.clock(s).text,'22:35');
-  const time=s.eveningMin;assert.equal(Life.act(s,'rest').reason,'notEnoughTime');assert.equal(Life.act(s,'play').reason,'notEnoughTime');assert.equal(s.eveningMin,time);
+test('the prepared physical bag survives the night and still needs picking up',()=>{
+ const s=stock();care(s);Life.act(s,'prepare');Life.act(s,'packBag');assert.equal(s.bagPrepared,true);Life.sleep(s,true);Life.finishNight(s);
+ assert.equal(s.bagPacked,true);assert.equal(s.hasBag,false);Life.act(s,'dress');assert.equal(Life.act(s,'leaveHome').reason,'noBag');Life.act(s,'pickBag');assert.equal(Life.ready(s).ok,true);assert.equal(Life.workTask(s).prepared,true);
 });
-test('a blocked activity spends nothing, while essential care and a physical window remain possible',()=>{
-  const s=stocked();s.eveningMin=170;const before=JSON.stringify(s);
-  assert.equal(Life.act(s,'deskSpace').reason,'notEnoughTime');assert.equal(JSON.stringify(s),before);
-  assert.equal(Life.act(s,'secureWindow').ok,true);assert.equal(s.eveningMin,170);
-  assert.equal(Life.act(s,'feed').ok,true);assert.equal(Life.act(s,'water').ok,true);assert.equal(Life.clock(s).text,'23:05');
-  Life.sleep(s,true);assert.equal(s.lastNight.lateMinutes,5);assert.ok(s.energy<=2);
+test('washing dishes uses one weekend activity slot and cannot be repeated',()=>{
+ const s=stock();s.day=6;s.phase='morning';Life.arriveHome(s);assert.equal(Life.timeBand(s).used,0);
+ assert.equal(Life.act(s,'dishes').ok,true);assert.equal(Life.timeBand(s).used,1);assert.equal(Life.timeBand(s).label,'주말 오후');
+ const before=JSON.stringify(s);assert.equal(Life.act(s,'dishes').reason,'alreadyDone');assert.equal(JSON.stringify(s),before);
 });
-test('desk seating and the weekend box remain physical changes without repeated rewards',()=>{
-  const s=stocked();assert.equal(Life.act(s,'deskSpace').minutes,15);assert.equal(s.flags.deskSeat,true);assert.equal(s.trust,4);assert.equal(Life.duration(s,'prepare'),50);
-  assert.equal(Life.act(s,'prepare').minutes,50);
-  s.day=6;s.phase='morning';Life.arriveHome(s);assert.equal(Life.act(s,'weekendSpace').ok,true);assert.equal(s.flags.cozyBox,true);
-  Life.sleep(s,false);Life.arriveHome(s);assert.equal(s.flags.cozyBox,true);assert.equal(s.needs.comfort,false);assert.equal(Life.act(s,'deskSpace').reason,'alreadyDone');
+test('preparation is dated and cannot be repeated for a second reward',()=>{
+ const s=stock();s.day=6;s.phase='morning';Life.arriveHome(s);Life.act(s,'prepare');assert.deepEqual(s.preparedDays,[8]);const before=JSON.stringify(s);assert.equal(Life.act(s,'prepare').reason,'alreadyPrepared');assert.equal(JSON.stringify(s),before);
 });
-test('one roller purchase lasts the whole story and resuming never charges another fee',()=>{
-  const s=Life.create();s.phase='morning';s.fur=40;Life.act(s,'buyRoller');assert.equal(s.cash,54000);
-  assert.equal('sheets' in s.roller,false);assert.equal(Life.act(s,'startRoller').ok,true);assert.equal(Life.act(s,'roll',{amount:25}).removed,25);
-  Life.act(s,'stopRoller');assert.equal(s.roller.usedToday,true);Life.act(s,'startRoller');assert.equal(Life.act(s,'roll',{amount:99}).removed,15);
-  assert.equal(s.fur,0);assert.equal(s.cash,54000);assert.equal(Life.act(s,'buyRoller').reason,'alreadyOwned');
-  assert.equal(Life.act(s,'buyRefill').reason,'removedAction');assert.equal(Life.act(s,'peelRoller').reason,'removedAction');
+test('finishing a normal shift advances to an actual evening instead of 09:05',()=>{
+ const s=toDay(2);assert.equal(Life.clock(s).text,'09:00');Life.finishWork(s,{completed:true});assert.equal(Life.clock(s).text,'18:00');Life.arriveHome(s);assert.equal(Life.clock(s).text,'20:00');assert.equal(Life.timeBand(s).slots,2);
 });
-test('the prepared bag survives the night and must actually be picked up',()=>{
-  const s=stocked();basic(s);Life.act(s,'hoodie');Life.act(s,'prepare');Life.act(s,'packBag');assert.equal(s.bagPrepared,true);assert.equal(s.hasBag,false);
-  Life.sleep(s,true);assert.equal(s.bagPacked,true);assert.equal(s.bagPrepared,true);assert.equal(Life.ready(s).ok,false);
-  Life.act(s,'dress');assert.equal(Life.act(s,'leaveHome').reason,'noBag');Life.act(s,'pickBag');assert.equal(Life.ready(s).ok,true);
-  assert.equal(Life.workTask(s).prepared,true);assert.equal(Life.workTask(s).clueAvailable,true);
+test('an unfinished task costs this evening and persists into the next shift',()=>{
+ const s=toDay(2);Life.finishWork(s,{completed:false});assert.equal(s.work[0].status,'missed');assert.equal(s.issueQueue.filter(i=>!i.resolved).length,3);Life.arriveHome(s);assert.equal(Life.timeBand(s).slots,1);assert.equal(Life.clock(s).text,'21:00');
+ s.day=3;s.phase='work';Life.finishWork(s,{completed:true});assert.equal(s.issueQueue.filter(i=>!i.resolved).length,0);assert.equal(s.flags.overtime,true);assert.equal(s.workMissed,1);
 });
-test('morning clothes, bed, packing and an 08:10 departure have real clock effects',()=>{
-  const s=stocked();care(s);Life.sleep(s,true);s.morningMin=45;
-  assert.equal(Life.act(s,'dress').minutes,5);assert.equal(Life.clock(s).text,'08:10');
-  assert.equal(Life.act(s,'makeBed').minutes,3);assert.equal(Life.act(s,'packBag').minutes,5);Life.act(s,'pickBag');
-  const r=Life.act(s,'leaveHome');assert.equal(r.ok,true);assert.equal(r.lateMinutes,8);assert.equal(Life.clock(s).text,'08:18');assert.equal(Life.ready(s).lateMinutes,8);
-  assert.equal(Life.workTask(s).availableMinutes,112);
+test('forgetting the bag has a visible late return even after successful work',()=>{
+ const s=stock();s.day=2;s.phase='morning';Life.act(s,'dress');assert.equal(Life.act(s,'leaveHome').reason,'noBag');Life.act(s,'leaveHome',{borrowLaptop:true});s.phase='work';Life.finishWork(s,{completed:true});assert.equal(s.work[0].borrowedLaptop,true);assert.equal(s.work[0].extraMinutes,60);Life.arriveHome(s);assert.equal(Life.timeBand(s).slots,1);
 });
-test('forgetting a bag requires a decision and borrowing changes actual work resources',()=>{
-  const s=stocked();s.day=9;s.phase='morning';Life.act(s,'dress');const before=JSON.stringify(s);
-  assert.equal(Life.act(s,'leaveHome').reason,'noBag');assert.equal(JSON.stringify(s),before);
-  const r=Life.act(s,'leaveHome',{borrowLaptop:true});assert.equal(r.ok,true);assert.equal(s.flags.borrowedLaptop,true);assert.equal(s.flags.missingPhotos,true);
-  const task=Life.workTask(s);assert.equal(task.availableMinutes,75);assert.equal(task.prepared,false);assert.ok(task.extraSteps.some(step=>step.id==='requestFiles'));
-  s.phase='work';Life.act(s,'requestFiles');assert.equal(s.flags.missingPhotos,false);assert.equal(s.workMin,15);assert.equal(Life.workTask(s).availableMinutes,60);
-  const report=Life.finishWork(s,{completed:true}).work;assert.equal(report.missing.length,0);assert.equal(report.borrowedLaptop,true);assert.equal(report.extraMinutes,75);
+test('choosing to finish the extra page today or tomorrow changes which evening is lost',()=>{
+ const today=toDay(4),tomorrow=toDay(4);Life.finishWork(today,{completed:true,choice:'today'});Life.finishWork(tomorrow,{completed:true,choice:'tomorrow'});Life.arriveHome(today);Life.arriveHome(tomorrow);assert.equal(Life.timeBand(today).slots,1);assert.equal(Life.timeBand(tomorrow).slots,2);
+ tomorrow.day=5;tomorrow.phase='work';Life.finishWork(tomorrow,{completed:true});Life.arriveHome(tomorrow);assert.equal(Life.timeBand(tomorrow).slots,1);
 });
-test('a borrowed computer cannot pretend to contain the unrequested meeting files',()=>{
-  const s=stocked();s.day=9;s.phase='morning';Life.act(s,'dress');Life.act(s,'leaveHome',{borrowLaptop:true});s.phase='work';
-  const report=Life.finishWork(s,{completed:true}).work;assert.equal(report.status,'partial');assert.deepEqual(report.missing,['rowsFile']);
-  assert.equal(s.issueQueue[0].id,'9:rowsFile');assert.equal(s.issueQueue[0].deadline,true);
+test('work cannot be replayed to erase missed tasks or produce money',()=>{
+ const s=toDay(12),cash=s.cash;Life.finishWork(s,{completed:false});assert.equal(Life.finishWork(s,{completed:true}).alreadyDone,true);assert.equal(s.work.length,1);assert.equal(s.cash,cash);assert.equal(s.project.presented,false);
 });
-test('work performed while tired is still performed, and preparation changes needed steps',()=>{
-  const a=stocked(),b=stocked();for(const s of [a,b]){basic(s);Life.act(s,'packBag');}
-  Life.act(a,'prepare');Life.sleep(a,true);Life.sleep(b,true);depart(a);depart(b);
-  assert.equal(Life.workTask(a).extraSteps.some(step=>step.id==='findReference'),false);assert.equal(Life.workTask(b).extraSteps.some(step=>step.id==='findReference'),true);
-  a.energy=0;const done=Life.finishWork(a,{completed:true}).work;assert.equal(done.completed,true);assert.equal(done.status,'strained');assert.equal(done.missing.length,0);
-  const missed=Life.finishWork(b,{completed:false}).work;assert.equal(missed.status,'missed');assert.deepEqual(missed.missing,Life.schedule[1].required);
+test('morning and evening food and water are genuinely different care periods',()=>{
+ const s=stock();care(s);Life.act(s,'hoodie');Life.sleep(s,false);Life.finishNight(s);assert.equal(s.needs.fed,false);assert.equal(s.water,false);assert.equal(s.done.feed,undefined);
+ morning(s);assert.equal(s.careLog.find(c=>c.day===1&&c.when==='morning').fed,true);Life.finishWork(s,{completed:true});Life.arriveHome(s);assert.equal(s.needs.fed,false);assert.equal(s.water,false);assert.equal(Life.act(s,'feed').ok,true);
 });
-test('missing checklist items persist into later tasks until those exact issues are repaired',()=>{
-  const s=stocked();s.day=4;s.phase='work';Life.finishWork(s,{completed:true,missing:['completedCount','pendingCount'],labels:{completedCount:'완료 합계',pendingCount:'대기 합계'}});
-  assert.equal(s.work[0].status,'partial');assert.equal(s.issueQueue.length,2);Life.arriveHome(s);care(s);Life.sleep(s,true);depart(s);
-  const task=Life.workTask(s);assert.deepEqual(task.carryover.map(i=>i.id),['4:completedCount','4:pendingCount']);assert.ok(task.extraSteps.some(i=>i.id==='4:completedCount'));
-  Life.finishWork(s,{completed:true,resolved:['4:completedCount']});assert.equal(s.issueQueue[0].resolved,true);assert.equal(s.issueQueue[1].resolved,false);
-  assert.equal(s.issueQueue[0].resolvedDay,5);assert.deepEqual(s.work[1].carryover,['4:pendingCount']);
+test('night hunger is actionable but feeding at night does not consume breakfast or morning time',()=>{
+ const s=stock();const night=Life.sleep(s,false);assert.deepEqual(night.night.wakeReasons,['hunger','thirst','calling']);const energy=s.energy;
+ assert.equal(Life.actAtNight(s,'feed').ok,true);assert.equal(Life.actAtNight(s,'water').ok,true);assert.equal(s.morningMin,0);assert.equal(s.needs.fed,false);assert.equal(s.water,false);assert.equal(s.lastNight.nightCare.length,2);assert.equal(s.energy,energy);
+ assert.equal(Life.actAtNight(s,'feed').reason,'alreadyDone');Life.finishNight(s);assert.equal(Life.actAtNight(s,'water').reason,'wrongPhase');assert.equal(Life.act(s,'feed').ok,true);
 });
-test('a reported work result cannot be replayed to erase issues or create money',()=>{
-  const s=stocked();s.day=12;s.phase='work';const cash=s.cash;Life.finishWork(s,{completed:false});
-  assert.equal(Life.finishWork(s,{completed:true,resolved:s.issueQueue.map(i=>i.id)}).alreadyDone,true);
-  assert.equal(s.cash,cash);assert.equal(s.project.launched,false);assert.equal(s.issueQueue.filter(i=>!i.resolved).length,3);
-  assert.ok(s.transactions.every(t=>t.cash<0));
+test('repeated missed meals cause visible concern withdrawal and an intervention ending',()=>{
+ const s=stock();for(let n=0;n<3;n++){Life.sleep(s,false);if(s.phase==='ending')break;s.dressed=true;Life.act(s,'leaveHome',{borrowLaptop:true});if(s.phase==='ending')break;s.phase='work';Life.finishWork(s,{completed:true});Life.arriveHome(s);}
+ assert.ok(s.careDebt>=5);assert.equal(s.flags.careConcern,true);assert.equal(s.flags.catWithdrawn,true);assert.equal(s.phase,'ending');assert.equal(Life.ending(s).key,'neglected');assert.match(Life.ending(s).lines.join(' '),/빈 그릇|사료와 물/);
 });
-test('night hunger, thirst and calling produce a playable episode description and morning fatigue',()=>{
-  const s=stocked();const beforeTrust=s.trust;const r=Life.sleep(s,false);
-  assert.deepEqual(r.night.wakeReasons,['hunger','thirst','calling']);assert.deepEqual(s.nightIssue.reasons,r.night.wakeReasons);
-  assert.equal(s.flags.nightHunger,true);assert.equal(s.flags.nightThirst,true);assert.equal(s.flags.nightCalling,true);assert.ok(s.energy<3);assert.ok(s.trust<beforeTrust);
-  assert.equal(Life.act(s,'feed').ok,true);assert.equal(Life.act(s,'water').ok,true);assert.equal(s.morningMin,15);
-  assert.equal(s.flags.nightHunger,true,'the morning reaction can still refer to what happened overnight');
+test('feeding after an omission repairs concern rather than causing a delayed arbitrary loss',()=>{
+ const s=stock();s.careDebt=3;s.flags.catWithdrawn=true;Life.act(s,'feed');assert.equal(s.careDebt,2);assert.equal(s.flags.catWithdrawn,false);s.needs.fed=false;Life.act(s,'feed');assert.equal(s.careDebt,1);assert.equal(s.flags.careConcern,false);assert.notEqual(Life.ending(s).key,'neglected');
 });
-test('fed and watered cats can sleep separately in a familiar place without a calling penalty',()=>{
-  const s=stocked();Life.act(s,'feed');Life.act(s,'water');Life.act(s,'hoodie');Life.sleep(s,false);
-  assert.equal(s.flags.nightCalling,false);assert.deepEqual(s.lastNight.wakeReasons,[]);assert.equal(s.energy,3);
+test('a familiar cat bed allows a closed door without an automatic calling penalty',()=>{
+ const s=stock();care(s);Life.act(s,'hoodie');Life.sleep(s,false);assert.equal(s.flags.nightCalling,false);assert.equal(s.nightIssue.playing,false);assert.deepEqual(s.lastNight.wakeReasons,[]);
 });
-test('only the visible day-three storm adds rain; a closed window alone cannot replace care',()=>{
-  for(const day of [3,10,11]){const s=stocked();s.day=day;Life.act(s,'feed');Life.act(s,'water');Life.act(s,'secureWindow');Life.sleep(s,false);assert.equal(s.lastNight.storm,day===3);assert.equal(s.nightIssue.rain,day===3);}
-  const s=stocked();s.day=3;s.hoodie=true;Life.act(s,'feed');Life.act(s,'water');Life.act(s,'secureWindow');Life.sleep(s,false);
-  assert.equal(s.nightIssue.rain,false);assert.equal(s.flags.windowSecured,false);assert.ok(s.trust<=4);
+test('storm discomfort and ordinary door choices have different causes',()=>{
+ const s=stock();s.day=3;care(s);Life.sleep(s,false);assert.equal(s.lastNight.storm,true);assert.ok(s.lastNight.wakeReasons.includes('rain'));
+ const quiet=stock();quiet.day=3;care(quiet);Life.act(quiet,'hoodie');Life.act(quiet,'secureWindow');Life.sleep(quiet,false);assert.equal(quiet.nightIssue.rain,false);
 });
-test('night care is recorded in that night without stealing morning time or erasing poor sleep',()=>{
-  const s=stocked();Life.sleep(s,false);const energy=s.energy,trust=s.trust;
-  const feed=Life.actAtNight(s,'feed');assert.equal(feed.ok,true);assert.equal(feed.atNight,true);assert.equal(feed.minutes,10);
-  const water=Life.actAtNight(s,'water');assert.equal(water.ok,true);assert.deepEqual(water.clock,{before:'02:50',after:'02:55'});assert.equal(s.morningMin,0);assert.equal(s.dayMinutes,0);assert.equal(Life.clock(s).text,'07:20');
-  assert.equal(s.lastNight.nightCareMinutes,15);assert.equal(s.lastNight.nightCare.length,2);assert.equal(s.lastNight.fed,false);
-  assert.equal(s.energy,energy);assert.equal(s.trust,trust);assert.equal(s.needs.fed,true);assert.equal(s.water,true);
-  assert.equal(Life.actAtNight(s,'feed').reason,'alreadyDone');
+test('the roller remains owned and usable through the story without buying sheets',()=>{
+ const s=stock();Life.act(s,'buyRoller');s.fur=15;Life.act(s,'startRoller');assert.equal(Life.act(s,'roll',{amount:10}).removed,10);Life.act(s,'stopRoller');Life.act(s,'startRoller');Life.act(s,'roll',{amount:99});assert.equal(s.fur,0);assert.equal(s.roller.owned,true);assert.equal(Life.act(s,'buyRoller').reason,'alreadyOwned');assert.equal(Life.act(s,'peelRoller').reason,'removedAction');
 });
-test('weekend activity starts at 10:00 and concrete chores advance daytime without an office',()=>{
-  const s=stocked();s.day=6;s.phase='morning';Life.arriveHome(s);assert.equal(Life.clock(s).text,'10:00');assert.equal(Life.clock(s).remaining,780);
-  Life.act(s,'laundry');Life.act(s,'dishes');Life.act(s,'tidy');assert.equal(Life.clock(s).text,'12:05');assert.equal(Life.finishWork(s).reason,'weekend');
-  const minutes=s.eveningMin;Life.arriveHome(s);assert.equal(s.eveningMin,minutes);assert.equal(Life.sleep(s,true).earlySleep,true);
+test('a two-week route feeds both mornings and evenings and reaches distinct final outcomes',()=>{
+ const s=Life.create('하늘','보리');Life.act(s,'buyRoller');stock(s);Life.act(s,'hoodie');const office=[];
+ for(let day=0;day<=12;day++){
+  assert.equal(s.day,day);care(s);if(day===0)Life.act(s,'play');else{Life.act(s,day%2?'rest':'prepare');Life.act(s,'play');}if(day<12)Life.act(s,'packBag');if(day===3)Life.act(s,'secureWindow');Life.sleep(s,day%2===0);if(s.phase==='ending')break;
+  Life.finishNight(s);if([6,7].includes(s.day)){Life.arriveHome(s);continue;}morning(s);office.push(s.day);Life.finishWork(s,{completed:true});Life.arriveHome(s);
+ }
+ assert.deepEqual(office,[1,2,3,4,5,8,9,10,11,12]);assert.equal(s.phase,'ending');assert.equal(s.project.presented,true);assert.equal(s.careDebt,0);assert.ok(s.cash>=0);assert.ok(s.strain<8);assert.equal(s.log.length,13);assert.equal(Life.ending(s).key,'settled');
+ const failed=toDay(12);failed.workMissed=3;Life.finishWork(failed,{completed:true});assert.equal(failed.project.presented,false);assert.match(Life.ending(failed).lines[0],/빠뜨린/);
 });
-test('preparation is dated, cannot be farmed, and weekend preparation still belongs to Monday',()=>{
-  const s=stocked();s.day=6;s.phase='morning';Life.arriveHome(s);Life.act(s,'prepare');assert.deepEqual(s.preparedDays,[8]);
-  Life.sleep(s,true);Life.arriveHome(s);const before=JSON.stringify(s);assert.equal(Life.act(s,'prepare').reason,'alreadyPrepared');assert.equal(JSON.stringify(s),before);
-  Life.act(s,'packBag');Life.sleep(s,true);assert.equal(s.day,8);depart(s);assert.equal(Life.workTask(s).prepared,true);Life.finishWork(s,{completed:true});assert.deepEqual(s.preparedDays,[]);
-});
-test('a twelve-day route alternates preparation and rest, buys food, and reaches the first team meeting',()=>{
-  const s=Life.create('하늘','보리');Life.act(s,'buyRoller');Life.act(s,'hoodie');const officeDays=[],rested=[],unprepared=[];
-  for(let evening=0;evening<=12;evening++){
-    assert.equal(s.day,evening);assert.equal(s.phase,'evening');basic(s);
-    if(evening<12&&(s.strain<2||evening===11))Life.act(s,'prepare');
-    else if(Life.act(s,'rest').ok)rested.push(evening);
-    if(evening<12)Life.act(s,'packBag');
-    if(Life.clock(s).remaining>=Life.duration(s,'play'))Life.act(s,'play');
-    if(evening===3)Life.act(s,'secureWindow');
-    const night=Life.sleep(s,evening%2===0);assert.equal(night.ok,true);if(s.phase==='ending')break;
-    if([6,7].includes(s.day)){assert.equal(Life.finishWork(s).reason,'weekend');Life.arriveHome(s);Life.act(s,'weekendSpace');}
-    else{depart(s);officeDays.push(s.day);if(!Life.workTask(s).prepared){unprepared.push(s.day);assert.equal(Life.act(s,'openReference').ok,true);}assert.equal(Life.act(s,'workReview').ok,true);const done=Life.finishWork(s,{completed:true});assert.equal(done.work.missing.length,0);Life.arriveHome(s);}
-  }
-  assert.deepEqual(officeDays,[1,2,3,4,5,8,9,10,11,12]);assert.equal(s.log.length,13);assert.equal(s.phase,'ending');assert.equal(s.project.presented,true);assert.ok(rested.length>=3);assert.ok(unprepared.length>=2);assert.ok(s.strain<7);
-  assert.equal(s.cash,6000);assert.equal(s.food,3);assert.equal(s.transactions.filter(t=>t.type==='buyFood').length,4);assert.ok(s.transactions.every(t=>t.cash<0));
-  assert.equal(Life.ending(s).presented,true);
-});
-test('two favorite multipacks remain affordable alongside fourteen meals and the roller',()=>{
-  const s=Life.create();Life.act(s,'buyFavorite');Life.act(s,'buyFavorite');Life.act(s,'buyFood');Life.act(s,'buyFood');Life.act(s,'buyRoller');
-  assert.equal(s.cash,0);assert.equal(s.food,14);assert.equal(s.favoriteFood,6);assert.equal(s.roller.owned,true);
-});
-test('endings describe the actual team meeting and relationship, never a final wealth target',()=>{
-  const a=Life.create(),b=Life.create();a.cash=0;b.cash=999999;
-  for(const s of [a,b]){s.project.presented=true;s.trust=7;s.routine=4;s.lastNight={open:false};}
-  assert.deepEqual(Life.ending(a),Life.ending(b));assert.equal(Life.ending(a).key,'settled');
-  b.project.presented=false;assert.equal(Life.ending(b).presented,false);assert.match(Life.ending(b).lines[0],/준비가 부족/);
-});
-test('working adds strain even with preparation, while one rest removes exactly two strain',()=>{
-  const s=stocked();basic(s);Life.act(s,'prepare');Life.act(s,'packBag');Life.sleep(s,true);depart(s);
-  Life.act(s,'workReview');Life.finishWork(s,{completed:true});assert.equal(s.strain,1);
-  s.strain=5;Life.arriveHome(s);assert.equal(Life.fatigue(s),'tired');Life.act(s,'rest');assert.equal(s.strain,3);assert.equal(Life.fatigue(s),'normal');
-});
-test('prepared work gets real source links and deliberate reviews consume a fatigue-dependent budget',()=>{
-  const s=Life.create();s.day=4;s.phase='work';s.hasBag=true;s.bagPrepared=true;s.preparedDays=[4];
-  const definition={slots:[{id:'completedCount',hint:'완료 수를 찾는다.'}],cards:[{id:'eight',sourceId:'table'}],sources:[{id:'table',title:'현황 표'}],solution:{completedCount:'eight'}};
-  assert.deepEqual(Life.workBudget(s,definition).hints,[{slotId:'completedCount',sourceId:'table',text:'현황 표'}]);assert.equal(Life.workBudget(s).remaining,4);
-  assert.equal(Life.act(s,'workReview').ok,true);assert.equal(Life.workBudget(s).remaining,3);assert.equal(s.workMin,5);
-  s.strain=4;assert.equal(Life.workBudget(s).total,3);s.strain=7;assert.equal(Life.workBudget(s).total,2);
-  assert.equal(Life.act(s,'workReview').ok,true);const before=JSON.stringify(s);assert.equal(Life.act(s,'workReview').reason,'noWorkActions');assert.equal(JSON.stringify(s),before);
-});
-test('unprepared work spends one opportunity finding its reference and does not charge that time twice',()=>{
-  const s=Life.create();s.day=3;s.phase='work';assert.equal(Life.workBudget(s).sourceAvailable,false);
-  assert.equal(Life.act(s,'openReference').ok,true);assert.equal(Life.workBudget(s).sourceAvailable,true);assert.equal(Life.workBudget(s).remaining,3);
-  assert.equal(Life.act(s,'openReference').reason,'alreadyAvailable');Life.act(s,'workReview');assert.equal(Life.finishWork(s,{completed:true}).work.extraMinutes,20);
-});
-test('the final meeting needs materials by 09:20 and forgotten equipment can really miss it',()=>{
-  const onTime=Life.create(),late=Life.create();for(const s of [onTime,late]){s.day=12;s.phase='work';s.hasBag=true;s.bagPrepared=true;s.preparedDays=[12];}
-  assert.equal(Life.workBudget(onTime).availableMinutes,20);assert.equal(Life.workBudget(onTime).deadlineAt,'09:20');Life.act(onTime,'workReview');Life.finishWork(onTime,{completed:true});assert.equal(onTime.project.presented,true);
-  late.flags.borrowedLaptop=true;assert.equal(Life.workBudget(late).availableMinutes,0);assert.equal(Life.act(late,'workReview').reason,'notEnoughWorkTime');
-  const report=Life.finishWork(late,{completed:true}).work;assert.equal(report.completed,true);assert.equal(report.onTime,false);assert.equal(late.project.presented,false);
-});
-test('an open bedroom without play or a familiar bed can produce a real nighttime play episode',()=>{
-  const s=stocked();basic(s);Life.sleep(s,true);assert.ok(s.lastNight.wakeReasons.includes('play'));assert.equal(s.flags.nightPlay,true);assert.equal(s.nightIssue.playing,true);assert.ok(s.energy<=2);
-  const quiet=stocked();basic(quiet);Life.act(quiet,'hoodie');Life.sleep(quiet,true);assert.equal(quiet.nightIssue.playing,false);
+test('all team-lead lines use speech rather than report narration in an attributed voice',()=>{
+ for(const item of Life.schedule.filter(d=>d.day>0&&!d.weekend)){const s=toDay(item.day);for(const l of Story.dialogue(s,'lead')){assert.equal(l.who,'팀장');assert.doesNotMatch(l.text,/했다\.$|한다\.$|들어갔다\.$|접속한다\.$/);}Life.finishWork(s,{completed:true});for(const l of Story.workReport(s))assert.doesNotMatch(l.text,/했다\.$|한다\.$|들어갔다\.$/);}
+ assert.equal(Story.workChoice({day:4}).choices.length,2);assert.equal(Story.workChoice({day:5}),null);
 });

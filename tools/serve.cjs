@@ -4,7 +4,7 @@ const path=require('node:path');
 const http=require('node:http');
 const {buildWeb}=require('./build-web.cjs');
 const root=buildWeb();
-const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.woff':'font/woff','.json':'application/json; charset=utf-8'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.woff':'font/woff','.woff2':'font/woff2','.json':'application/json; charset=utf-8'};
 const server=http.createServer((req,res)=>{
  let file;
  try{

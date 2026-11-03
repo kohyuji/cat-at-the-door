@@ -7,10 +7,12 @@ const root=path.resolve(__dirname,'..');
 function buildReview(out=path.join(root,'dist/downloads/Cat-at-the-Door.html')){
  let html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  let css=fs.readFileSync(path.join(root,'src/life.css'),'utf8');
- const font=fs.readFileSync(path.join(root,'assets/fonts/DungGeunMo.woff')).toString('base64');
- css=css.replace("url('../assets/fonts/DungGeunMo.woff')",`url('data:font/woff;base64,${font}')`);
+ const font=fs.readFileSync(path.join(root,'assets/fonts/DOSGothic.woff2')).toString('base64');
+ css=css.replace("url('../assets/fonts/DOSGothic.woff2')",`url('data:font/woff2;base64,${font}')`);
+ const fontLicense=fs.readFileSync(path.join(root,'assets/fonts/LICENSE-DOSGothic.txt'),'utf8');
+ html=html.replace('</head>',`<!-- 도스고딕: 이담허(leedheo), https://github.com/hurss/fonts\n${fontLicense}\n--></head>`);
  html=html.replace('<link rel="stylesheet" href="src/life.css">',`<style>${css}</style>`);
- const names={rooms:'rooms-pixel.png',places:'places-pixel.png',posesWithCat:'poses-with-cat.png',posesSolo:'poses-solo.png'};
+ const names={rooms:'rooms-pixel.png',places:'places-pixel.png'};
  const assets=Object.fromEntries(Object.entries(names).map(([key,file])=>[key,'data:image/png;base64,'+fs.readFileSync(path.join(root,'assets',file)).toString('base64')]));
  html=html.replace('<script src="src/life-state.js">',`<script>window.__LIFE_ASSETS=${JSON.stringify(assets)};</script><script src="src/life-state.js">`);
  html=html.replace(/<script src="([^"]+)"><\/script>/g,(_,file)=>'<script>\n'+fs.readFileSync(path.join(root,file),'utf8').replace(/<\/script/gi,'<\\/script')+'\n</script>');
