@@ -62,8 +62,8 @@ async function configurePages() {
     'User-Agent': 'cat-at-the-door-deploy',
     'Content-Type': 'application/json',
   };
-  async function api(method, body) {
-    const response = await fetch(`https://api.github.com/repos/${repository}/pages`, {
+  async function api(method, body, subpath = '') {
+    const response = await fetch(`https://api.github.com/repos/${repository}/pages${subpath}`, {
       method, headers, ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(30000),
     });
@@ -76,14 +76,25 @@ async function configurePages() {
   if (!current.ok && current.status !== 404) {
     throw new Error(`GitHub Pages 설정 조회 실패 (${current.status}): ${current.result.message || '권한 또는 연결을 확인해 주세요.'}`);
   }
-  if (current.ok && current.result.build_type === 'legacy' &&
-      current.result.source?.branch === publishBranch && current.result.source?.path === '/') return;
-  // 도메인·HTTPS 등 기존 설정은 보내지 않아 그대로 유지한다.
-  const updated = await api(current.status === 404 ? 'POST' : 'PUT', {
-    build_type: 'legacy', source: { branch: publishBranch, path: '/' },
-  });
-  if (!updated.ok) {
-    throw new Error(`GitHub Pages 설정 변경 실패 (${updated.status}): ${updated.result.message || '저장소 관리 권한을 확인해 주세요.'}`);
+  const correctSource = current.ok && current.result.build_type === 'legacy' &&
+    current.result.source?.branch === publishBranch && current.result.source?.path === '/';
+  if (!correctSource) {
+    // 도메인·HTTPS 등 기존 설정은 보내지 않아 그대로 유지한다.
+    const updated = await api(current.status === 404 ? 'POST' : 'PUT', {
+      build_type: 'legacy', source: { branch: publishBranch, path: '/' },
+    });
+    if (!updated.ok) {
+      throw new Error(`GitHub Pages 설정 변경 실패 (${updated.status}): ${updated.result.message || '저장소 관리 권한을 확인해 주세요.'}`);
+    }
+  }
+  // 처음 소스 브랜치를 바꿀 때 푸시가 먼저 끝나므로 빌드를 명시적으로 요청한다.
+  const requested = await api('POST', null, '/builds');
+  if (!requested.ok) {
+    if (requested.status === 409) {
+      const latest = await api('GET', null, '/builds/latest');
+      if (latest.ok && ['queued', 'building'].includes(latest.result.status)) return;
+    }
+    throw new Error(`GitHub Pages 빌드 요청 실패 (${requested.status}): ${requested.result.message || 'Pages 빌드 상태를 확인해 주세요.'}`);
   }
 }
 
