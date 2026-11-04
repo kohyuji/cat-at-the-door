@@ -129,12 +129,12 @@ function updateUI(){
  $('clockWidget').hidden=hidden;$('dayRhythm').hidden=hidden;paintClock();
  $('eveningOptions').hidden=true;$('shiftProgress').hidden=!G.workMontage;$('shiftProgress').textContent=G.workMontage?'일하는 중  '+['오전','점심','오후','퇴근'][Math.min(3,Math.floor((G.workProgress||0)*4))]:'';
  $('shopPrices').hidden=G.scene!=='shop'||G.intro==='montage';
- $('shopPrices').replaceChildren();if(!$('shopPrices').hidden){const tags=[['건사료 12,000원',166,181],['습식 15,000원',292,181],...(G.shopMode==='intro'?[['번개탄 12,000원',418,181]]:[['한 끼 3,000원',166,258],...(!s.roller.owned?[['돌돌이 4,000원',544,181]]:[])])];for(const [label,x,y] of tags){const tag=addText($('shopPrices'),'span',label);tag.style.left=x/6.4+'%';tag.style.top=y/3.6+'%';}}
+ $('shopPrices').replaceChildren();if(!$('shopPrices').hidden){const tags=[['dry','건사료 12,000원'],['wet','습식 15,000원'],...(G.shopMode==='intro'?[['dark','번개탄 12,000원']]:[['small','한 끼 3,000원'],...(!s.roller.owned?[['shoproller','돌돌이 4,000원']]:[])])];for(const [id,label] of tags){const p=LifeView.layout.shop[id],tag=addText($('shopPrices'),'span',label);tag.style.left=p.cx/6.4+'%';tag.style.top=(p.base+3)/3.6+'%';}}
  refreshGuide();refreshHotspots();
 }
 $('soundButton').onclick=()=>{Audio.enabled=!Audio.enabled;if(Audio.enabled)audioStart();rainAudio(isStorm());updateUI();};
 $('routineToggle').onclick=()=>{G.checklistOpen=!G.checklistOpen;updateUI();};
-function target(id,label,x,y,w,h,ax,ay,fn){return{id,label,x,y,w,h,ax,ay,fn};}
+function target(id,label,x,y,w,h,ax,ay,fn){const map=G.scene==='shop'?LifeView.layout.shop:['bedroom','living'].includes(G.scene)?LifeView.hotspots(G):null,p=map?.[id];if(p&&Number.isFinite(p.x)){({x,y,w,h}=p);ax=p.gx??(id==='bed'?clamp(ax,x,x+w):x+w/2);ay=p.gy??ay;}return{id,label,x,y,w,h,ax,ay,fn};}
 function targets(){
  if(G.mode!=='play'||G.mini||G.dialog||G.menu||G.ack||G.transition||(G.sleeping&&G.intro!=='bedPhone')||G.paused||G.workMontage||G.timeFlow||G.endingPlayback||G.nightScene)return[];
  const s=G.s,T=[];
@@ -158,7 +158,6 @@ function targets(){
  if(G.scene==='bedroom'){
   T.push(target('room','부엌으로 나간다',500,65,130,265,558,315,()=>moveRoom('living')),target('bed',s.phase==='morning'?'이불을 편다':'잠자리에 눕는다',10,215,185,115,180,315,s.phase==='morning'?makeBed:bedtime),target('clothes',s.phase==='morning'?'출근복을 입는다':s.dressed?'정장을 벗고 집에서 입는 옷으로 갈아입는다':'집에서 입는 옷을 입고 있다',375,120,105,150,435,315,()=>s.phase==='morning'?dress():changeClothes()));
   if(!weekend()&&(s.phase==='morning'||!s.bagPacked))T.push(target('bag',s.hasBag?'가방을 들고 있다':s.bagPacked?'가방을 집는다':'가방을 챙긴다',485,275,65,65,510,323,packBag));
-  if(s.phase==='evening'&&s.day===0&&!s.bagPacked)T.push(target('desk','내일 들고 갈 가방을 챙긴다',225,165,150,110,310,315,()=>startMini('bag')));
   if(s.roller.owned&&s.fur)T.push(target('roller','옷에 붙은 털을 뗀다',440,248,45,55,455,320,()=>startMini('roller')));
  }else{
   T.push(target('room','침실로 들어간다',552,62,85,232,585,320,()=>moveRoom('bedroom')),target('food','밥그릇을 채운다',525,290,90,55,550,325,feedChoice),target('water','물그릇을 씻고 물을 담는다',468,295,60,50,490,325,()=>startMini('water')),target('litter','모래를 삽으로 청소한다',130,255,95,80,180,323,()=>startMini('litter')),target('cat','고양이를 쓰다듬는다',G.cat.x-32,G.cat.y-45,70,45,clamp(G.cat.x-30,45,595),323,()=>startMini('pet')));
@@ -171,7 +170,7 @@ function targets(){
    if(weekend()&&!s.done.dishes&&s.flags.dirtyDishes>0)T.push(target('dishes','밀린 설거지를 한다',205,140,175,105,290,320,()=>{const r=act('dishes',{},true);say([{who:'',text:r.message}]);}));
    if(isStorm()&&!G.curtainClosed)T.push(target('curtain','흔들리는 창문을 닫는다',410,55,180,140,570,315,()=>startMini('curtain')));
   }
- }if(G.scene==='living'&&s.phase!=='morning')T.push(target('shop','슈퍼에 다녀온다',20,45,110,240,80,320,()=>enterShop('general','home')));return T.filter(t=>!(t.id==='food'&&s.needs.fed)&&!(t.id==='water'&&s.waterChangedDay===s.day)&&!(t.id==='litter'&&s.litterDirty===0)&&!(t.id==='toy'&&s.needs.played));
+ }if(G.scene==='living'&&s.phase!=='morning')T.push(target('shop','슈퍼에 다녀온다',20,45,110,240,80,320,()=>enterShop('general','home')));return T.filter(t=>!(t.id==='food'&&s.needs.fed)&&!(t.id==='water'&&s.waterChangedDay===s.day)&&!(t.id==='litter'&&s.litterDirty===0)&&!(t.id==='toy'&&s.needs.played)).sort((a,b)=>(a.id==='cat'?0:1)-(b.id==='cat'?0:1));
 }
 function desired(){
  if(G.endingMoment)return{id:G.finalEnding.key==='worn'?'endrest':['distance','neglected'].includes(G.finalEnding.key)?'endwater':'endcat',text:''};
@@ -368,7 +367,7 @@ function finishMini(fn,wait=1){const m=G.mini;if(!m||m.complete)return;m.complet
 function sleepChoice(open){const m=G.mini;if(!m||m.type!=='bed'||!m.decided||m.complete)return;m.complete=true;G.doorOpen=open;G.lockedUntil=G.now+.8;if(m.final){G.s.doorOpen=open;if(G.s.lastNight)G.s.lastNight.open=open;G.finalEnding=Life.ending(G.s);G.mini=null;hideMini();G.sleeping=true;G.heroOnBed=true;G.bedStage='sleeping';G.catOnBed=false;G.cat.x=300;G.cat.y=323;G.bedApproach=open;later(2,()=>{G.sleeping=false;G.bedApproach=false;G.jump=null;say([{who:'',text:G.finalEnding.lines.at(-1)}],showEnding);});return;}later(.8,()=>beginSleep(open));}
 function miniDown(p){const m=G.mini;if(!m||m.complete)return;m.down=true;if(m.type!=='play')m.pointer=p;m.lastP=p;m.downAt=G.now;m.downP=p;
  if(['feed','water','roller','umbrella','litter'].includes(m.type)&&dist(p,m.p)<80){m.drag='tool';m.offset={x:p.x-m.p.x,y:p.y-m.p.y};}
- if(m.type==='bed'&&p.x>395&&p.x<590&&p.y>55&&p.y<310)m.drag='door';
+ if(m.type==='bed'){const r=LifeView.layout.bedtime.room;if(p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h){m.drag='door';m.doorStart=m.door;m.moved=0;}}
  if(m.type==='pet')m.drag='hand';if(m.type==='play'){m.hasMoved=false;m.drag='toy';m.offset={x:p.x-m.pointer.x,y:p.y-m.pointer.y};}if(m.type==='dishes')m.drag='sponge';if(m.type==='curtain')m.drag='curtain';
  const card=m.cards.slice().reverse().find(c=>p.x>c.x&&p.x<c.x+c.w&&p.y>c.y&&p.y<c.y+c.h);if(card){for(const slot of m.slots)if(slot.cardId===card.id)slot.cardId=null;card.placed=false;m.drag=card;m.offset={x:p.x-card.x,y:p.y-card.y};}
  if(m.type!=='dishes'){const item=m.items.find(a=>!a.placed&&Math.hypot(a.x-p.x,a.y-p.y)<55);if(item){m.drag=item;m.offset={x:p.x-item.x,y:p.y-item.y};}}
@@ -379,7 +378,7 @@ function miniMove(p){const m=G.mini;if(!m||m.complete)return;const delta=m.lastP
  if(m.drag==='tool'){if(m.type==='umbrella'){m.tilt=clamp((p.x-m.downP.x)/85,0,1);m.p={x:m.anchor.x+m.tilt*30,y:m.anchor.y};}else if(['feed','water'].includes(m.type)){const q={x:p.x-m.offset.x,y:p.y-m.offset.y},dx=m.target.x-m.origin.x,dy=m.target.y-m.origin.y;m.motion=clamp(((q.x-m.origin.x)*dx+(q.y-m.origin.y)*dy)/(dx*dx+dy*dy),0,1);m.p={x:m.origin.x+dx*m.motion,y:m.origin.y+dy*m.motion};}else m.p={x:p.x-m.offset.x,y:p.y-m.offset.y};if(m.type==='litter'){for(const clump of m.clumps)if(!clump.removed&&dist(m.p,clump)<35)clump.removed=true;if(m.clumps.every(c=>c.removed))finishMini(()=>{const r=act('litter',{},true);G.s.flags['learned:litter']=true;say([{who:'',text:r.message}]);},.8);}
  if(m.type==='roller'){const hits=m.fur.filter(f=>f.on&&Math.abs(f.x-m.p.x)<35&&Math.abs(f.y-m.p.y)<21);if(hits.length){if(!m.used){if(!act('startRoller',{},true).ok)return;m.used=true;}const r=act('roll',{amount:hits.length},true);if(r.ok){hits.slice(0,r.removed).forEach(f=>f.on=false);tone(210,.03,'sawtooth',.008);}}}}
  if(m.drag&&typeof m.drag==='object'){m.drag.x=p.x-(m.offset?.x||0);m.drag.y=p.y-(m.offset?.y||0);}
- if(m.drag==='door'){m.door=clamp((p.x-430)/120,0,1);m.moved+=delta;}
+ if(m.drag==='door'){m.door=clamp(m.doorStart+(p.x-m.downP.x)/(LifeView.layout.bedtime.room.w*.7),0,1);m.moved+=delta;}
  if(m.drag==='curtain')m.progress=clamp((p.x-400)/160,0,1);
  if(m.drag==='sponge'){for(const plate of m.items)if(dist(p,plate)<50)plate.clean=Math.min(1,plate.clean+delta/180);if(m.items.every(plate=>plate.clean>=1))finishMini(()=>act('dishes'),1.4);}
  if(m.drag==='hand'&&p.x>240&&p.x<470&&p.y>165&&p.y<300){m.moved+=Math.min(delta,35);m.lastMove=G.now;m.progress=Math.min(1,m.moved/260);if(m.moved>=260&&G.now-m.start>1.8)finishMini(()=>{const r=act('pet',{},true);if(G.intro==='hoodie'){G.intro='furLook';G.s.flags.introFur=true;G.s.flags.petFurToday=true;G.cat.pose='purr';say([{who:'나',text:'후드티에 털이 잔뜩 붙었네.'},{who:'나',text:'졸려? 이제 자러 가자.'}]);}else{G.catReactionUntil=G.now+3;G.cat.pose='purr';say([{who:'나',text:(G.s.dressed?'정장':'후드티')+'에 털이 붙었네.'}]);}

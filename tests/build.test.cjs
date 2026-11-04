@@ -10,6 +10,7 @@ test('웹과 오프라인 HTML에 실제 이미지·Neo둥근모·라이선스�
  const expected=Object.assign({},...manifests.map(m=>m.load));assert.deepEqual(availableImages(),expected);
  const bundled=JSON.parse(html.match(/window.__LIFE_ASSETS=(.*?);<\/script>/)[1]);assert.deepEqual(Object.keys(bundled).sort(),Object.keys(expected).sort());
  for(const manifest of manifests)for(const file of manifest.retainedDraftsNotForLoading||[]){if(!Object.values(expected).includes('assets/'+file))assert.equal(fs.existsSync(path.join(root,'assets',file)),false,'시안은 공개 빌드에서 제외한다');}
+ for(const manifest of manifests)for(const draft of manifest.drafts||[])if(draft.loaded===false&&!Object.values(expected).includes(draft.file))assert.equal(fs.existsSync(path.join(root,draft.file)),false,'미사용 R5 시안은 공개 빌드에서 제외한다');
  for(const file of availableManifests())assert.ok(fs.readFileSync(path.join(root,file)).equals(fs.readFileSync(path.join(__dirname,'..',file))));
 
 });
