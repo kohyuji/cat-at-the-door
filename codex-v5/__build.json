@@ -1,7 +1,7 @@
 {
   "publisher": "cat-at-the-door",
   "source_branch": "codex-v5",
-  "source_commit": "14b65382589eab65d716b178df9a68291f5b3610",
-  "main_commit": "194dc90998a52d98659dcdabbf14042a7b535a69",
-  "built_at": "2026-11-03T19:00:19.938Z"
+  "source_commit": "3232c46e6f49f5d7f186edf88949ecc2cafd9f5e",
+  "base_pages_commit": "3f2c1338fde58118cdbc570c7b5210d825506ae6",
+  "built_at": "2026-11-04T10:24:12.050Z"
 }

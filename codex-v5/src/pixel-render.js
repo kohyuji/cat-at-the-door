@@ -2,13 +2,87 @@
    좌표는 640×360 기준이고 t와 walk는 초 단위다. */
 var PixelArt = (function () {
   'use strict';
+  // R4: generated PNGs stay untouched. Tight source rectangles avoid neighbouring
+  // poses; a shared source-pixel scale keeps heads and paws the same size.
+  var images={}, peopleScale=.28, catScale=.205;
+  var assetSources={r4People:'assets/r4-people-pixel.png',r4Cats:'assets/r4-cats-pixel.png',r4Props:'assets/r4-props-pixel.png',r4Actions:'assets/r4-actions-pixel.png',r4Seated:'assets/r4-seated-pixel.png',r4Portraits:'assets/r4-portraits-approved-cords.png',r4PortraitBase:'assets/r4-portraits-approved.png',r4Scenes:'assets/r4-scenes-urban.png',r4Outdoors:'assets/r4-outdoors-urban.png'};
+  var peopleRects=[[54,30,105,206],[246,30,98,206],[438,30,98,206],[630,30,103,194],[822,30,104,206],[1014,30,99,206],[1205,30,98,206],[1399,30,102,205],[54,286,105,205],[246,286,98,205],[438,286,98,205],[630,286,103,193],[822,286,104,205],[1014,286,98,205],[1206,286,97,205],[1399,286,102,202],[54,536,93,206],[218,564,136,167],[413,560,134,171],[583,569,131,159],[751,632,218,90],[1013,599,113,123],[1188,539,124,199],[1388,544,106,194],[45,796,104,209],[236,801,99,204],[426,794,99,211],[615,801,103,204],[814,791,94,214],[994,829,113,175],[1182,830,131,174],[1370,829,119,175]];
+  var catRects=[[40,105,139,120],[232,106,140,119],[424,108,140,117],[614,108,141,117],[806,109,141,117],[994,105,144,121],[1185,109,145,117],[1375,110,147,115],[40,360,139,129],[224,391,142,101],[420,365,139,118],[611,331,128,120],[807,322,130,107],[989,341,136,131],[1180,371,140,121],[1374,392,140,99],[40,605,125,129],[231,605,126,129],[420,660,132,75],[609,657,131,78],[792,613,136,122],[987,662,135,73],[1188,614,138,121],[1380,607,136,127],[23,876,158,99],[228,874,141,110],[412,862,139,129],[599,864,139,127],[800,861,109,130],[992,884,125,109],[1180,852,114,139],[1374,908,123,83]];
+  var propRects=[[35,69,148,187],[216,108,153,145],[401,121,160,124],[590,108,163,137],[783,121,163,125],[1001,59,94,199],[1150,128,170,121],[1354,68,147,189],[18,369,174,142],[208,369,176,142],[427,316,106,199],[584,304,169,204],[777,361,164,150],[961,304,173,214],[1152,351,181,168],[1366,344,129,175],[17,564,182,196],[251,556,83,204],[423,577,111,176],[571,589,190,155],[786,586,149,158],[984,585,134,163],[1143,588,184,163],[1350,607,162,138],[18,826,173,151],[215,850,144,117],[384,822,171,161],[570,826,189,157],[786,800,160,202],[991,793,109,204],[1143,843,175,129],[1338,838,181,137]];
+  var actionRects=[[70,55,169,267],[384,55,169,267],[695,55,204,267],[1010,55,188,267],[70,378,168,264],[384,381,200,261],[686,392,189,250],[1012,379,168,263],[69,758,181,96],[396,752,150,100],[693,759,187,90],[1014,757,171,102],[47,1037,228,152],[371,1006,202,189],[685,1033,214,152],[1065,988,89,220]];
+  var seatedRects=[[71,30,169,276],[385,30,168,276],[698,30,179,276],[1012,30,168,276],[73,348,165,264],[387,351,164,261],[701,348,164,264],[1015,351,163,261],[71,657,169,277],[385,657,168,276],[698,657,169,277],[1012,657,168,277],[75,976,142,262],[389,978,155,260],[702,977,141,261],[1017,978,151,260]];
+  // Widths are in the existing PixelArt local coordinates (feet/base at y=0).
+  var props={foodBag:[0,27],wetFood:[1,26],bowlEmpty:[2,30],bowlFull:[3,30],water:[4,30],waterBottle:[5,21],toy:[6,23],litterBag:[7,28],litterTray:[8,51],litterDirty:[9,51],scoop:[10,18],suit:[11,31],hoodieFolded:[12,34],hoodie:[13,34],briefcase:[14,31],roller:[15,23],umbrella:[16,60],umbrellaFolded:[17,17],phone:[18,18],laptop:[19,55],notebook:[20,31],sheet:[21,24],document:[21,24],laundryBasket:[22,46],plateDirty:[23,34],plate:[24,34],sponge:[25,19],crate:[26,39],cozyBox:[27,51],chair:[28,29],coatRack:[29,29],pillow:[30,43],blanketFolded:[31,48]};
+  function setImages(next){if(next)images=next;return images;}
+  function ready(im){return !!(im&&im.complete!==false&&(im.naturalWidth||im.width));}
+  function portrait(c,variant,x,y,w,h){var im=ready(images.r4PortraitBase)?images.r4PortraitBase:images.r4Portraits;if(!ready(im))return false;var map={me:0,hoodie:0,suit:1,lead:2,boss:2,peer:3,customerA:4,commuterA:4,customerB:5,commuterB:5,customerC:6,commuterC:6,cat:7},i=map[variant]===undefined?0:map[variant],iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,sw=iw/4,sh=ih/2;
+    var dw=Math.round(Math.min(w,h*sw/sh)),dh=Math.round(dw*sh/sw),dx=Math.round(x+(w-dw)/2),dy=Math.round(y+h-dh);c.save();c.imageSmoothingEnabled=false;c.drawImage(im,(i%4)*sw,Math.floor(i/4)*sh,sw,sh,dx,dy,dw,dh);
+    // Keep the user's exact approved face pixels. Only the hoodie below the chin
+    // comes from the generated colour correction; the other seven cells use base.
+    if(i===0&&im===images.r4PortraitBase&&ready(images.r4Portraits)){var split=330,top=Math.round(dh*split/sh);c.drawImage(images.r4Portraits,0,split,384,512-split,dx,dy+top,dw,dh-top);}
+    c.restore();return true;}
+  function cut(c,im,a,x,y,w,h,flip){if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,a[0],a[1],a[2],a[3],Math.round(-w/2),Math.round(-h),Math.round(w),Math.round(h));c.restore();return true;}
+  function generatedPerson(c,x,y,variant,dir,t,pose){
+    if(!ready(images.r4People))return false;
+    if(pose==='sit'&&ready(images.r4Seated)){var si=variant==='suit'?Math.floor((t||0)*2)%4:variant==='customerA'?4:variant==='customerB'?5:variant==='customerC'?6:variant==='peer'?7:variant==='commuterA'?12:variant==='commuterB'?13:variant==='commuterC'?14:variant==='boss'||variant==='lead'?15:8+Math.floor((t||0)*1.2)%4,sa=seatedRects[si],left=si>=4&&si<8||si>=12;
+      cut(c,images.r4Seated,sa,x,y,sa[2]*.178,sa[3]*.178,left?dir>0:dir<0);
+      if(si>=8&&si<12){c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir<0?-1:1,1);r(c,0,-27,1,4,'#9c5d52');r(c,2,-27,1,4,'#9c5d52');c.restore();}return true;}
+    if(ready(images.r4Actions)&&((variant==='suit'&&pose==='sit')||pose==='kneel'||pose==='care')){
+      var ai=pose==='sit'?Math.floor((t||0)*2)%4:4+Math.floor((t||0)*3)%4,aa=actionRects[ai];
+      return cut(c,images.r4Actions,aa,x,y,aa[2]*.168,aa[3]*.168,dir<0);
+    }
+    var moving=pose==='walk'||pose==='umbrellaWalk',frame=moving?Math.floor((t||0)*10)%8:0,index;
+    var npc={lead:24,boss:24,peer:25,customerA:26,customerB:27,customerC:28,commuterA:26,commuterB:27,commuterC:28};
+    if(npc[variant]!==undefined){index=npc[variant];if(pose==='sit')index=variant==='customerB'||variant==='commuterB'?30:variant==='customerC'||variant==='commuterC'?31:29;}
+    else if(pose==='sleep')index=20;
+    else if(pose==='bedSleep')index=21;
+    else if(pose==='sit')index=17;
+    else if(pose==='kneel'||pose==='care')index=18+(Math.floor((t||0)*3)%2);
+    else if(pose==='umbrella'||pose==='umbrellaWalk')index=moving?frame:22;
+    else if(pose==='tired')index=23;
+    else index=variant==='suit'?8+frame:dir===0&&!moving?16:frame;
+    var a=peopleRects[index],w=a[2]*peopleScale,h=a[3]*peopleScale;
+    // Only the closed eyes/shoulders are shown above the scene's single blanket.
+    if(pose==='bedSleep')return cut(c,images.r4People,a,x,y-11,w,h,false);
+    var ok=cut(c,images.r4People,a,x,y,w,h,index>=29?dir>0:dir<0);
+    if(pose==='carry')item(c,'briefcase',x+(dir<0?-14:14),y-2,.65);
+    return ok;
+  }
+  function generatedCat(c,x,y,dir,t,pose){
+    if(!ready(images.r4Cats))return false;var index=16;
+    if(pose==='walk')index=Math.floor((t||0)*12)%8;
+    else if(pose==='run')index=24+Math.floor((t||0)*14)%2;
+    else if(pose==='jump')index=12;
+    else if(/^jump[0-7]$/.test(pose))index=8+Number(pose.slice(4));
+    else if(pose==='land')index=15;
+    else if(pose==='sleep')index=18+Math.floor((t||0)*1.4)%2;
+    else if(pose==='eat')index=20;
+    else if(pose==='fear')index=21;
+    else if(pose==='purr'||pose==='rub')index=22;
+    else if(pose==='play')index=26+Math.floor((t||0)*4)%2;
+    else if(pose==='groom')index=28;
+    else if(pose==='scratch')index=29;
+    else if(pose==='lookUp')index=30;
+    else if(pose==='stand')index=23;
+    else if(Math.floor((t||0)*2)%13===0)index=17;
+    var a=catRects[index],w=a[2]*catScale,h=a[3]*catScale;
+    return cut(c,images.r4Cats,a,x,y,w,h,dir<0);
+  }
+  function generatedItem(c,type,x,y,scale){var actions={hand:[8,17],handGrip:[9,15],handPoint:[10,17],handRest:[11,17],charger:[12,41],folder:[13,44],shoes:[14,34],umbrellaGrip:[15,10]},ap=actions[type];
+    if(type==='roller'&&ready(images.r4Props)){var ra=propRects[15],rw=23*(scale||1);return cut(c,images.r4Props,ra,x,y+2*(scale||1),rw,rw*ra[3]/ra[2],false);}
+    if(ap&&ready(images.r4Actions)){var aa=actionRects[ap[0]],aw=ap[1]*(scale||1);return cut(c,images.r4Actions,aa,x,y,aw,aw*aa[3]/aa[2],false);}
+    var p=props[type];if(!p||!ready(images.r4Props))return false;var a=propRects[p[0]],w=p[1]*(scale||1),h=w*a[3]/a[2];
+    if(type==='bowlEmpty'||type==='bowlFull'||type==='water')h=w*.4;
+    if(type==='hoodieFolded')h=w*.55;
+    cut(c,images.r4Props,a,x,y,w,h,false);
+    if(type==='hoodie'||type==='hoodieFolded'){c.save();c.translate(Math.round(x),Math.round(y));c.scale(scale||1,scale||1);if(type==='hoodie'){r(c,-3,-25,2,7,'#9c5d52');r(c,2,-25,2,7,'#9c5d52');}else{r(c,-6,-11,2,4,'#9c5d52');r(c,1,-11,2,4,'#9c5d52');}c.restore();}return true;}
   var C = {
-    ink:'#293c48', line:'#40535d', wall:'#e5e9e5', wallShade:'#ccd5d3', floor:'#c0beb0',
-    paper:'#f5f4e9', white:'#e9f0ed', blue:'#739eac', blueDark:'#467383', navy:'#365569',
-    teal:'#6fa79c', green:'#8ba58b', grey:'#a1adb0', greyDark:'#75868d', hair:'#4b4140',
+    ink:'#293c48', line:'#40535d', wall:'#dedcdd', wallShade:'#b7b9c0', floor:'#b8aca3',
+    paper:'#eeebe8', white:'#e7e7e9', blue:'#739eac', blueDark:'#467383', navy:'#365569',
+    teal:'#8494a8', green:'#aa7972', grey:'#84909e', greyDark:'#657084', hair:'#4b4140',
     skin:'#e9b68e', skinLight:'#f4cba3', ginger:'#d89553', gingerLight:'#f0bd77',
-    gingerDark:'#a96c3e', furWhite:'#f3e4c3', brown:'#8d7460', wood:'#a99c84',
-    woodDark:'#817a69', glass:'#a4c3cc', night:'#455f77', food:'#8b6842'
+    gingerDark:'#a96c3e', furWhite:'#f3e4c3', brown:'#8d7460', wood:'#9a8270',
+    woodDark:'#72675f', glass:'#a4c3cc', night:'#455f77', food:'#8b6842'
   };
   function r(c,x,y,w,h,col) {
     if (w<=0 || h<=0) return;
@@ -45,6 +119,8 @@ var PixelArt = (function () {
   }
   function person(c,x,y,variant,dir,walk,pose) {
     variant=variant||'me';dir=dir===-1?-1:dir===0?0:1;walk=walk||0;pose=pose||'stand';
+    if(c.canvas&&c.canvas.width<=100&&c.canvas.height<=100&&portrait(c,variant,0,0,c.canvas.width,c.canvas.height))return;
+    if(generatedPerson(c,x,y,variant,dir,walk,pose))return;
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir<0?-1:1,1);
     var suit=variant==='suit'||variant==='lead'||variant==='boss'||variant==='commuterA';
     var commuter=variant.indexOf('commuter')===0;
@@ -106,6 +182,8 @@ var PixelArt = (function () {
   }
   function cat(c,x,y,dir,walk,pose) {
     dir=dir===-1?-1:1;walk=walk||0;pose=pose||'stand';
+    if(c.canvas&&c.canvas.width<=100&&c.canvas.height<=100&&ready(images.r4Portraits)){c.save();c.setTransform(1,0,0,1,0,0);portrait(c,'cat',0,0,c.canvas.width,c.canvas.height);c.restore();return;}
+    if(generatedCat(c,x,y,dir,walk,pose))return;
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir,1);
     var sway=Math.round(Math.sin(walk*4)*2),step=pose==='walk'?Math.sin(walk*12):0;
     if(pose!=='jump')shadow(c,-2,0,14);
@@ -142,6 +220,7 @@ var PixelArt = (function () {
     c.restore();
   }
   function item(c,type,x,y,scale) {
+    if(generatedItem(c,type,x,y,scale))return;
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(scale||1,scale||1);
     switch(type) {
     case 'roller':
@@ -268,6 +347,13 @@ var PixelArt = (function () {
     r(c,x+w-10,y+h*.55,3,4,C.woodDark);r(c,x+3,y+h-3,w-6,2,C.wallShade);
   }
   function fallback(c,scene,t) {
+    // Room fallbacks leave the bed/window/doors to LifeView's single live layer.
+    if(scene==='bedroom'||scene==='living'){
+      r(c,0,0,640,360,'#dfdcda');floor(c,250);r(c,0,247,640,4,'#8c817b');
+      if(scene==='bedroom'){box(c,265,183,149,13,'#aa8e78');r(c,272,196,6,69,'#78685b');r(c,398,196,6,69,'#78685b');item(c,'laptop',336,182,.8);r(c,422,121,5,139,C.ink);r(c,505,121,5,139,C.ink);r(c,422,121,88,5,C.ink);}
+      else{box(c,145,179,162,71,'#c9c6c3');r(c,145,178,162,7,C.paper);box(c,313,91,64,159,'#d5d2cf');r(c,316,151,58,2,C.greyDark);r(c,320,127,3,18,C.ink);r(c,320,169,3,27,C.ink);box(c,380,203,160,57,'#647084');r(c,386,209,148,22,'#778395');r(c,387,235,146,18,'#78869a');r(c,456,208,2,45,C.ink);r(c,386,260,5,8,C.woodDark);r(c,530,260,5,8,C.woodDark);}
+      return;
+    }
     r(c,0,0,640,360,C.wall);r(c,0,235,640,5,C.wallShade);floor(c,240);
     if(scene==='bedroom') {
       window(c,40,30,135,102);door(c,548,48,68,196);
@@ -301,6 +387,6 @@ var PixelArt = (function () {
       box(c,331,299,112,8,C.paper,C.greyDark);item(c,'document',390,296);
     }
   }
-  return {palette:C,person:person,cat:cat,item:item,train:train,rain:rain,fallback:fallback};
+  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=PixelArt;
