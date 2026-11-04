@@ -92,3 +92,9 @@ test('새벽 밥 수습은 아침 밥·시각과 구별되고 저장 후 이어�
 test('저장·이어하기는 이름·물건·문·커튼을 유지하고 초기화는 두 번째 확인 뒤 실행한다',async()=>{
  const s=state();s.cat='사라';s.bagPacked=true;s.bagContents=['laptop','charger'];s.doorOpen=false;s.curtainClosed=true;const g=await game({state:s,scene:'bedroom'});g.click('menuButton');g.click('saveButton');g.click('saveExitButton');assert.equal(g.get('continueButton').hidden,false);g.click('continueButton');assert.equal(g.snap().state.cat,'사라');assert.deepEqual(g.snap().state.bagContents,['laptop','charger']);assert.equal(g.snap().doorOpen,false);assert.equal(g.snap().state.curtainClosed,true);g.click('menuButton');g.click('newGameButton');assert.ok(g.storage.has(SAVE_KEY));g.click('newGameButton');assert.equal(g.storage.has(SAVE_KEY),false);assert.equal(g.get('continueButton').hidden,true);
 });
+
+
+test('최종 9개 이미지와 G 타이틀을 로드하고 192px 초상화를 전용 API로 그린다',async()=>{
+ const g=await game(null,{autoStart:false}),keys=Object.keys(require('../assets/r4-asset-manifest.json').load).sort();g.step(.1);assert.deepEqual(g.paint.titleAssetKeys.sort(),keys);assert.equal(g.get('portrait').width,192);assert.equal(g.get('portrait').height,192);
+ g.start();black(g);message(g);assert.deepEqual(g.snap().assetKeys.sort(),keys);assert.ok(g.paint.portraits.some(p=>p.variant==='hoodie'&&p.w===192&&p.h===192));read(g);g.target('고양이에게');read(g);g.drag([190,150],[320,150],2.4);assert.ok(g.paint.portraits.some(p=>p.variant==='cat'&&p.x===0&&p.y===0&&p.w===192));
+});

@@ -11,7 +11,7 @@ const output=path.join(root,'dist');
 function buildWeb(){
  // 실행에 필요한 파일만 복사합니다. 이전 버전·기획서·검사용 화면은 공개하지 않습니다.
  const files=['index.html','src/life.css','src/life-state.js','src/life-story.js','src/pixel-render.js','src/life-view.js','src/life-game.js',
-  ...Object.values(availableImages()),'assets/fonts/NeoDunggeunmoPro-Regular.woff2','assets/fonts/LICENSE-NeoDunggeunmo.txt'];
+  ...Object.values(availableImages()),'assets/r4-asset-manifest.json','assets/fonts/NeoDunggeunmoPro-Regular.woff2','assets/fonts/LICENSE-NeoDunggeunmo.txt'];
  for(const file of files){
   const dest=path.join(output,file);
   fs.mkdirSync(path.dirname(dest),{recursive:true});

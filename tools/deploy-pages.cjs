@@ -78,6 +78,7 @@ async function configurePages() {
   }
   const correctSource = current.ok && current.result.build_type === 'legacy' &&
     current.result.source?.branch === publishBranch && current.result.source?.path === '/';
+  if (correctSource) return; // 기존 gh-pages 소스의 푸시가 Pages 빌드를 시작한다.
   if (!correctSource) {
     // 도메인·HTTPS 등 기존 설정은 보내지 않아 그대로 유지한다.
     const updated = await api(current.status === 404 ? 'POST' : 'PUT', {
@@ -175,7 +176,11 @@ async function main() {
     const commit = git(['commit-tree', tree, '-p', previousSha, '-m', `Publish codex-v5 ${sourceSha.slice(0, 7)}`]);
     git(['push', 'origin', `${commit}:refs/heads/gh-pages`]);
     await configurePages();
-    console.log(JSON.stringify({ status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, base_pages_commit: previousSha }, null, 2));
+    const preservedFiles = git(['ls-tree', '-r', '--name-only', previousSha]).split(/\r?\n/).filter(file => file && !file.startsWith('codex-v5/')).length;
+    const deployment = { status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, base_pages_commit: previousSha, other_paths_changed: 0, preserved_files: preservedFiles };
+    fs.mkdirSync(path.join(root, '.preview'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.preview/r4-deployment.json'), JSON.stringify(deployment, null, 2));
+    console.log(JSON.stringify(deployment, null, 2));
   } finally {
     try { removeStaging(stagingBase, staging); }
     catch { console.warn(`임시 파일 자동 정리를 마치지 못했습니다. 배포 결과에는 영향이 없습니다: ${staging}`); }

@@ -67,8 +67,8 @@ canvas{display:block;image-rendering:pixelated}
 .object-hit.hinted:not(:hover):not(:focus-visible){border-color:transparent!important;background:transparent!important}
 .notice{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:4;width:max-content;max-width:calc(100% - 28px);padding:9px 15px;border:2px solid #a7c0b3;border-radius:6px;background:#fbfdf4f7;color:#294a4b;font-size:18px;line-height:1.5;text-align:center;pointer-events:none}
 .night-banner{margin:0 0 10px;padding:12px 18px;border:2px solid #56738b;border-radius:6px;background:#314d6a;color:#f8f6db;text-align:center;font-size:24px;line-height:1.4}
-.dialogue{position:relative;z-index:5;display:grid;grid-template-columns:80px minmax(0,1fr) 36px;gap:16px;min-height:138px;margin:12px 0 0;padding:18px 20px;border:3px solid #779f91;border-radius:13px;background:#fcfdf5;box-shadow:0 4px 0 #a4beb0;cursor:pointer}
-#portrait{width:80px;height:80px;align-self:center;background:transparent}
+.dialogue{position:relative;z-index:5;display:grid;grid-template-columns:128px minmax(0,1fr) 36px;gap:16px;min-height:138px;margin:12px 0 0;padding:18px 20px;border:3px solid #779f91;border-radius:13px;background:#fcfdf5;box-shadow:0 4px 0 #a4beb0;cursor:pointer}
+#portrait{width:128px;height:128px;align-self:center;background:transparent}
 .dialogue-body{min-width:0}
 .speaker{margin:0 0 6px;color:#3e7265;font-size:18px;line-height:1.4}
 .speech{min-height:3em;white-space:pre-wrap;word-break:keep-all;overflow-wrap:break-word;font-size:20px;line-height:1.6}
@@ -149,7 +149,7 @@ canvas{display:block;image-rendering:pixelated}
   body{font-size:18px}.title-screen{display:flex;flex-direction:column;justify-content:center;gap:24px;padding:24px 18px}.title-menu{width:100%;max-width:360px}.title-menu h1{font-size:32px;text-align:center;margin-bottom:24px}
   #gameScreen{padding:8px 10px 18px}.topbar{gap:4px}#dateLabel{font-size:16px;min-width:90px}#timeLabel{font-size:18px}#energyLabel,#foodLabel{font-size:14px;padding:4px 6px}.topbar button{min-width:40px}
   .time-track{gap:3px}.time-segment{padding:6px 4px;font-size:14px}#routineToggle{font-size:14px;padding:5px 7px}#objectiveText{font-size:16px}.routine-checklist{gap:6px 12px;padding:9px 12px}.check-item{font-size:16px}
-  .dialogue{grid-template-columns:56px minmax(0,1fr) 30px;gap:10px;padding:14px 12px;min-height:140px}#portrait{width:56px;height:56px}.speaker{font-size:16px}.speech{font-size:18px;line-height:1.6}#dialogueNext{min-width:30px;width:30px}.choices button{font-size:16px}
+  .dialogue{grid-template-columns:120px minmax(0,1fr) 30px;gap:10px;padding:14px 12px;min-height:140px}#portrait{width:120px;height:120px}.speaker{font-size:16px}.speech{font-size:18px;line-height:1.6}#dialogueNext{min-width:30px;width:30px}.choices button{font-size:16px}
   .mini-bar{padding:10px 12px;gap:4px 9px}#miniLabel{font-size:18px}#miniHint{font-size:16px}#miniExit{font-size:14px;padding:7px 9px}#miniActions button{font-size:18px}.notice{font-size:16px;padding:8px 10px}.night-banner{font-size:20px;padding:10px}
   .modal{padding:12px}.ack-card,.session-card{padding:22px}.ack-card p{font-size:18px}.phone-shell{max-height:92dvh}#endingTitle{font-size:28px}#endingText{font-size:18px}
 }
@@ -180,3 +180,7 @@ canvas{display:block;image-rendering:pixelated}
 
 .shop-prices{position:absolute;inset:0;z-index:1;pointer-events:none}
 .shop-prices span{position:absolute;transform:translateX(-50%);padding:1px 4px;border:1px solid #b5a47c;border-radius:2px;background:#fff4d3;color:#4c493a;font-size:clamp(11px,1.5vw,15px);white-space:nowrap;line-height:1.5}
+
+/* 승인 초상화는 원본 비율을 유지하고 192px 내부 캔버스에서 직접 그린다. */
+.dialogue:has(#portrait[hidden]){grid-template-columns:minmax(0,1fr) 36px}
+@media(max-width:700px){.dialogue:has(#portrait[hidden]){grid-template-columns:minmax(0,1fr) 30px}}

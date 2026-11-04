@@ -1,5 +1,11 @@
-const fs=require('node:fs'),path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
-const images={rooms:'assets/rooms-pixel.png',places:'assets/places-pixel.png',r4People:'assets/r4-people.png',r4Cats:'assets/r4-cats.png',r4Props:'assets/r4-props.png',r4Scenes:'assets/r4-scenes.png',r4Actions:'assets/r4-actions.png'};
-const availableImages=()=>Object.fromEntries(Object.entries(images).filter(([,p])=>fs.existsSync(path.join(root,p))));
+// 브라우저와 빌드는 같은 최종 자산 목록을 쓴다. 시안 PNG를 같은 키에 넣지 않는다.
+const context=vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(root,'src/pixel-render.js'),'utf8'),context);
+const images=Object.fromEntries(Object.entries(context.PixelArt.assetSources));
+function availableImages(){
+ for(const file of Object.values(images))if(!fs.existsSync(path.join(root,file)))throw new Error('필수 게임 그림이 없습니다: '+file);
+ return images;
+}
 module.exports={images,availableImages};

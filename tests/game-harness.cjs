@@ -33,12 +33,12 @@ async function game(saved,{autoStart=true}={}){
   replaceChildren(...a){this._text='';this.children=[];this.append(...a);}append(...a){for(const child of a){const n=typeof child==='string'?{textContent:child}:child;n.parentNode=this;this.children.push(n);}}appendChild(n){this.append(n);return n;}after(n){n.afterNode=this;}
  }
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
- for(const match of html.matchAll(/<([a-z0-9]+)\b([^>]*\bid="([^"]+)"[^>]*)>/gi)){const n=new Node(match[1],match[3]);n.hidden=/\bhidden\b/.test(match[2]);nodes.set(n.id,n);}
+ for(const match of html.matchAll(/<([a-z0-9]+)\b([^>]*\bid="([^"]+)"[^>]*)>/gi)){const n=new Node(match[1],match[3]);n.hidden=/\bhidden\b/.test(match[2]);for(const dimension of ['width','height']){const value=match[2].match(new RegExp(dimension+'="(\\d+)"'));if(value)n[dimension]=Number(value[1]);}nodes.set(n.id,n);}
  const get=id=>{assert.ok(nodes.has(id),`index.html is missing #${id}`);return nodes.get(id);};
  const document={getElementById:get,createElement:tag=>new Node(tag),createTextNode:t=>({textContent:String(t)}),addEventListener:(k,fn)=>events[k]=fn,querySelectorAll:s=>all.filter(n=>n.matches(s)),fonts:{ready:Promise.resolve()}};
  if(saved)storage.set(SAVE_KEY,JSON.stringify({state:saved.state,scene:saved.scene||'living',doorOpen:true,officeTalk:{},officeDone:false,officeFeedback:false,...saved}));
  const sandbox={document,console,Math,JSON,Map,Set,requestAnimationFrame:fn=>frame=fn,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{addEventListener(){},AudioContext:FakeAudioContext},Image:class{constructor(){this.complete=true;this.width=this.naturalWidth=1280;this.height=this.naturalHeight=1440;}set src(v){this.onload?.();}}};
- const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c,{filename:file});
+ const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js']){if(file==='life-game.js'){const drawPortrait=c.PixelArt.portrait;c.PixelArt.portrait=(ctx,variant,x,y,w,h)=>{paint.portraits||=[];paint.portraits.push({variant,x,y,w,h});return drawPortrait(ctx,variant,x,y,w,h);};const title=c.LifeView.title;c.LifeView.title=(ctx,t,G)=>{paint.titleAssetKeys=Object.keys(G?.images||{});return title(ctx,t,G);};}vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c,{filename:file});}
  await Promise.resolve();await Promise.resolve();
  const snap=()=>sandbox.window.CatDoorReview.snapshot();
  const step=(seconds=.4)=>{for(let i=0;i<Math.ceil(seconds*30);i++){time+=1000/30;frame(time);}};

@@ -19,3 +19,5 @@
 R4 생성 스프라이트·배경은 r4-asset-manifest.json과 r4-prompts.md를 따른다. 로더는 G.images에 이미지를 제공하고 PixelArt.setImages로 연결한다. tools/assets.cjs는 웹·단일 HTML 자산 목록을 공통 관리한다.
 
 현재 글꼴은 사용자 제공 Neo둥근모 Pro 원본을 그대로 사용한다. 글꼴 메타데이터의 SIL OFL 1.1 표기를 확인했고 [원 제작자 사용 조건](https://github.com/neodgm/neodgm/blob/main/LICENSE.txt)을 fonts/LICENSE-NeoDunggeunmo.txt에 포함한다. 이전 도스 고딕은 보관 자료다.
+
+최종 R4의 런타임은 PixelArt.assetSources 9개 파일만 사용한다. 사용자 승인 얼굴은 r4-portraits-approved.png 그대로, 후드티 아래 부분만 r4-portraits-approved-cords.png를 쓴다. -pixel 없는 초기 시안은 보존하며 공개 빌드에서 제외한다. 초상화 내부192px, 표시128px(작은 화면120px).
