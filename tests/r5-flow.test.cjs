@@ -62,3 +62,8 @@ test('F31 저장은 실제 행동 종료 시각만 보존하며 경과 연출의
 test('F39 누적된 모래가 많아도 모든 덩이는 실제 작업영역 안에서 삽으로 치울 수 있다',async()=>{
  const s=fixture(10);s.litterDirty=26;const g=await game({state:s});g.target('모래를');assert.equal(g.snap().mini,'litter');assert.equal(g.snap().clumps.length,26);for(const p of g.snap().clumps)assert.ok(p.x>=134&&p.x<=489&&p.y>=147&&p.y<=267);clean(g);assert.equal(g.snap().state.litterDirty,0);
 });
+
+
+test('F33 이전 R4에서 저장한 열린 문 고양이 시점도 추가 진입 없이 아침으로 이어진다',async()=>{
+ const s=fixture(1,'morning');s.doorOpen=true;s.lastNight={day:0,open:true,wakeReasons:[]};const g=await game({state:s,scene:'living',catControl:true,catStage:'openDoor',pendingNight:s.lastNight});assert.equal(g.snap().catControl,false);assert.equal(g.snap().heroOnBed,true);assert.equal(g.snap().bedStage,'waking');read(g);assert.equal(g.snap().state.day,1);assert.equal(g.snap().heroOnBed,false);assert.equal(g.snap().state.doorOpen,true);
+});

@@ -179,7 +179,7 @@ async function main() {
     const preservedFiles = git(['ls-tree', '-r', '--name-only', previousSha]).split(/\r?\n/).filter(file => file && !file.startsWith('codex-v5/')).length;
     const deployment = { status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, base_pages_commit: previousSha, other_paths_changed: 0, preserved_files: preservedFiles };
     fs.mkdirSync(path.join(root, '.preview'), { recursive: true });
-    fs.writeFileSync(path.join(root, '.preview/r4-deployment.json'), JSON.stringify(deployment, null, 2));
+    fs.writeFileSync(path.join(root, '.preview/latest-deployment.json'), JSON.stringify(deployment, null, 2));
     console.log(JSON.stringify(deployment, null, 2));
   } finally {
     try { removeStaging(stagingBase, staging); }
