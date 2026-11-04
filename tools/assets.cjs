@@ -11,6 +11,7 @@ function availableImages(){
 function availableManifests(){
  const files=['assets/r4-asset-manifest.json'];
  if(Object.values(images).some(file=>file.startsWith('assets/r5-')))files.push('assets/r5-asset-manifest.json');
+ if(Object.values(images).some(file=>file.startsWith('assets/r6-')))files.push('assets/r6-asset-manifest.json');
  for(const file of files)if(!fs.existsSync(path.join(root,file)))throw new Error('최종 자산 계약이 아직 없습니다: '+file);
  return files;
 }

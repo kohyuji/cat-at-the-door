@@ -16,17 +16,17 @@ test('이름의 받침과 호격·주격을 저장된 이름에 맞춘다',()=>{
  assert.equal(Life.josa('땅콩','call'),'땅콩아');assert.equal(Life.josa('땅콩','subject'),'땅콩이가');assert.equal(Life.josa('사라','call'),'사라야');assert.equal(Life.josa('사라','subject'),'사라가');assert.equal(Life.josa('안녕','topic'),'안녕이는');assert.equal(Life.create('  하늘  ',' 땅콩 ').cat,'땅콩');
 });
 test('정확한 응대·복장·피로가 계약과 오늘 입금을 결정한다',()=>{
- const good=workState(),customers=Story.customers(good);customers.slice(0,2).forEach(c=>assert.equal(consult(good,c).contract,true));const r=Life.finishWork(good);assert.equal(r.work.contracts,2);assert.equal(r.work.income,48000);assert.equal(good.minute,1080);
- const dirty=workState();dirty.clothesFur.suit=8;assert.equal(consult(dirty,Story.customers(dirty)[0]).contract,false);assert.match(dirty.consultations[0].reasons.join(''),/정장.*털/);assert.equal(Life.finishWork(dirty).work.income,12000);
+ const good=workState(),customers=Story.customers(good);customers.slice(0,2).forEach(c=>assert.equal(consult(good,c).contract,true));const r=Life.finishWork(good);assert.equal(r.work.contracts,2);assert.equal(r.work.income,32000);assert.equal(good.minute,1080);
+ const dirty=workState();dirty.clothesFur.suit=8;assert.equal(consult(dirty,Story.customers(dirty)[0]).contract,false);assert.match(dirty.consultations[0].reasons.join(''),/정장.*털/);assert.equal(Life.finishWork(dirty).work.income,8000);
  const tired=workState();tired.energy=0;assert.match(consult(tired,Story.customers(tired)[0]).reasons.join(''),/잠이 부족/);
  const wrong=workState();assert.match(consult(wrong,Story.customers(wrong)[0],true).reasons.join(''),/다른 보장/);
 });
 test('미완료는 자동완료되지 않고 저장·재정산에도 중복 입금이 없다',()=>{
- let s=workState(),list=Story.customers(s);consult(s,list[0]);Life.beginConsultation(s,list[1]);Life.answerConsultation(s,list[1].correct[0]);const before=s.cash;const first=Life.finishWork(s);assert.equal(first.work.consultations,1);assert.equal(first.work.missing,1);assert.equal(first.work.income,24000);assert.equal(s.cash,before+24000);
+ let s=workState(),list=Story.customers(s);consult(s,list[0]);Life.beginConsultation(s,list[1]);Life.answerConsultation(s,list[1].correct[0]);const before=s.cash;const first=Life.finishWork(s);assert.equal(first.work.consultations,1);assert.equal(first.work.missing,1);assert.equal(first.work.income,16000);assert.equal(s.cash,before+16000);
  s=JSON.parse(JSON.stringify(s));const cash=s.cash;assert.equal(Life.finishWork(s).alreadyDone,true);assert.equal(s.cash,cash);assert.equal(s.transactions.filter(t=>t.id==='wage:1').length,1);
 });
 test('추가 상담은 수당과 퇴근·귀가 시각을 함께 바꾼다',()=>{
- const a=workState(4),b=workState(4);Story.customers(a).slice(0,2).forEach(c=>consult(a,c));Story.customers(b).forEach(c=>consult(b,c));Life.finishWork(a);Life.finishWork(b);assert.equal(b.work[0].income-a.work[0].income,24000);assert.equal(b.minute-a.minute,60);Life.arriveHome(a);Life.arriveHome(b);assert.equal(a.minute,1120);assert.equal(b.minute,1180);assert.equal(Life.clock(a).text,'18:40');assert.equal(Life.clock(b).text,'19:40');
+ const a=workState(4),b=workState(4);Story.customers(a).slice(0,2).forEach(c=>consult(a,c));Story.customers(b).forEach(c=>consult(b,c));Life.finishWork(a);Life.finishWork(b);assert.equal(b.work[0].income-a.work[0].income,16000);assert.equal(b.minute-a.minute,60);Life.arriveHome(a);Life.arriveHome(b);assert.equal(a.minute,1120);assert.equal(b.minute,1180);assert.equal(Life.clock(a).text,'18:40');assert.equal(Life.clock(b).text,'19:40');
  const before=b.cash;Life.arriveHome(b);assert.equal(b.cash,before);assert.equal(b.transactions.filter(t=>t.id==='living:4').length,1);
 });
 test('아침·저녁 밥, 하루 물 교체와 잔량, 모래의 누적·수습을 구분한다',()=>{
@@ -43,17 +43,17 @@ test('돌돌이는 3분 투자로 털을 없애며 소모품 횟수를 세지 �
  const s=workState();s.phase='morning';s.minute=470;s.clothesFur.suit=s.fur=12;Life.act(s,'buyRoller');const before=s.cash;Life.act(s,'startRoller');Life.act(s,'roll',{amount:30});Life.act(s,'stopRoller');assert.equal(s.fur,0);assert.equal(s.clothesFur.suit,0);assert.equal(s.minute,473);assert.equal(s.cash,before);assert.equal(s.roller.owned,true);
 });
 test('놀이 누락·배고픔·비·더러운 모래가 각각 밤 반응과 피로에 남는다',()=>{
- const s=employed();s.day=3;s.food=5;s.waterLevel=0;s.litterDirty=4;const r=Life.sleep(s,true);assert.deepEqual(r.night.wakeReasons,['hunger','thirst','play','rain','litter']);assert.equal(s.energy,0);assert.equal(s.phase,'morning');
+ const s=employed();s.day=3;s.food=5;s.waterLevel=0;s.litterDirty=4;const r=Life.sleep(s,true);assert.deepEqual(r.night.wakeReasons,['thirst','hunger','litter','rain','play']);assert.equal(s.energy,0);assert.equal(s.phase,'morning');
  const n=employed();n.day=3;Life.act(n,'feed');Life.act(n,'water');Life.act(n,'play');Life.act(n,'secureWindow');Life.act(n,'litter');assert.deepEqual(Life.sleep(n,true).night.wakeReasons,[]);assert.equal(n.energy,3);
 });
 test('누락은 갑작스러운 엔딩이 아니며 새벽 돌봄은 다음 아침 밥으로 계산하지 않는다',()=>{
- const s=employed();s.careDebt=9;s.waterLevel=1;Life.sleep(s,false);assert.equal(s.phase,'morning');const food=s.food,cash=s.cash;assert.ok(Life.actAtNight(s,'feed').ok);assert.equal(s.food,food-1);assert.equal(s.needs.fed,false);assert.equal(s.minute,440);assert.equal(s.cash,cash);assert.equal(s.lastNight.nightCare[0].type,'feed');Life.finishNight(s);assert.equal(Life.actAtNight(s,'feed').ok,false);
+ const s=employed();s.careDebt=9;s.waterLevel=1;Life.sleep(s,false);assert.equal(s.phase,'morning');const food=s.food,cash=s.cash;assert.ok(Life.actAtNight(s,'feed').ok);assert.equal(s.food,food-1);assert.equal(s.needs.fed,false);assert.equal(s.minute,476);assert.equal(s.cash,cash);assert.equal(s.lastNight.nightCare[0].type,'feed');Life.finishNight(s);assert.equal(Life.actAtNight(s,'feed').ok,false);
 });
 test('돈 부족은 구매·사료를 바꾸지 않으며 한 끼 포장이 회복 경로다',()=>{
  const s=employed();s.cash=3000;s.food=0;assert.equal(Life.act(s,'buyFood').ok,false);assert.equal(s.food,0);assert.equal(s.cash,3000);assert.ok(Life.act(s,'smallFood').ok);assert.ok(Life.act(s,'feed').ok);assert.equal(s.cash,0);assert.equal(s.food,0);
 });
 test('첫 근무 기간 마지막 결산은 이미 받은 수입을 다시 지급하지 않는다',()=>{
- const s=workState(12);Story.customers(s).slice(0,2).forEach(c=>consult(s,c));Life.finishWork(s);Life.arriveHome(s);Life.act(s,'feed');Life.act(s,'water');Life.act(s,'play');Life.act(s,'litter');const cash=s.cash;Life.sleep(s,false);assert.equal(s.phase,'ending');const end=Life.ending(s);assert.equal(s.cash,cash);assert.equal(end.summary.earned,48000);assert.equal(end.summary.contracts,2);assert.match(end.lines.join(''),/슈퍼/);assert.match(end.lines.at(-1),/방문을 닫았다/);
+ const s=workState(12);Story.customers(s).slice(0,2).forEach(c=>consult(s,c));Life.finishWork(s);Life.arriveHome(s);Life.act(s,'feed');Life.act(s,'water');Life.act(s,'play');Life.act(s,'litter');const cash=s.cash;Life.sleep(s,false);assert.equal(s.phase,'ending');const end=Life.ending(s);assert.equal(s.cash,cash);assert.equal(end.summary.earned,32000);assert.equal(end.summary.contracts,2);assert.match(end.lines.join(''),/슈퍼/);assert.match(end.lines.at(-1),/방문을 닫았다/);
 });
 module.exports={employed,workState,consult};
 

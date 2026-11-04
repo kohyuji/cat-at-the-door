@@ -22,15 +22,15 @@ async function verify(){
  }
  const r=await fetch(base+'__build.json?verify='+source,{signal:AbortSignal.timeout(30000)});assert.equal(r.status,200,'공개 빌드 기록');const metadata=await r.json();assert.equal(metadata.source_commit,source,'공개 소스 SHA가 다릅니다.');
  const {availableImages,availableManifests}=require('./assets.cjs');
- const required=['index.html','src/life.css','src/life-state.js','src/life-story.js','src/pixel-render.js','src/life-view.js','src/life-game.js',...Object.values(availableImages()),...availableManifests(),'assets/fonts/NeoDunggeunmoPro-Regular.woff2'];
+ const required=['index.html','src/life.css','src/life-state.js','src/life-story.js','src/pixel-render.js','src/life-view.js','src/life-game.js','assets/audio/phone-vibration.wav','assets/fonts/LICENSE-NeoDunggeunmo.txt',...Object.values(availableImages()),...availableManifests(),'assets/fonts/NeoDunggeunmoPro-Regular.woff2'];
  const checks=await Promise.all(required.map(async file=>{
   const response=await fetch(base+file+'?verify='+source,{signal:AbortSignal.timeout(60000)});assert.equal(response.status,200,file);
   let web=Buffer.from(await response.arrayBuffer()),local=fs.readFileSync(path.join(root,'dist',file));
   if(/\.(html|js|css|json)$/.test(file)){web=Buffer.from(web.toString().replace(/\r\n/g,'\n'));local=Buffer.from(local.toString().replace(/\r\n/g,'\n'));}
   const hash=digest(web);assert.equal(hash,digest(local),file+' 공개 내용 불일치');return{file,status:response.status,bytes:web.length,sha256:hash};
  }));
- const offline=await fetch(base+'downloads/Cat-at-the-Door.html?verify='+source,{method:'HEAD',signal:AbortSignal.timeout(30000)});assert.equal(offline.status,200,'오프라인 다운로드');
+ const offline=await fetch(base+'downloads/Cat-at-the-Door.html?verify='+source,{signal:AbortSignal.timeout(60000)});assert.equal(offline.status,200,'오프라인 다운로드');const offlineBytes=Buffer.from(await offline.arrayBuffer());assert.equal(digest(offlineBytes),digest(fs.readFileSync(path.join(root,'dist/downloads/Cat-at-the-Door.html'))),'오프라인 공개 내용 불일치');checks.push({file:'downloads/Cat-at-the-Door.html',status:offline.status,bytes:offlineBytes.length,sha256:digest(offlineBytes)});
  const report={status:'공개 검증 완료',source_commit:source,deployment_commit:deployment.deployment_commit,base_pages_commit:deployment.base_pages_commit,pages_status:build.status,pages_commit:build.commit,other_paths_changed:deployment.other_paths_changed,preserved_files:deployment.preserved_files,url:base,checks,offline_status:offline.status,checked_at:new Date().toISOString()};
- fs.writeFileSync(path.join(root,'.preview/r5-public-verification.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+ fs.writeFileSync(path.join(root,'.preview/r6-public-verification.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }
 verify().catch(error=>{console.error(error.message);process.exitCode=1;});
