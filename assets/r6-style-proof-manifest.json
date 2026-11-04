@@ -1,0 +1,242 @@
+{
+  "status": "selected_by_user_HQ_scale_review_complete",
+  "selectedByUser": "2026-11-04: 첫교정본이 훨나은데? 반투명 광번짐 머리카락 중간색 괜찮아",
+  "selectedSource": "assets/r6-style-proof-v2-source.png",
+  "native": "assets/r6-style-proof-v2-native.png",
+  "integer2x": "assets/r6-style-proof-v2-2x.png",
+  "logicalCell": [
+    48,
+    64
+  ],
+  "grid": [
+    4,
+    2
+  ],
+  "metrics": [
+    {
+      "index": 0,
+      "name": "정면",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        0,
+        0,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        192,
+        466
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        18,
+        31,
+        13,
+        31
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 1,
+      "name": "측면",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        384,
+        0,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        192,
+        466
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        15,
+        31,
+        16,
+        31
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 2,
+      "name": "걷기 A",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        768,
+        0,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        192,
+        466
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        15,
+        31,
+        18,
+        31
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 3,
+      "name": "걷기 B",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        1152,
+        0,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        192,
+        466
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        15,
+        31,
+        16,
+        31
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 4,
+      "name": "소파 휴식",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        0,
+        512,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        160,
+        469
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        17,
+        33,
+        19,
+        29
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 5,
+      "name": "쓸기",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        384,
+        512,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        156,
+        469
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        15,
+        30,
+        25,
+        32
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 6,
+      "name": "승객",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        768,
+        512,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        192,
+        469
+      ],
+      "sourcePixelsPerLogicalPixel": 15.36,
+      "boundsAlpha128": [
+        17,
+        37,
+        13,
+        25
+      ],
+      "gameIntegerScale": 4
+    },
+    {
+      "index": 7,
+      "name": "습식",
+      "logicalCell": [
+        48,
+        64
+      ],
+      "sourceCell": [
+        1152,
+        512,
+        384,
+        512
+      ],
+      "sourceAnchor": [
+        148,
+        469
+      ],
+      "sourcePixelsPerLogicalPixel": 12.8,
+      "boundsAlpha128": [
+        14,
+        33,
+        24,
+        29
+      ],
+      "gameIntegerScale": 4
+    }
+  ],
+  "export": "Nearest point sampling; preserve source RGBA, no quantization, blur, alpha threshold or hand redrawing. Logical native frame48x64, game4x, wet closeup8x. Source is generated from small pixel references.",
+  "runtimeLinked": false,
+  "artifacts": [
+    "C:\\Users\\omool\\Dropbox\\90r1p\\03_knuani\\26_02karts\\검토자료\\R6-픽셀기준\\r6-style-correction-comparison.png",
+    "C:\\Users\\omool\\Dropbox\\90r1p\\03_knuani\\26_02karts\\검토자료\\R6-픽셀기준\\r6-style-correction-house.png",
+    "C:\\Users\\omool\\Dropbox\\90r1p\\03_knuani\\26_02karts\\검토자료\\R6-픽셀기준\\r6-style-correction-transit.png",
+    "C:\\Users\\omool\\Dropbox\\90r1p\\03_knuani\\26_02karts\\검토자료\\R6-픽셀기준\\r6-style-correction-wet.png"
+  ],
+  "r6-style-proof-v2-source.png": {
+    "sha256": "c607e5fa7c8ce1ccd6ea2fd9831c5388683fd892bae0225fbd25150a1faa8ea7"
+  },
+  "r6-style-proof-v2-native.png": {
+    "sha256": "0370c7bae3d11c4b77119ce5d8e1a8aeee2264b93e6fc2571e52160837d5f221"
+  },
+  "r6-style-proof-v2-2x.png": {
+    "sha256": "ca347967d55270848de855b162eb3454a8e6ce28b87fd7c7d1ca64b37b7f9efb"
+  }
+}

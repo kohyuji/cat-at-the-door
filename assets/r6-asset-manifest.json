@@ -1,355 +1,1324 @@
 {
+  "version": 2,
   "generatedWith": "image_gen.imagegen (built-in)",
-  "sourceMaster": "assets/r5-home.png (unchanged)",
+  "visualStatus": "first_correction_selected_and_runtime_connected",
+  "publicUse": "hold_until_HQ_instructs",
+  "selectedMaster": {
+    "file": "assets/r6-style-proof-v2-source.png",
+    "sha256": "c607e5fa7c8ce1ccd6ea2fd9831c5388683fd892bae0225fbd25150a1faa8ea7",
+    "userQuote": "첫교정본이 훨나은데? 반투명 광번짐 머리카락 중간색 괜찮아",
+    "choice": "first source, not the flattened second generation"
+  },
   "assets": {
     "r6Bed": {
-      "file": "assets/r6-bed.png",
-      "width": 1817,
+      "file": "assets/r6-bed-v2.png",
+      "width": 1816,
       "height": 866,
-      "bytes": 810271,
-      "sha256": "df6ff6118df7606777efcdf5c1cab787212caefce9258419e3291e0b45bf65f3",
-      "transparent": true
+      "bytes": 890943,
+      "sha256": "0dda7c3d1f21d1c04a8376a0c229d5d5e23947d0fca36866ec59f7c1ae424c8e"
     },
-    "r6Poses": {
-      "file": "assets/r6-poses.png",
-      "width": 1086,
-      "height": 1448,
-      "bytes": 1319811,
-      "sha256": "7601220ab198e916a6644ad699e0b2364484fe0a01114ba87b88363d1cf76c7d",
-      "transparent": true
+    "r6PeopleV2": {
+      "file": "assets/r6-people-v2.png",
+      "width": 384,
+      "height": 256,
+      "bytes": 49624,
+      "sha256": "3496bd10f60a0088300da8a3babb910eeebadb1ef7e3c9318ce008c0d721725b"
+    },
+    "r6CleanV2": {
+      "file": "assets/r6-clean-v2.png",
+      "width": 192,
+      "height": 128,
+      "bytes": 13694,
+      "sha256": "013d3c1a17aeb6271586f2797bed63b34721eb9bd6debf4c5e0cbccb8c8d3fb6"
+    },
+    "r6WetV2": {
+      "file": "assets/r6-wet-v2.png",
+      "width": 192,
+      "height": 128,
+      "bytes": 14989,
+      "sha256": "1fe710ab520f9293ae43d2b63bd37b97f2c02bd09bd0790e3fb13aa77b2e9517"
+    },
+    "r6CareV2": {
+      "file": "assets/r6-care-v2.png",
+      "width": 192,
+      "height": 384,
+      "bytes": 47779,
+      "sha256": "a8dd1276c58fd64fdfca831431f6936daa335f9c43c12daef97cddac10797fa9"
+    },
+    "r6TransitV2": {
+      "file": "assets/r6-transit-v2.png",
+      "width": 96,
+      "height": 128,
+      "bytes": 4295,
+      "sha256": "663124ea0b4805ba007348271aa53f5190211cfd1c24083143c820dba659d566"
     },
     "r6Devices": {
       "file": "assets/r6-devices.png",
       "width": 1774,
       "height": 887,
       "bytes": 880507,
-      "sha256": "aa7676e24aa01624adaa72aa7ca893e20c2dac9c882135fc53724977ea3f1d37",
-      "transparent": true
-    },
-    "r6WetCare": {
-      "file": "assets/r6-wet-care.png",
-      "width": 1774,
-      "height": 887,
-      "bytes": 1333153,
-      "sha256": "5f35d44fc942d7ceb916917d3b8ce1d1822ad176e0b5b91f7d76f684afcecd04",
-      "transparent": true
-    },
-    "r6Transit": {
-      "file": "assets/r6-transit.png",
-      "width": 2172,
-      "height": 724,
-      "bytes": 562670,
-      "sha256": "1d6ffcbf7fdb78592f292f1abf18d63aa2cb4c40f907729203b0a18b2e02a8c1",
-      "transparent": true
+      "sha256": "aa7676e24aa01624adaa72aa7ca893e20c2dac9c882135fc53724977ea3f1d37"
     },
     "r6Bowls": {
       "file": "assets/r6-bowls.png",
       "width": 2172,
       "height": 724,
       "bytes": 549142,
-      "sha256": "39180ade476d6a483718130a8670220832af834b357f5889d242cb11cd356767",
-      "transparent": true
+      "sha256": "39180ade476d6a483718130a8670220832af834b357f5889d242cb11cd356767"
     },
     "r6DeviceStates": {
       "file": "assets/r6-device-states.png",
       "width": 2172,
       "height": 724,
       "bytes": 731208,
-      "sha256": "c05247c0b463a2514de7ee24cee3ecbda349790cf85da783df6964dde3bba6eb",
-      "transparent": true
+      "sha256": "c05247c0b463a2514de7ee24cee3ecbda349790cf85da783df6964dde3bba6eb"
     }
   },
-  "sourceRects": {
-    "bed": [
-      [
-        49,
-        207,
-        813,
-        480
-      ],
-      [
-        958,
-        207,
-        813,
-        480
-      ]
+  "nativeContract": {
+    "cell": [
+      48,
+      64
     ],
-    "poses": [
-      [
-        35,
-        60,
-        206,
-        266
-      ],
-      [
-        308,
-        60,
-        204,
-        265
-      ],
-      [
-        580,
-        60,
-        205,
-        266
-      ],
-      [
-        851,
-        60,
-        207,
-        266
-      ],
-      [
-        56,
-        417,
-        167,
-        282
-      ],
-      [
-        327,
-        417,
-        167,
-        282
-      ],
-      [
-        600,
-        417,
-        166,
-        282
-      ],
-      [
-        871,
-        417,
-        166,
-        282
-      ],
-      [
-        42,
-        756,
-        208,
-        304
-      ],
-      [
-        291,
-        756,
-        193,
-        305
-      ],
-      [
-        585,
-        756,
-        208,
-        304
-      ],
-      [
-        834,
-        756,
-        193,
-        304
-      ],
-      [
-        42,
-        1120,
-        207,
-        298
-      ],
-      [
-        293,
-        1120,
-        191,
-        298
-      ],
-      [
-        586,
-        1120,
-        207,
-        298
-      ],
-      [
-        836,
-        1120,
-        190,
-        298
-      ]
+    "anchor": [
+      24,
+      62
     ],
-    "devices": [
-      [
-        85,
-        79,
-        298,
-        318
+    "worldIntegerScale": 4,
+    "careIntegerScale": 8,
+    "rgba": "source RGBA retained; no palette quantization, blur or alpha threshold",
+    "inputLayout": "unchanged from HEAD"
+  },
+  "packing": {
+    "people": {
+      "file": "assets/r6-people-v2.png",
+      "columns": 8,
+      "rows": 4,
+      "cell": [
+        48,
+        64
       ],
-      [
-        565,
-        57,
-        206,
-        345
+      "anchor": [
+        24,
+        62
       ],
-      [
-        984,
-        90,
-        250,
-        312
-      ],
-      [
-        1411,
-        153,
-        281,
-        237
-      ],
-      [
-        89,
-        542,
-        287,
-        281
-      ],
-      [
-        540,
-        492,
-        267,
-        347
-      ],
-      [
-        964,
-        490,
-        293,
-        349
-      ],
-      [
-        1425,
-        542,
-        262,
-        286
+      "frames": [
+        {
+          "sourceBounds": [
+            51,
+            28,
+            109,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            102,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            102,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            107,
+            199
+          ],
+          "sourceAnchor": [
+            96,
+            227
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            52,
+            28,
+            110,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            52,
+            28,
+            102,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            102,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            107,
+            210
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            29,
+            109,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            102,
+            208
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            29,
+            102,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            107,
+            197
+          ],
+          "sourceAnchor": [
+            96,
+            225
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            29,
+            108,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            52,
+            29,
+            102,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            29,
+            102,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            51,
+            28,
+            107,
+            208
+          ],
+          "sourceAnchor": [
+            96,
+            236
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            48,
+            20,
+            98,
+            215
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            32,
+            30,
+            107,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            32,
+            30,
+            106,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            92,
+            211
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            19,
+            31,
+            134,
+            204
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            19,
+            32,
+            134,
+            203
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            19,
+            33,
+            135,
+            202
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            20,
+            32,
+            135,
+            203
+          ],
+          "sourceAnchor": [
+            96,
+            235
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            55,
+            22,
+            84,
+            216
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            32,
+            31,
+            107,
+            207
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            32,
+            31,
+            106,
+            206
+          ],
+          "sourceAnchor": [
+            96,
+            237
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            43,
+            25,
+            84,
+            212
+          ],
+          "sourceAnchor": [
+            96,
+            237
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            19,
+            33,
+            134,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            20,
+            33,
+            133,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            238
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            19,
+            32,
+            119,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            237
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            20,
+            32,
+            111,
+            205
+          ],
+          "sourceAnchor": [
+            96,
+            237
+          ],
+          "ratio": 6.4,
+          "bowl": null
+        }
       ]
-    ],
-    "wet": [
-      [
-        30,
-        37,
-        401,
-        369
+    },
+    "clean": {
+      "file": "assets/r6-clean-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": [
+        48,
+        64
       ],
-      [
-        473,
-        37,
-        401,
-        369
+      "anchor": [
+        24,
+        62
       ],
-      [
-        917,
-        37,
-        401,
-        369
-      ],
-      [
-        1360,
-        37,
-        394,
-        369
-      ],
-      [
-        30,
-        481,
-        401,
-        370
-      ],
-      [
-        474,
-        481,
-        400,
-        370
-      ],
-      [
-        917,
-        481,
-        401,
-        370
-      ],
-      [
-        1360,
-        481,
-        394,
-        370
+      "frames": [
+        {
+          "sourceBounds": [
+            89,
+            57,
+            283,
+            413
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            470
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            83,
+            54,
+            300,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            470
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            83,
+            54,
+            289,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            470
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            82,
+            54,
+            293,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            470
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            83,
+            55,
+            289,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            471
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            83,
+            55,
+            298,
+            415
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            470
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            83,
+            55,
+            289,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            471
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            82,
+            55,
+            292,
+            416
+          ],
+          "sourceAnchor": [
+            176.64000000000001,
+            471
+          ],
+          "ratio": 12.8,
+          "bowl": null
+        }
       ]
-    ],
-    "transit": [
-      [
-        123,
-        144,
-        284,
-        508
+    },
+    "wet": {
+      "file": "assets/r6-wet-v2.png",
+      "columns": 4,
+      "rows": 2,
+      "cell": [
+        48,
+        64
       ],
-      [
-        692,
-        136,
-        256,
-        516
+      "anchor": [
+        24,
+        62
       ],
-      [
-        1218,
-        135,
-        265,
-        517
-      ],
-      [
-        1754,
-        148,
-        273,
-        504
+      "frames": [
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.409375,
+            -2.4609375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.409375,
+            -2.4609375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            273,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            8.9640625,
+            -3.3984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.4484375,
+            -2.4609375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.409375,
+            -2.4609375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.409375,
+            -2.4609375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            273,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            8.9640625,
+            -3.3984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            57,
+            48,
+            274,
+            409
+          ],
+          "sourceAnchor": [
+            149.76,
+            457
+          ],
+          "ratio": 12.8,
+          "bowl": [
+            10.4484375,
+            -2.4609375
+          ]
+        }
       ]
-    ],
-    "bowls": [
-      [
-        43,
-        246,
-        455,
-        278
+    },
+    "transit": {
+      "file": "assets/r6-transit-v2.png",
+      "columns": 2,
+      "rows": 2,
+      "cell": [
+        48,
+        64
       ],
-      [
-        587,
-        246,
-        455,
-        278
+      "anchor": [
+        24,
+        62
       ],
-      [
-        1130,
-        245,
-        454,
-        279
-      ],
-      [
-        1674,
-        246,
-        456,
-        278
+      "frames": [
+        {
+          "sourceBounds": [
+            210,
+            78,
+            259,
+            526
+          ],
+          "sourceAnchor": [
+            313.5,
+            604
+          ],
+          "ratio": 19.59375,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            153,
+            74,
+            251,
+            530
+          ],
+          "sourceAnchor": [
+            313.5,
+            604
+          ],
+          "ratio": 19.59375,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            212,
+            46,
+            253,
+            530
+          ],
+          "sourceAnchor": [
+            313.5,
+            576
+          ],
+          "ratio": 19.59375,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            142,
+            49,
+            262,
+            528
+          ],
+          "sourceAnchor": [
+            313.5,
+            577
+          ],
+          "ratio": 19.59375,
+          "bowl": null
+        }
       ]
-    ],
-    "deviceStates": [
-      [
-        131,
-        116,
-        284,
-        466
+    },
+    "care": {
+      "file": "assets/r6-care-v2.png",
+      "columns": 4,
+      "rows": 6,
+      "cell": [
+        48,
+        64
       ],
-      [
-        643,
-        153,
-        345,
-        429
+      "anchor": [
+        24,
+        62
       ],
-      [
-        1139,
-        359,
-        438,
-        223
-      ],
-      [
-        1698,
-        120,
-        406,
-        462
+      "frames": [
+        {
+          "sourceBounds": [
+            39,
+            23,
+            194,
+            225
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.254882812499998,
+            -4.7607421875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            23,
+            194,
+            225
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.108398437499998,
+            -4.7607421875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            23,
+            194,
+            225
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.767578124999998,
+            -4.7607421875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.328124999999998,
+            -4.7607421875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -2.9296875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.108398437499998,
+            -3.6621093749999996
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            195,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -3.6621093749999996
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -3.2958984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            129,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            149,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            41,
+            24,
+            150,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            129,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.254882812499998,
+            -4.833984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.108398437499998,
+            -4.833984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.840820312499998,
+            -4.833984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            12.401367187499998,
+            -4.833984375
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -2.9296875
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -3.22265625
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -3.6621093749999996
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            194,
+            224
+          ],
+          "sourceAnchor": [
+            99.84,
+            248
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": [
+            14.598632812499998,
+            -3.5156249999999996
+          ]
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            129,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            150,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            42,
+            24,
+            149,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        },
+        {
+          "sourceBounds": [
+            39,
+            24,
+            129,
+            219
+          ],
+          "sourceAnchor": [
+            99.84,
+            243
+          ],
+          "ratio": 6.826666666666667,
+          "bowl": null
+        }
       ]
-    ]
+    },
+    "bed": {
+      "file": "assets/r6-bed-v2.png",
+      "width": 1816,
+      "height": 866,
+      "rects": [
+        [
+          47,
+          201,
+          818,
+          486
+        ],
+        [
+          955,
+          201,
+          818,
+          486
+        ]
+      ]
+    }
   },
   "layout": {
     "bedroom": {
@@ -782,20 +1751,92 @@
       }
     }
   },
-  "equipmentFields": [
-    "autoLitter",
-    "feeder",
-    "fountain",
-    "robot",
-    "premiumToy"
+  "prompts": "assets/r6-v2-prompts.md",
+  "proofPrompts": "assets/r6-style-proof-prompts.md",
+  "previousAssetRecords": {
+    "r6Bed": {
+      "file": "assets/r6-bed.png",
+      "width": 1817,
+      "height": 866,
+      "bytes": 810271,
+      "sha256": "df6ff6118df7606777efcdf5c1cab787212caefce9258419e3291e0b45bf65f3",
+      "transparent": true
+    },
+    "r6Poses": {
+      "file": "assets/r6-poses.png",
+      "width": 1086,
+      "height": 1448,
+      "bytes": 1319811,
+      "sha256": "7601220ab198e916a6644ad699e0b2364484fe0a01114ba87b88363d1cf76c7d",
+      "transparent": true
+    },
+    "r6Devices": {
+      "file": "assets/r6-devices.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 880507,
+      "sha256": "aa7676e24aa01624adaa72aa7ca893e20c2dac9c882135fc53724977ea3f1d37",
+      "transparent": true
+    },
+    "r6WetCare": {
+      "file": "assets/r6-wet-care.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1333153,
+      "sha256": "5f35d44fc942d7ceb916917d3b8ce1d1822ad176e0b5b91f7d76f684afcecd04",
+      "transparent": true
+    },
+    "r6Transit": {
+      "file": "assets/r6-transit.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 562670,
+      "sha256": "1d6ffcbf7fdb78592f292f1abf18d63aa2cb4c40f907729203b0a18b2e02a8c1",
+      "transparent": true
+    },
+    "r6Bowls": {
+      "file": "assets/r6-bowls.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 549142,
+      "sha256": "39180ade476d6a483718130a8670220832af834b357f5889d242cb11cd356767",
+      "transparent": true
+    },
+    "r6DeviceStates": {
+      "file": "assets/r6-device-states.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 731208,
+      "sha256": "c05247c0b463a2514de7ee24cee3ecbda349790cf85da783df6964dde3bba6eb",
+      "transparent": true
+    }
+  },
+  "archiveNotLoaded": [
+    "assets/r6-bed.png",
+    "assets/r6-poses.png",
+    "assets/r6-wet-care.png",
+    "assets/r6-transit.png",
+    "assets/r6-style-proof-v2-source.png",
+    "assets/r6-style-proof-v2-native.png",
+    "assets/r6-style-proof-v2-2x.png",
+    "assets/r6-people-v2-source.png",
+    "assets/r6-clean-v2-source.png",
+    "assets/r6-wet-v2-source.png",
+    "assets/r6-transit-v2-source.png",
+    "assets/r6-care-v2-source.png",
+    "assets/r6-care-v2-contact-source.png"
   ],
-  "prompts": "assets/r6-prompts.md",
   "verification": {
-    "scope": "R6 changed renderer scenes only; no browser/audio/build/deployment",
-    "passedChecks": 94,
-    "sceneFrames": 56,
-    "walkFrames": 16,
-    "supplement": "C:/Users/omool/.codex/visualizations/2026/11/04/01a1a6a7-acae-7622-8a73-8f7d26be8938/r6-supplement.json",
-    "report": "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\r6-verification.json"
+    "scope": "Only changed graphic scale/crop/frame/pose/contact/asset paths; no whole-game/build/public tests",
+    "report": "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-style-runtime.json",
+    "contactFollowup": "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-contact-final.json",
+    "evidence": [
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-walk-idle.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-world-scenes.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-care-scenes.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-basic-care-final.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a6a7-acae-7622-8a73-8f7d26be8938\\v2-clean-final.png"
+    ],
+    "note": "Earlier 94 technical checks are not a visual approval and were not repeated"
   }
 }
