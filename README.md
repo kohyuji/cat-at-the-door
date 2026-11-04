@@ -2,6 +2,10 @@
 
 > 내일은 첫 출근 날! 고양이랑 같이 자도 괜찮을까?
 
+**[▶ v5.1 바로 하기](https://kohyuji.github.io/cat-at-the-door/claude-v5/)**
+
+링크를 열고 내 이름과 고양이 이름을 적은 뒤 **시작하기**를 누르면 됩니다. 설치할 필요는 없습니다. 폰에서는 손가락으로, PC에서는 마우스로 화면 속 물건을 끌고 문지릅니다. 오른쪽 위 스피커를 누르면 소리를 끌 수 있습니다.
+
 인터랙티브 미디어 스토리텔링 수업에서 만든 선택형 웹 게임입니다.
 열 번의 밤 동안 방문 앞의 고양이와 **같이 잘지, 혼자 잘지**를 고르고, 그 선택이 회사 생활과 고양이와의 관계에 쌓여 월급날의 결말로 이어집니다.
 
@@ -9,7 +13,8 @@ v5에서는 받은 피드백(클릭만 반복, 글이 많음, 고양이 입장�
 
 v4에서는 같은 선택을 그대로 두고, 그 선택이 한 사람과 한 고양이의 이야기가 되도록 앞뒤를 채웠습니다. 취준 시절 늘 열려 있던 방문을 첫 출근 전날 내 손으로 닫으면서 이야기가 시작되고, 월급날 밤 같은 문을 다시 여는 것으로 끝납니다.
 
-- ▶️ 플레이(GitHub Pages, main 브랜치): https://kohyuji.github.io/cat-at-the-door/
+- ▶️ 플레이(GitHub Pages, claude-v5 브랜치 v5.1): https://kohyuji.github.io/cat-at-the-door/claude-v5/
+- ▶️ 플레이(GitHub Pages, main 브랜치 v4.1): https://kohyuji.github.io/cat-at-the-door/
 - ▶️ 플레이(itch.io): https://kohyuji.itch.io/cat-at-the-door
 
 ## 업데이트 기록
