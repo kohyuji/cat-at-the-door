@@ -63,6 +63,7 @@ var Work = (function () {
     Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
     G.hero.x = 600; G.hero.dir = -1; G.hero.visible = true;
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(470); }).then(function () {
+      workClock(Life.T.assembly);
       if (late) { Wk.look.marks = [Wk.lead.x, Wk.peer.x]; UI.sfx('bad'); }
       return say(Story.assembly(s, late).map(function (l) { return { who: l.who, text: l.text }; }));
     }).then(function () {
@@ -115,7 +116,7 @@ var Work = (function () {
     c.fillStyle = 'rgba(30,26,34,.35)'; c.fillRect(0, 0, 640, 360);
     // 탁자와 두 사람 (옆모습)
     View.seated(c, G, 196, 262, 'suit', k.heroFrame || 0, 2.5, null, false);
-    if (s.fur > 0 && k.p.fur) Home.furOn(c, 196, 262 - 98, s.fur, 1);
+    if (s.fur > 0 && k.p.fur) Home.furOn(c, 198, 262 - 84, s.fur, 1); // 무릎 위 정장 소매와 가슴께
     if (k.peer) View.person(c, G, 110, 268, 'peer', 1, t, 'stand', 2.2);
     var cl = Story.CLIENT[k.id];
     if (!k.gone) View.seated(c, G, 446 + (k.shake ? Math.sin(t * 40) * 3 : 0), 262, cl.look, 0, 2.5, cl.tint, false);
@@ -231,11 +232,14 @@ var Work = (function () {
   }
 
   // ---------- 하루 지점 일정 ----------
+  // 지점에 있는 동안 위쪽 시계만 상담 시각으로 옮긴다 (규칙 계산에는 쓰지 않는다)
+  var CONSULT_AT = [600, 840, 960];
+  function workClock(m) { var s = S(); if (s && s.phase === 'work') s.minute = Math.max(s.minute, m); }
   function workDay() {
     var s = S(), ids = Life.clientsOn(s.day), results = [];
     return Engine.fade(1, .3).then(assembly).then(function () {
-      return ids.reduce(function (pr, id) {
-        return pr.then(function () { return Engine.fade(1, .3); }).then(function () { return consult(id); }).then(function (res) {
+      return ids.reduce(function (pr, id, i) {
+        return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
           results.push(res);
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(res.pet ? 2 : 1); });
@@ -247,6 +251,7 @@ var Work = (function () {
   function groupEvening() {
     var s = S(), id = Life.day(s).group;
     office();
+    workClock(920);
     return Engine.fade(0, .3).then(function () { return say(Story.groupOffer(s)); }).then(function () {
       var m = Story.phone.group;
       return UI.phoneWait({ from: m.from, time: m.time, body: m.body, preview: m.body, replies: [m.yes, m.no] }, '3:20');
@@ -255,7 +260,7 @@ var Work = (function () {
       Life.decideGroup(s, go);
       if (!go) return null;
       return Engine.fade(1, .4).then(function () { Wk.dark = true; office({ night: true }); return Engine.fade(0, .4); })
-        .then(function () { return Engine.fade(1, .3); }).then(function () { Wk.dark = true; return consult(id); })
+        .then(function () { return Engine.fade(1, .3); }).then(function () { Wk.dark = true; workClock(1200); return consult(id); })
         .then(function (res) {
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office({ night: true }); return Engine.fade(0, .3); }).then(function () { return sticker(1); });
@@ -281,7 +286,7 @@ var Work = (function () {
   function showCards() {
     var s = S();
     Engine.setScene({
-      draw: function (c) { drawOffice(c); Home.H.closeUp = { flipT: 0 }; var save = Home.H.closeUp; c.save(); drawCardsOverlay(c, s); c.restore(); Home.H.closeUp = null; },
+      draw: function (c) { drawOffice(c); drawCardsOverlay(c, s); },
       hot: function () { return [{ id: 'cardsClose', x: 0, y: 0, w: 640, h: 360, glow: false, tap: function () { Wk.cardsDone = true; } }]; },
       place: 'office'
     });
@@ -348,12 +353,12 @@ var Work = (function () {
   var PRO_SHELF = { charcoal: { x: 292, y: 160, price: 12000 }, dry: { x: 382, y: 160, price: 12000 }, wet: { x: 470, y: 160, price: 15000 } };
   function drawShopItem(c, item, x, y, scale) {
     scale = scale || 1;
-    if (item === 'dry') View.foodBag(c, x, y, undefined, 8, 0);
+    if (item === 'dry') View.foodBag(c, x, y, undefined, 8, 0, scale);
     else if (item === 'wet') View.item(c, 'wetFood', x, y, 1.1 * scale);
     else if (item === 'sand') View.sandBag(c, x, y, 1.05 * scale);
     else if (item === 'roller') View.item(c, 'roller', x, y, 1 * scale);
-    else if (item === 'coffee') View.cup(c, x, y, .65 * scale);
-    else if (item === 'lunch') View.lunchbox(c, x, y, .65 * scale);
+    else if (item === 'coffee') View.cup(c, x, y, 1 * scale);
+    else if (item === 'lunch') View.lunchbox(c, x, y, 1 * scale);
     else if (item === 'feeder') View.feeder(c, x, y, .9 * scale);
     else if (item === 'tower') View.catTower(c, x, y, .82 * scale);
     else if (item === 'charcoal') View.charcoal(c, x, y, .62 * scale);
@@ -370,12 +375,12 @@ var Work = (function () {
       drawShopItem(c, item, p.x, p.y, 1);
       View.priceTag(c, p.x, p.y + (item === 'tower' ? -6 : 4), price, wallet < price);
     });
-    // 계산대 위 바구니
-    View.box(c, 506, 214, 92, 20, '#c9a46f', '#6f5638', 2);
-    sh.basket.forEach(function (item, i) { drawShopItem(c, item, 520 + (i % 4) * 22, 216, .6); });
+    // 고른 물건은 계산대 위에 올려 둔다 (누르면 다시 진열대로)
+    sh.basket.forEach(function (item, i) { var b = basketPos(i); drawShopItem(c, item, b.x, b.y, .62); });
     View.shadow(c, G.hero.x, 343, 20);
     View.person(c, G, G.hero.x, 342, sh.pro ? 'hoodie' : (s.wearing === 'suit' ? 'suit' : 'hoodie'), G.hero.walking ? G.hero.dir : -1, t, G.hero.walking ? 'walk' : 'stand', 2.35);
   }
+  function basketPos(i) { return { x: 500 + (i % 6) * 22, y: 246 - Math.floor(i / 6) * 14 }; }
   function hotShop() {
     var sh = Wk.shop, s = S(), list = [];
     var wallet = sh.pro ? G.pro.wallet : s.wallet;
@@ -385,7 +390,7 @@ var Work = (function () {
       var w = item === 'tower' ? 54 : 40, h = item === 'tower' ? 90 : 46;
       list.push({ id: 'shelf-' + item, x: p.x - w / 2, y: p.y - h + 6, w: w, h: h + 18, tap: function () { return buy(item, price); } });
     });
-    sh.basket.forEach(function (item, i) { list.push({ id: 'basket-' + i, x: 520 + (i % 4) * 22 - 11, y: 196, w: 22, h: 22, tap: function () { return unbuy(item); } }); });
+    sh.basket.forEach(function (item, i) { var b = basketPos(i); list.push({ id: 'basket-' + i, x: b.x - 11, y: b.y - 30, w: 22, h: 32, tap: function () { return unbuy(item); } }); });
     list.push({ id: 'exit', x: 14, y: 44, w: 152, h: 196, tap: function () { sh.leave = true; } });
     return list;
   }

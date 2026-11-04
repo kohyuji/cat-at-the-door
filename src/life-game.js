@@ -189,15 +189,15 @@ var Game = (function () {
     Home.enter('living', { mode: 'pro', heroX: 70, catRoom: 'living', catX: 130 });
     G.cat.visible = true; G.cat.pose = 'sit';
     await Engine.fade(0, .6);
-    await Engine.walkTo(360);
+    await Engine.walkTo(420);
     var cat = await UI.askName();
     G.pro.cat = cat; s.cat = cat;
+    s.seen['line:ate'] = true; // 밥 먹는 줄은 아래에서 한 번만 말한다
     UI.sfx('meow');
     // 밥
     G.hand = { x: P.food.x, y: P.food.y - 18, tx: P.bowl.x, ty: P.bowl.y - 30, period: 2.2, t0: G.t };
     await Engine.until(function () { return s.fed.pm; });
     G.hand = null;
-    s.seen['line:ate'] = true;
     await Engine.until(function () { return H.catAct === 'eat'; });
     await say([narr(Story.catLine('ate', cat))]);
     await say([me('물도 담아주자.')]);
@@ -206,8 +206,11 @@ var Game = (function () {
     G.hand = null;
     await Engine.until(function () { return H.catAct !== 'eat'; });
     // 쓰다듬기
-    await Engine.sleep(.6);
-    G.cat.tx = null;
+    await Engine.sleep(.4);
+    // 물병과 겹치지 않는 빈 바닥에 앉힌 뒤 쓰다듬기를 보여 준다
+    H.catAct = null;
+    await Engine.catTo(352, { y: 336 });
+    G.cat.dir = 1; G.cat.pose = 'sit'; H.catAct = 'still';
     G.hand = { stroke: true, x: G.cat.x - 22, y: G.cat.y - 26, dx: 44, period: 1.6, t0: G.t, follow: true };
     var follow = setInterval(function () { if (G.hand && G.hand.follow) { G.hand.x = G.cat.x - 22; G.hand.y = G.cat.y - 26; } }, 60);
     await Engine.until(function () { return s.petted; });
@@ -405,6 +408,7 @@ var Game = (function () {
       draw: function (c) {
         var t = G.t;
         View.bg(c, G, 'living');
+        View.entranceDoor(c, View.L.living.entrance, 0);
         View.roomDoor(c, G, door, pov.crack || 0, 'bedroom', [40, 60, 92, 230], true);
         View.windowView(c, G, View.L.living.window, 'night', t, 0, false);
         View.nightTint(c, .62);
@@ -427,6 +431,10 @@ var Game = (function () {
       }
     });
     await Engine.fade(0, .6);
+    if (!s.seen.pov) { // 처음 한 번은 고를 수 있는 두 곳을 함께 빛낸다
+      s.seen.pov = true; G.outlineAll = true;
+      setTimeout(function () { G.outlineAll = false; }, 2600);
+    }
     await Engine.until(function () { return pov.pick; });
     await Engine.sleep(pov.pick === 'wait' ? 1.4 : .6);
     return pov.pick;
@@ -569,6 +577,7 @@ var Game = (function () {
 
   function startGame(fn) {
     $('titleScreen').hidden = true; $('gameScreen').hidden = false;
+    document.body.classList.add('playing');
     Engine.resize();
     G.fade = 1;
     ready.then(fn).catch(function (e) { console.error(e); });
@@ -594,6 +603,7 @@ var Game = (function () {
       startGame(function () { if (s.ended) { endingScreen(); return null; } return mainLoop(); });
     };
     $('playerName').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('startButton').click(); });
+    $('rotateHint').addEventListener('click', function () { document.body.classList.add('rotate-ok'); });
     // 메뉴
     var confirmRestart = false;
     $('menuButton').onclick = function () { $('menu').hidden = false; $('menuStatus').textContent = ''; confirmRestart = false; $('menuRestart').textContent = '처음부터 다시'; };

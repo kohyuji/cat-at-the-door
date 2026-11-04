@@ -219,7 +219,7 @@ var Home = (function () {
       var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y, f: drawCat }];
       if (G.cat.room === 'bedroom' && H.catAct !== 'sleep') actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
       else drawHero(c);
-    }
+    } else if (G.cat.room === 'bedroom' && H.catAct !== 'sleep') drawCat(c); // 침대로 오는 고양이
     drawHeld(c);
     var dk = dim(); if (dk) View.nightTint(c, dk);
     if (night) View.lampGlow(c, 290, 160, 70, .22);
@@ -451,8 +451,9 @@ var Home = (function () {
     return holder('roller', null, {
       start: function () { rubbed = 0; H.rollHits = 0; },
       move: function (d) {
-        var s = S(), target = s.wearing === 'suit' ? around({ x: G.hero.x, y: G.hero.y - 40 }, 50, 90) : rect(P.suitRack.x - 26, P.suitRack.y - 62, 52, 66);
-        if (inside(d, target) && s.fur > 0) { rubbed += 5; if (Math.floor(rubbed / 30) > H.rollHits) { H.rollHits++; Engine.puff({ x: d.x + 10, y: d.y, icon: 'fur', px: 1, life: .6, rise: -10 }); } }
+        // 입고 있으면 몸 전체, 걸려 있으면 옷걸이의 정장 위를 문지른다
+        var s = S(), target = s.wearing === 'suit' ? around({ x: G.hero.x, y: G.hero.y }, 66, 108) : rect(P.suitRack.x - 26, P.suitRack.y - 62, 52, 66);
+        if (inside(d, target) && s.fur > 0) { rubbed += 6; if (Math.floor(rubbed / 30) > H.rollHits) { H.rollHits++; Engine.puff({ x: d.x + 10, y: d.y, icon: 'fur', px: 1, life: .6, rise: -10 }); } }
       },
       end: function () {
         var s = S();

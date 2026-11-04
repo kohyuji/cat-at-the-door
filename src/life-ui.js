@@ -153,14 +153,21 @@ var UI = (function () {
       typeText($('speech'), line.text, resolve, line.slow ? 60 : 30);
     });
   }
+  // 대화와 검은 화면은 한 줄로 세운다. 두 흐름이 동시에 말을 걸어도 앞의 것이 끝난 뒤에 나온다.
+  var textQueue = Promise.resolve();
+  function queued(run) {
+    var p = textQueue.then(run);
+    textQueue = p.catch(function () { /* 다음 줄은 계속 */ });
+    return p;
+  }
   function say(lines) {
     if (!Array.isArray(lines)) lines = [lines];
     lines = lines.filter(Boolean);
     sayDepth++;
-    return lines.reduce(function (p, line) { return p.then(function () { return sayOne(line); }); }, Promise.resolve()).then(function () {
-      sayDepth--;
-      if (!sayDepth) $('dialogue').hidden = true;
-    });
+    function end() { sayDepth--; if (!sayDepth) $('dialogue').hidden = true; }
+    return queued(function () {
+      return lines.reduce(function (p, line) { return p.then(function () { return sayOne(line); }); }, Promise.resolve());
+    }).then(end, function (e) { end(); throw e; });
   }
   function talking() { return !$('dialogue').hidden; }
 
@@ -168,10 +175,12 @@ var UI = (function () {
   function black(lines, opts) {
     opts = opts || {};
     var el = $('blackScreen'), tx = $('blackText');
-    el.hidden = false; tx.textContent = '';
-    return lines.reduce(function (p, text) {
-      return p.then(function () { return new Promise(function (resolve) { typeText(tx, text, resolve, opts.speed || 75); }); });
-    }, Promise.resolve()).then(function () { if (!opts.keep) { el.hidden = true; tx.textContent = ''; } });
+    return queued(function () {
+      el.hidden = false; tx.textContent = '';
+      return lines.reduce(function (p, text) {
+        return p.then(function () { return new Promise(function (resolve) { typeText(tx, text, resolve, opts.speed || 75); }); });
+      }, Promise.resolve()).then(function () { if (!opts.keep) { el.hidden = true; tx.textContent = ''; } });
+    });
   }
   function blackOff() { $('blackScreen').hidden = true; $('blackText').textContent = ''; }
   function blackOn() { $('blackScreen').hidden = false; $('blackText').textContent = ''; }
@@ -217,7 +226,12 @@ var UI = (function () {
     $('iosThread').innerHTML = html;
     $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = false;
     phoneBadge();
-    var box = $('iosThread').querySelector('.ios-msgs'); if (box) box.scrollTop = box.scrollHeight;
+    // 가장 최근에 받은 문자의 첫 줄부터 보이게 (긴 문자가 화면이 낮은 가로 폰에서 잘리지 않게)
+    var box = $('iosThread').querySelector('.ios-msgs');
+    if (box) {
+      var ins = box.querySelectorAll('.bubble.in'), b = ins[ins.length - 1];
+      box.scrollTop = b ? Math.max(0, b.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 28) : box.scrollHeight;
+    }
   }
   function phoneOpen() {
     if (!$('phone').hidden) return;
@@ -302,7 +316,7 @@ var UI = (function () {
     h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
     h += sec('heart', Life.josa(s.cat, 'of') + ' 마음', t.hearts.map(function (x) { return line(Story.HEART[x.key], sign(x.delta), x.delta > 0 ? 'plus' : 'minus'); }).join('') +
       '<div class="r-stickers">' + (function () { var o = ''; for (var i = 0; i < Life.MAX; i++) o += img(i < s.hearts ? 'heart' : 'heartEmpty', 1); return o; }()) + '</div>');
-    var en = ''; for (var k = 0; k < Life.MAX; k++) en += img(k < (t.energyNext == null ? s.energy : t.energyNext) ? 'bolt' : 'slot', 1, k < s.energy ? '' : 'off');
+    var en = '', next = t.energyNext == null ? s.energy : t.energyNext; for (var k = 0; k < Life.MAX; k++) en += img('bolt', 1, k < next ? '' : 'off');
     h += sec('bolt', '내일 아침 체력', '<div class="r-stickers">' + en + '</div>');
     var st = t.stickers.map(function () { return img('sticker', 1); }).join('');
     h += sec('sticker', '실적', '<div class="r-line"><span class="r-stickers">' + st + '</span><b>' + esc((t.total == null ? s.contracts : t.total) + ' / ' + Life.GOAL + '건') + '</b></div>');

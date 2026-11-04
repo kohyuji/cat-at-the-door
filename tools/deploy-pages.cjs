@@ -7,9 +7,10 @@ const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const liveUrl = 'https://kohyuji.github.io/cat-at-the-door/codex-v5/';
+const liveUrl = 'https://kohyuji.github.io/cat-at-the-door/codex-v5-claude/';
 const repository = 'kohyuji/cat-at-the-door';
-const sourceBranch = 'codex-v5';
+const sourceBranch = 'codex-v5-claude';
+const folder = 'codex-v5-claude'; // gh-pages 안에서 이 폴더만 바꾼다
 const publishBranch = 'gh-pages';
 const prepareOnly = process.argv.includes('--prepare-only');
 const gitEnv = {
@@ -111,18 +112,18 @@ async function main() {
     throw new Error('origin이 kohyuji/cat-at-the-door 저장소가 아니므로 배포를 중단합니다.');
   }
   if (!prepareOnly && git(['status', '--porcelain', '--untracked-files=normal'])) {
-    throw new Error('변경 파일을 먼저 커밋하고 codex-v5에 올린 뒤 배포해 주세요.');
+    throw new Error(`변경 파일을 먼저 커밋하고 ${sourceBranch}에 올린 뒤 배포해 주세요.`);
   }
   run(process.execPath, [path.join(__dirname, 'build-web.cjs')]);
   const dist = path.join(root, 'dist');
   if (!fs.existsSync(path.join(dist, 'index.html'))) throw new Error('빌드 결과 dist/index.html이 없습니다.');
 
   if (!prepareOnly) {
-    git(['fetch', 'origin', '+refs/heads/codex-v5:refs/remotes/origin/codex-v5']);
+    git(['fetch', 'origin', `+refs/heads/${sourceBranch}:refs/remotes/origin/${sourceBranch}`]);
   }
   const sourceSha = git(['rev-parse', 'HEAD']);
-  if (!prepareOnly && git(['rev-parse', 'refs/remotes/origin/codex-v5']) !== sourceSha) {
-    throw new Error('로컬 커밋과 원격 codex-v5가 다릅니다. 소스를 먼저 푸시해 주세요.');
+  if (!prepareOnly && git(['rev-parse', `refs/remotes/origin/${sourceBranch}`]) !== sourceSha) {
+    throw new Error(`로컬 커밋과 원격 ${sourceBranch}가 다릅니다. 소스를 먼저 푸시해 주세요.`);
   }
 
   let previousSha = '';
@@ -134,8 +135,10 @@ async function main() {
       git(['fetch', 'origin', '+refs/heads/gh-pages:refs/remotes/origin/gh-pages']);
       previousSha = git(['rev-parse', 'refs/remotes/origin/gh-pages']);
       let previousBuild;
-      try { previousBuild = JSON.parse(git(['show', `${previousSha}:codex-v5/__build.json`])); }
-      catch { throw new Error('기존 gh-pages가 이 도구의 생성 브랜치인지 확인할 수 없어 덮어쓰지 않았습니다.'); }
+      // 처음 배포할 때는 자기 폴더가 없으니 코덱스 폴더의 생성 정보로 생성 브랜치인지 확인한다
+      try { previousBuild = JSON.parse(git(['show', `${previousSha}:${folder}/__build.json`])); }
+      catch { try { previousBuild = JSON.parse(git(['show', `${previousSha}:codex-v5/__build.json`])); } catch { previousBuild = null; } }
+      if (!previousBuild) throw new Error('기존 gh-pages가 이 도구의 생성 브랜치인지 확인할 수 없어 덮어쓰지 않았습니다.');
       if (previousBuild.publisher !== 'cat-at-the-door') throw new Error('기존 gh-pages의 생성 정보를 확인할 수 없어 배포를 중단합니다.');
     }
   }
@@ -157,8 +160,8 @@ async function main() {
     if (!previousSha) throw new Error('기존 gh-pages가 없어 다른 사이트 보존을 검증할 수 없습니다.');
     stagedGit(['read-tree', previousSha]);
     stagedGit(['checkout-index', '--all', '--force']);
-    const preview = path.join(site, sourceBranch);
-    if (!inside(site, preview) || path.basename(preview) !== 'codex-v5') throw new Error('자기 배포 경로를 확인할 수 없습니다.');
+    const preview = path.join(site, folder);
+    if (!inside(site, preview) || path.basename(preview) !== folder) throw new Error('자기 배포 경로를 확인할 수 없습니다.');
     fs.rmSync(preview, { recursive: true, force: true });
     fs.cpSync(dist, preview, { recursive: true });
     const build = { publisher: 'cat-at-the-door', source_branch: sourceBranch, source_commit: sourceSha, base_pages_commit: previousSha, built_at: new Date().toISOString() };
@@ -166,17 +169,18 @@ async function main() {
     stagedGit(['add', '--all', '--force', '--', '.']);
     const tree = stagedGit(['write-tree']);
     const changed = git(['-c', 'core.quotepath=false', 'diff-tree', '-r', '--name-only', previousSha, tree]).split(/\r?\n/).filter(Boolean);
-    if (changed.some(file => !file.startsWith('codex-v5/'))) {
+    if (changed.some(file => !file.startsWith(folder + '/'))) {
       throw new Error('다른 공개 사이트 또는 루트 파일이 달라져 배포를 중단합니다.');
     }
     if (prepareOnly) {
       console.log(JSON.stringify({ status: '로컬 배포 묶음 검증 완료', source_commit: sourceSha, base_pages_commit: previousSha, tree, preview_files: changed.length, url: liveUrl }, null, 2));
       return;
     }
-    const commit = git(['commit-tree', tree, '-p', previousSha, '-m', `Publish codex-v5 ${sourceSha.slice(0, 7)}`]);
+    const commit = git(['commit-tree', tree, '-p', previousSha, '-m', `Publish ${folder} ${sourceSha.slice(0, 7)}\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Cp5eYTpGnyxtMQvdgzVNTN`]);
     git(['push', 'origin', `${commit}:refs/heads/gh-pages`]);
-    await configurePages();
-    const preservedFiles = git(['ls-tree', '-r', '--name-only', previousSha]).split(/\r?\n/).filter(file => file && !file.startsWith('codex-v5/')).length;
+    // Pages 설정은 이미 gh-pages 루트로 되어 있다. 로그인 정보가 없는 환경에서는 건너뛴다
+    try { await configurePages(); } catch (error) { console.warn('Pages 설정 확인을 건너뜀: ' + (error.message || error)); }
+    const preservedFiles = git(['ls-tree', '-r', '--name-only', previousSha]).split(/\r?\n/).filter(file => file && !file.startsWith(folder + '/')).length;
     const deployment = { status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, base_pages_commit: previousSha, other_paths_changed: 0, preserved_files: preservedFiles };
     fs.mkdirSync(path.join(root, '.preview'), { recursive: true });
     fs.writeFileSync(path.join(root, '.preview/r4-deployment.json'), JSON.stringify(deployment, null, 2));

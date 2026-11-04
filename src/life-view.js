@@ -198,9 +198,9 @@ var View = (function () {
       }
     }
   }
-  function foodBag(c, x, y, meals, max, tilt) {
+  function foodBag(c, x, y, meals, max, tilt, scale) {
     c.save(); c.translate(x, y); if (tilt) c.rotate(tilt);
-    item(c, 'foodBag', 0, 0, 1.15);
+    item(c, 'foodBag', 0, 0, 1.15 * (scale || 1));
     c.restore();
     if (meals !== undefined && !tilt) { // 남은 끼니 칸
       for (var i = 0; i < 8; i++) r(c, x - 13 + i * 3.4, y + 3, 2.4, 3, i < meals ? '#a9744a' : '#d8cfc0');
