@@ -2,12 +2,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
+const {execFileSync}=require('node:child_process');
 const Life=require('../src/life-state.js');
 const SAVE_KEY='catdoor-life-v4';
 
 // 실제 HTML의 요소와 상태·대사·입력·렌더 코드를 함께 사용한다.
 // 대체 오디오 장치는 실제 소리를 내지 않고, 그리기 장치는 잘못된 좌표를 검출한다.
-async function game(saved,{autoStart=true}={}){
+async function game(saved,{autoStart=true,devicePixelRatio=1,revision=null}={}){
+ const read=file=>revision?execFileSync('git',['show',revision+':'+file],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'}):fs.readFileSync(path.join(__dirname,'..',file),'utf8');
  const nodes=new Map(),all=[],events={},storage=new Map(),paint={},audio={constructors:0,resumes:0,starts:0};let frame,time=0;
  class FakeAudioContext{
   constructor(){audio.constructors++;this.currentTime=0;this.sampleRate=3000;this.destination={};}
@@ -23,7 +25,7 @@ async function game(saved,{autoStart=true}={}){
  });
  const descendants=n=>n.children.flatMap(c=>[c,...(c.children?descendants(c):[])]);
  class Node{
-  constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.hidden=false;this.value='';this._text='';this.children=[];this.dataset={};this.listeners={};this.attributes={};this.style={setProperty(){}};this.disabled=false;this.checked=false;this.width=640;this.height=360;all.push(this);}
+  constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.hidden=false;this.value='';this._text='';this.children=[];this.dataset={};this.listeners={};this.attributes={};this.style={setProperty(name,value){this[name]=value;}};this.disabled=false;this.checked=false;this.width=640;this.height=360;all.push(this);}
   get textContent(){return this._text+this.children.map(n=>n.textContent||'').join('');}set textContent(v){this._text=String(v??'');this.children=[];}
   get lastChild(){return this.children.at(-1);}get childNodes(){return this.children;}
   getContext(){return drawing;}getBoundingClientRect(){return{left:0,top:0,width:640,height:360};}
@@ -32,13 +34,13 @@ async function game(saved,{autoStart=true}={}){
   querySelectorAll(selector){return descendants(this).filter(n=>n.matches?.(selector));}querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
   replaceChildren(...a){this._text='';this.children=[];this.append(...a);}append(...a){for(const child of a){const n=typeof child==='string'?{textContent:child}:child;n.parentNode=this;this.children.push(n);}}appendChild(n){this.append(n);return n;}after(n){n.afterNode=this;}
  }
- const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const html=read('index.html');
  for(const match of html.matchAll(/<([a-z0-9]+)\b([^>]*\bid="([^"]+)"[^>]*)>/gi)){const n=new Node(match[1],match[3]);n.hidden=/\bhidden\b/.test(match[2]);for(const dimension of ['width','height']){const value=match[2].match(new RegExp(dimension+'="(\\d+)"'));if(value)n[dimension]=Number(value[1]);}nodes.set(n.id,n);}
  const get=id=>{assert.ok(nodes.has(id),`index.html is missing #${id}`);return nodes.get(id);};
  const document={getElementById:get,createElement:tag=>new Node(tag),createTextNode:t=>({textContent:String(t)}),addEventListener:(k,fn)=>events[k]=fn,querySelectorAll:s=>all.filter(n=>n.matches(s)),fonts:{ready:Promise.resolve()}};
  if(saved)storage.set(SAVE_KEY,JSON.stringify({state:saved.state,scene:saved.scene||'living',doorOpen:true,officeTalk:{},officeDone:false,officeFeedback:false,...saved}));
- const sandbox={document,console,Math,JSON,Map,Set,requestAnimationFrame:fn=>frame=fn,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{addEventListener(){},AudioContext:FakeAudioContext},Image:class{constructor(){this.complete=true;this.width=this.naturalWidth=1280;this.height=this.naturalHeight=1440;}set src(v){this.onload?.();}}};
- const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js']){if(file==='life-game.js'){const drawPortrait=c.PixelArt.portrait;c.PixelArt.portrait=(ctx,variant,x,y,w,h)=>{paint.portraits||=[];paint.portraits.push({variant,x,y,w,h});return drawPortrait(ctx,variant,x,y,w,h);};const title=c.LifeView.title;c.LifeView.title=(ctx,t,G)=>{paint.titleAssetKeys=Object.keys(G?.images||{});return title(ctx,t,G);};}vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c,{filename:file});}
+ const sandbox={document,console,Math,JSON,Map,Set,requestAnimationFrame:fn=>frame=fn,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{devicePixelRatio,addEventListener(){},AudioContext:FakeAudioContext},Image:class{constructor(){this.complete=true;this.width=this.naturalWidth=1280;this.height=this.naturalHeight=1440;}set src(v){this.onload?.();}}};
+ const c=vm.createContext(sandbox);for(const file of ['life-state.js','life-story.js','pixel-render.js','life-view.js','life-game.js']){if(file==='life-game.js'){const drawPortrait=c.PixelArt.portrait;c.PixelArt.portrait=(ctx,variant,x,y,w,h)=>{paint.portraits||=[];paint.portraits.push({variant,x,y,w,h});return drawPortrait(ctx,variant,x,y,w,h);};const title=c.LifeView.title;c.LifeView.title=(ctx,t,G)=>{paint.titleAssetKeys=Object.keys(G?.images||{});return title(ctx,t,G);};}const source=read('src/'+file);vm.runInContext(file==='life-game.js'?source.replace('window.CatDoorReview={','window.__R5Capture=()=>G;window.CatDoorReview={'):source,c,{filename:file});}
  await Promise.resolve();await Promise.resolve();
  const snap=()=>sandbox.window.CatDoorReview.snapshot();
  const step=(seconds=.4)=>{for(let i=0;i<Math.ceil(seconds*30);i++){time+=1000/30;frame(time);}};
@@ -59,7 +61,7 @@ async function game(saved,{autoStart=true}={}){
  const pack=()=>{toRoom('bedroom');target('가방을');if(snap().mini==='bag'){for(const item of snap().items)drag([item.x,item.y],[455,245],.15);step(1.5);}assert.ok(snap().state.bagPacked);};
  const start=()=>{if(saved)click('continueButton',.8);else{get('playerName').value='하늘';click('startButton',.6);}};
  step(.3);if(autoStart)start();
- return{get,snap,step,key,press,pointer,drag,button,click,find,ack,clearAck,dialogues,target,toRoom,fillTask,pack,paint,audio,all,start,storage};
+ return{get,snap,step,capture:()=>sandbox.window.__R5Capture(),runtime:c,key,press,pointer,drag,button,click,find,ack,clearAck,dialogues,target,toRoom,fillTask,pack,paint,audio,all,start,storage};
 }
 
 

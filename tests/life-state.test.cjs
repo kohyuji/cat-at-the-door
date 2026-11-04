@@ -37,7 +37,7 @@ test('주말에는 출근·수당 없이 아침과 저녁 밥을 각각 줄 수 
 });
 test('가방 내용과 옷별 털·문·커튼은 밤과 출퇴근을 지나 보존된다',()=>{
  const s=employed();Life.act(s,'packBag');Life.act(s,'pet');const fur=s.clothesFur.hoodie;Life.act(s,'secureWindow');morning(s);assert.deepEqual(s.bagContents,['laptop','charger']);assert.equal(s.bagPacked,true);assert.equal(s.doorOpen,true);assert.equal(s.curtainClosed,true);assert.ok(s.clothesFur.hoodie>=fur);assert.equal(s.clothesFur.suit,0);
- Life.act(s,'dress');Life.act(s,'pet');assert.equal(s.clothesFur.suit,4);Life.act(s,'pickBag');Life.act(s,'leaveHome');Life.finishWork(s);Life.arriveHome(s);assert.equal(s.dressed,false);assert.equal(s.suitStored,true);assert.equal(s.clothesFur.suit,4);assert.equal(s.bagPacked,true);assert.equal(Life.act(s,'packBag').reason,'alreadyDone');
+ Life.act(s,'dress');Life.act(s,'pet');assert.equal(s.clothesFur.suit,4);Life.act(s,'pickBag');Life.act(s,'leaveHome');Life.finishWork(s);Life.arriveHome(s);assert.equal(s.dressed,true);assert.equal(s.suitStored,false);Life.act(s,'storeSuit');assert.equal(s.dressed,false);assert.equal(s.suitStored,true);assert.equal(s.clothesFur.suit,4);assert.equal(s.bagPacked,true);assert.equal(Life.act(s,'packBag').reason,'alreadyDone');
 });
 test('돌돌이는 3분 투자로 털을 없애며 소모품 횟수를 세지 않는다',()=>{
  const s=workState();s.phase='morning';s.minute=470;s.clothesFur.suit=s.fur=12;Life.act(s,'buyRoller');const before=s.cash;Life.act(s,'startRoller');Life.act(s,'roll',{amount:30});Life.act(s,'stopRoller');assert.equal(s.fur,0);assert.equal(s.clothesFur.suit,0);assert.equal(s.minute,473);assert.equal(s.cash,before);assert.equal(s.roller.owned,true);
@@ -53,11 +53,16 @@ test('돈 부족은 구매·사료를 바꾸지 않으며 한 끼 포장이 회�
  const s=employed();s.cash=3000;s.food=0;assert.equal(Life.act(s,'buyFood').ok,false);assert.equal(s.food,0);assert.equal(s.cash,3000);assert.ok(Life.act(s,'smallFood').ok);assert.ok(Life.act(s,'feed').ok);assert.equal(s.cash,0);assert.equal(s.food,0);
 });
 test('첫 근무 기간 마지막 결산은 이미 받은 수입을 다시 지급하지 않는다',()=>{
- const s=workState(12);Story.customers(s).slice(0,2).forEach(c=>consult(s,c));Life.finishWork(s);Life.arriveHome(s);Life.act(s,'feed');Life.act(s,'water');Life.act(s,'play');Life.act(s,'litter');const cash=s.cash;Life.sleep(s,false);assert.equal(s.phase,'ending');const end=Life.ending(s);assert.equal(s.cash,cash);assert.equal(end.summary.earned,48000);assert.equal(end.summary.contracts,2);assert.match(end.lines.join(''),/슈퍼/);assert.match(end.lines.at(-1),/문을 닫았다/);
+ const s=workState(12);Story.customers(s).slice(0,2).forEach(c=>consult(s,c));Life.finishWork(s);Life.arriveHome(s);Life.act(s,'feed');Life.act(s,'water');Life.act(s,'play');Life.act(s,'litter');const cash=s.cash;Life.sleep(s,false);assert.equal(s.phase,'ending');const end=Life.ending(s);assert.equal(s.cash,cash);assert.equal(end.summary.earned,48000);assert.equal(end.summary.contracts,2);assert.match(end.lines.join(''),/슈퍼/);assert.match(end.lines.at(-1),/방문을 닫았다/);
 });
 module.exports={employed,workState,consult};
 
 
 test('놀이만 빠뜨린 밤도 다음 아침에 피곤함으로 표시되며 돌봄한 밤과 구별된다',()=>{
  const s=employed();Life.act(s,'feed');Life.act(s,'water');Life.sleep(s,true);assert.deepEqual(s.lastNight.wakeReasons,['play']);assert.equal(Life.fatigue(s),'tired');
+});
+
+
+test('R5 현재 옷에 따라 반복 쓰다듬기의 털·대사가 바뀌고 정장은 실제 갈아입어야 벗는다',()=>{
+ const s=employed();s.phase='morning';Life.act(s,'dress');const one=Life.act(s,'pet');assert.match(one.message,/정장에 털/);assert.equal(s.clothesFur.suit,4);const two=Life.act(s,'pet');assert.equal(two.ok,true);assert.equal(s.clothesFur.suit,8);Life.act(s,'storeSuit');const three=Life.act(s,'pet');assert.match(three.message,/후드티에 털/);assert.equal(s.clothesFur.hoodie,4);assert.equal(s.clothesFur.suit,8);
 });
