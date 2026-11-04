@@ -53,7 +53,20 @@ main{max-width:32rem;margin:0 auto;padding:12px 16px 28px}
 .dim{position:absolute;inset:0;background:#05060d;opacity:0;pointer-events:none}
 .dim.on{transition:opacity var(--hes,3s) linear;opacity:.88}
 .sepia svg{filter:sepia(.75) saturate(1.3) brightness(1.05)}
+/* 픽셀 그림: 보이는 그림은 캔버스(#pxc), SVG는 손가락 판정과 글자만 */
+#pxc{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none}
+#pxbg{position:absolute;left:0;width:100%;background-size:100% 100%;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
+.stage svg{position:relative;z-index:1}
+#sc.px #world{visibility:hidden;pointer-events:painted}
+#sc.px #world text{visibility:visible}
+.card,.dim{z-index:2}
+.stage.flash::after{z-index:3}
+.stage.out #pxc,.stage.out #pxbg{transition:opacity .45s ease;opacity:0}
+.stage.through #pxc,.stage.through #pxbg{transition:transform 1s ease-in,opacity 1s ease-in;transform:scale(2.6);opacity:0}
+.sepia #pxc,.sepia #pxbg{filter:sepia(.75) saturate(1.3) brightness(1.05)}
 /* 그림 속 움직임 */
+.pourfall rect{animation:pourf .5s linear infinite}
+@keyframes pourf{from{transform:translateY(-8px)}to{transform:translateY(10px)}}
 .wag{transform-box:fill-box;transform-origin:0% 100%;animation:wag 1.6s ease-in-out infinite}
 @keyframes wag{0%,100%{transform:rotate(0)}50%{transform:rotate(-14deg)}}
 .shiver{animation:shiver .18s linear infinite}
@@ -62,6 +75,10 @@ main{max-width:32rem;margin:0 auto;padding:12px 16px 28px}
 @keyframes breath{50%{transform:scaleY(1.03)}}
 .bob{animation:bob 1.1s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-4px)}}
+.arrowb{animation:arrowb .8s ease-in-out infinite}
+@keyframes arrowb{50%{transform:translateY(-9px)}}
+.sndbtn{position:absolute;top:8px;right:8px;z-index:6;width:38px;height:38px;border-radius:50%;border:2px solid #24273f;background:rgba(255,255,255,.92);display:grid;place-items:center;padding:0;cursor:pointer;touch-action:manipulation}
+.sndbtn:focus-visible{outline:3px solid #ffd84d;outline-offset:2px}
 .tapping{animation:tapping .5s ease-in-out infinite}
 @keyframes tapping{50%{transform:translate(2px,-5px)}}
 .rain line{animation:rain .7s linear infinite}
@@ -144,7 +161,7 @@ button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
 .found{color:var(--muted);font-size:14px;text-align:center;margin-top:1rem}
 .quiet{color:var(--muted);font-size:14px;text-align:center}
 @media (prefers-reduced-motion:reduce){
-  .wag,.shiver,.breath,.bob,.tapping,.rain line,.snow circle,.pop,.jump,.shake,.ring-pulse,.sway,.zz,.lightning,.card,.fadein,.flutter,.scratching,.vib,.blinkR,.knead,.hop,.glowring{animation:none}
+  .wag,.shiver,.breath,.bob,.arrowb,.tapping,.rain line,.snow circle,.pop,.jump,.shake,.ring-pulse,.sway,.zz,.lightning,.card,.fadein,.flutter,.scratching,.vib,.blinkR,.knead,.hop,.glowring{animation:none}
   .snowfall circle{animation-duration:12s!important}
   .card{display:none}
   .mover,.stage.through svg,.stage.out svg{transition:none}
@@ -180,7 +197,9 @@ function reset(){
   s = { day:0, bond:5, tired:0, face:3, prep:0, lates:0, slept:0, fur:0,
         lastOpen:false, catSpot:null, closetN:0, toys:0, laptopNight:false,
         hoodie:null, bossCat:false, found9:null, meet:null, log:[], finalOpen:null,
-        furLeft:0, satWork:0, satPlay:false };
+        furLeft:0, satWork:0, satPlay:false,
+        food:3, foodMax:4, foodKind:"tuna", order:null, hungry:0, hungryToday:false,
+        work:0, workMiss:0, overtime:0, curtain:false };
 }
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const bond = d => { s.bond = clamp(s.bond + d, 0, 10); };
@@ -205,14 +224,21 @@ function show(world, o={}){
   clearTimers(); idleKill(); G = null; HIT = {};
   EXT = o.flat ? { top:0, bot:0 } : computeExt();
   const TH = VH + EXT.top + EXT.bot;
+  world = topFix(world);
+  PLATE = o.bg || null;
   $app.innerHTML = `<div class="stage ${o.cls||''} fadein" id="sc" style="aspect-ratio:${VW}/${TH};max-width:min(100%, calc((100svh - 36px) * ${(VW/TH).toFixed(4)}))">
+      ${o.bg ? plateDiv(o.bg, TH) : ""}
       <svg viewBox="0 ${-EXT.top} ${VW} ${TH}" role="img" aria-label="${o.label||''}"><g id="world">${world}</g><g id="fx"></g><g id="ghost" pointer-events="none"></g></svg>
       ${o.card ? `<div class="card">${o.card}</div>` : ""}
     </div>${o.below || ""}`;
   window.scrollTo(0,0);
+  sndButton();
   bindScene();
+  pxAttach();
 }
-function world(html){ const w = $('world'); if (w) w.innerHTML = html; }
+// 화면 맨 위(키 큰 폰에서는 더 위)에 붙는 표시는 __TOP__ 자리에 실제 맨 위 + 34를 넣는다
+const topFix = html => String(html).split('__TOP__').join(String(34 - EXT.top));
+function world(html){ const w = $('world'); if (w) w.innerHTML = topFix(html); }
 function putFx(id, html){ const L = $('fx'); if (!L) return; const old = $(id); if (old) old.remove(); L.insertAdjacentHTML('beforeend', html); }
 function dropFx(...ids){ ids.forEach(id => { const e = $(id); if (e) e.remove(); }); }
 // 장면 전환: 살짝 어두워졌다가 다음 장면
@@ -220,7 +246,8 @@ function fadeTo(fn, ms=450){ const st = $('sc'); if (st) st.classList.add('out')
 // 문을 지나 반대편으로: 문 쪽으로 다가가며 어두워진다
 function throughDoor(fn, ox="76%", oy="52%"){
   const st = $('sc'); if (!st) return fn(); idleKill(); HIT = {};
-  const svg = st.querySelector('svg'); svg.style.transformOrigin = `${ox} ${oy}`;
+  const svg = st.querySelector('svg'); svg.style.transformOrigin = `${ox} ${oy}`; const cv = $('pxc'); if (cv) cv.style.transformOrigin = `${ox} ${oy}`;
+  const bg = $('pxbg'); if (bg){ const r = st.getBoundingClientRect(), b = bg.getBoundingClientRect(); bg.style.transformOrigin = `${ox} ${(parseFloat(oy) / 100 * r.height - (b.top - r.top)).toFixed(1)}px`; }
   st.classList.add('through');
   const t = setTimeout(fn, 1000 * Math.min(1, SPEED*2)); timers.push(t);
 }
@@ -229,8 +256,13 @@ function moveEl(id, x, y, extra=""){ const e = $(id); if (!e) return; requestAni
 /* ================= 입력: 장면 하나에 이벤트를 걸고 data-hit 이름으로 나눈다 ================= */
 // HIT[name] = { tap, rub:{fn,per}, drag:{ghost,targets,miss}, pull:{progress,move,done}, hold:{start,release}, key }
 let HIT = {}, G = null;
-function hits(m){ HIT = m; }
-function addHits(m){ Object.assign(HIT, m); }
+// 알림이나 휴대폰 주문 창이 떠 있는 동안 장면이 손 판정을 바꾸면, 창을 닫은 뒤에 쓰도록 맡아 둔다 (창의 버튼은 그대로)
+let MODAL = null;
+const modalOn = () => MODAL && $(MODAL.id);
+function hits(m){ if (modalOn()){ MODAL.m = m; return; } HIT = m; }
+function addHits(m){ if (modalOn()){ Object.assign(MODAL.m, m); return; } Object.assign(HIT, m); }
+function modalOpen(id, handlers){ MODAL = { id, m: HIT }; HIT = Object.assign({ _bg: null }, handlers); }
+function modalClose(id){ dropFx(id); if (MODAL && MODAL.id === id){ HIT = MODAL.m; MODAL = null; } }
 const hitA = (name, label) => `data-hit="${name}" tabindex="0" role="button" aria-label="${label}"`;
 function svgPt(svg, e){ const r = svg.getBoundingClientRect(); return { x:(e.clientX-r.left)*VW/r.width, y:-EXT.top + (e.clientY-r.top)*(VH+EXT.top+EXT.bot)/r.height }; }
 const ptIn = (p, r) => p.x >= r[0] && p.x <= r[0]+r[2] && p.y >= r[1] && p.y <= r[1]+r[3];
@@ -314,14 +346,25 @@ function handHint(type, x, y, x2, y2){
 // teach: 처음이면 바로, 아니면 가만히 있을 때만 손을 보여 준다. 여러 개면 번갈아 보여 준다 (고를 수 있다는 뜻).
 let IDLE = null;
 function teach(type, x, y, x2, y2, o={}){ teachCycle([[type, x, y, x2, y2]], o); }
+function arrowsFor(list){
+  return `<g id="arrows" pointer-events="none">${list.slice(0, 3).map(h => {
+    const x = clamp(h[1], 16, VW - 16), y = Math.max(h[2] - 40, -EXT.top + 26);
+    return `<g transform="translate(${x},${y})"><g class="arrowb"><path d="M-7,-20 h14 v10 h8 l-15,16 l-15,-16 h8 z" fill="#ffd84d" stroke="#24273f" stroke-width="2.4" stroke-linejoin="round"/></g></g>`;
+  }).join('')}</g>`;
+}
 function teachCycle(list, o={}){
+  if ($('note')) return;
   idleKill();
   let i = 0, iv = null;
   const stop = () => { if (iv){ clearInterval(iv); iv = null; } };
+  const arrows = () => { if (!o.noArrow && $('fx')) putFx('arrows', arrowsFor(list)); };
+  arrows();
+  let me = null;                     // 이 시범이 아직 지금 장면의 것인지 (지난 장면의 손이 남지 않게)
   const showIt = () => {
-    if (!$('fx') || G) return;
-    stop(); let n = 0;
+    if (IDLE !== me || !$('fx') || G) return;
+    stop(); let n = 0; arrows();
     const step = () => {
+      if (IDLE !== me){ stop(); return; }
       if (n >= Math.max(2, list.length * 2)){ stop(); dropFx('gh'); return; }
       const h = list[i % list.length]; i++; n++;
       putFx('gh', handHint(h[0], h[1], h[2], h[3], h[4]));
@@ -329,13 +372,13 @@ function teachCycle(list, o={}){
     step(); iv = setInterval(step, (o.each || 2400) * Math.max(SPEED, .2));
   };
   const key = o.key || list.map(h => h[0]).join('+');
-  IDLE = { showIt, stop, t:null, wait: o.wait || 5500 };
+  me = IDLE = { showIt, stop, t:null, wait: o.wait || 5500 };
   if (!SEEN[key] || o.now){ SEEN[key] = true; later(o.delay || 300, showIt); }
   armIdle();
 }
 function armIdle(){ if (!IDLE) return; clearTimeout(IDLE.t); IDLE.t = setTimeout(() => { if (IDLE) IDLE.showIt(); }, IDLE.wait * Math.max(SPEED, .2)); }
-function idlePoke(){ if (IDLE && IDLE.stop) IDLE.stop(); dropFx('gh'); armIdle(); }
-function idleKill(){ if (IDLE){ clearTimeout(IDLE.t); if (IDLE.stop) IDLE.stop(); IDLE = null; } dropFx('gh'); }
+function idlePoke(){ if (IDLE && IDLE.stop) IDLE.stop(); dropFx('gh', 'arrows'); armIdle(); }
+function idleKill(){ if (IDLE){ clearTimeout(IDLE.t); if (IDLE.stop) IDLE.stop(); IDLE = null; } dropFx('gh', 'arrows'); }
 
 /* ================= 컷: 순서대로 일어나는 일. 화면을 누르면 다음 일이 바로 온다 ================= */
 function beats(list, o={}){
@@ -364,6 +407,7 @@ const heart = (x, y) => floatText("♥", x, y, "#ff6b8a", 20);
 // 소리 표시 (야옹, 박박 같은 의성어)
 function sound(id, t, x, y, o={}){
   const fs = o.fs || 16;
+  if (!o.mute) sfx(t);
   putFx(id, `<text id="${id}" class="pop" x="${x}" y="${y}" text-anchor="middle" font-size="${fs}" fill="${o.color||'#fff'}" stroke="#24273f" stroke-width="3.5" paint-order="stroke">${t}</text>`);
 }
 // 말풍선 (팀장님, 사장님만)
@@ -387,7 +431,7 @@ function bubble(id, t, ax, ay, o={}){
     <line x1="${tx-5.6}" y1="${ey}" x2="${tx+5.6}" y2="${ey}" stroke="#fff" stroke-width="3"/>
     <text font-size="${fs}" fill="#24273f">${lines.map((l,i)=>`<tspan x="${bx+px}" y="${by+py+fs-2+i*lh}">${l}</tspan>`).join('')}</text></g>`;
 }
-const say = (id, t, ax, ay, o) => putFx(id, bubble(id, t, ax, ay, o));
+const say = (id, t, ax, ay, o) => { blip(t); putFx(id, bubble(id, t, ax, ay, o)); };
 // 보리의 생각: 글 없이 그림만 담는 구름
 function cloud(id, bx, by, w, h, ax, ay, inner){
   const bumps = [];
@@ -412,6 +456,255 @@ function nextArrow(fn, label="다음"){
   addHits({ nextA: { tap: fn, key: fn } });
 }
 function dropNext(){ dropFx('nextA'); delete HIT.nextA; }
+// 꼭 봐야 하는 알림: 눌러서 확인해야 닫힌다 (그동안 다른 것은 안 눌린다)
+function notice(lines, art, then){
+  if ($('note')) return;
+  idleKill();
+  const h = 182 + lines.length * 24;
+  const y0 = 240 - h / 2;
+  putFx('note', `<g id="note" class="pop">
+    <rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".55"/>
+    <rect x="38" y="${y0}" width="284" height="${h}" rx="14" fill="#fff" stroke="#24273f" stroke-width="3"/>
+    <g transform="translate(180,${y0 + 52})">${art || ""}</g>
+    ${lines.map((t, i) => `<text x="180" y="${y0 + 122 + i * 24}" text-anchor="middle" font-size="16" fill="#24273f">${t}</text>`).join('')}
+    <g ${hitA("noteOk", "확인")}><rect x="128" y="${y0 + h - 50}" width="104" height="36" rx="10" fill="#24273f"/><text x="180" y="${y0 + h - 26}" text-anchor="middle" font-size="16" fill="#fff">확인</text></g></g>`);
+  const close = () => { if (!$('note')) return; modalClose('note'); if (then) then(); else armIdle(); };
+  modalOpen('note', { noteOk: { tap: close, key: close } });
+}
+/* ================= 소리: 화면에 뜨는 의성어마다 짧은 합성음. 장면 오른쪽 위 스피커로 켜고 끈다 ================= */
+const SND = { on: true, ctx: null };
+try { SND.on = localStorage.getItem('catgame-sound') !== 'off'; } catch(e){}
+function sndCtx(){
+  if (!SND.on) return null;
+  if (!SND.ctx){ const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { SND.ctx = new C(); } catch(e){ return null; } }
+  if (SND.ctx.state === 'suspended') SND.ctx.resume().catch(() => {});
+  return SND.ctx;
+}
+document.addEventListener('pointerdown', () => { if (SND.on) sndCtx(); }, true);
+function tone(f0, f1, dur, o={}){
+  const c = sndCtx(); if (!c || c.state !== 'running') return;
+  const t = c.currentTime + (o.at || 0), osc = c.createOscillator(), g = c.createGain();
+  osc.type = o.type || 'sine';
+  osc.frequency.setValueAtTime(f0, t); osc.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .1, t + Math.min(.03, dur / 4)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + dur + .03);
+}
+function noise(dur, o={}){
+  const c = sndCtx(); if (!c || c.state !== 'running') return;
+  const t = c.currentTime + (o.at || 0), n = Math.max(1, Math.floor(c.sampleRate * dur));
+  const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, o.decay || 1);
+  const src = c.createBufferSource(); src.buffer = buf;
+  const f = c.createBiquadFilter(); f.type = o.ft || 'bandpass'; f.frequency.value = o.f || 1200; f.Q.value = o.q || 1;
+  const g = c.createGain(); g.gain.value = o.vol || .15;
+  src.connect(f); f.connect(g); g.connect(c.destination); src.start(t);
+}
+const meowS = (hi=1, at=0) => { tone(480*hi, 880*hi, .13, { type:'triangle', vol:.07, at }); tone(880*hi, 460*hi, .32, { type:'triangle', vol:.07, at: at + .12 }); };
+const clickS = (f=2600, at=0, vol=.25) => noise(.045, { f, q:2.5, vol, at, decay:3 });
+// 의성어 글자로 소리를 고른다
+function sfx(t){
+  if (!SND.on) return;
+  t = String(t);
+  if (/^(야옹|냥|냐|미야)/.test(t)){ meowS(t.includes('?') ? 1.15 : t.includes('…') ? .85 : 1); if (/!.*!|냥!|냐앙!/.test(t)) meowS(1.05, .45); return; }
+  if (/^골골/.test(t)) return noise(.9, { ft:'lowpass', f:140, q:4, vol:.35, decay:.4 });
+  if (/^(딸깍|탁|툭|착|틱|쏙|폭|톡)/.test(t)) return t.startsWith('틱') ? tone(240, 180, .12, { type:'square', vol:.05 }) : clickS(t.startsWith('폭') ? 700 : 2400);
+  if (/^철컥/.test(t)){ clickS(1800); tone(320, 110, .12, { type:'square', vol:.05, at:.05 }); return; }
+  if (/^타닥/.test(t)){ [0, .07, .15, .21].forEach(a => clickS(3200, a, .12)); return; }
+  if (/^와르르/.test(t)){ for (let i = 0; i < 14; i++) clickS(2600 + Math.random()*1600, i * .045, .09); return; }
+  if (/^우르릉/.test(t)) return noise(1.4, { ft:'lowpass', f:180, q:.8, vol:.6, decay:.7 });
+  if (/^박박/.test(t)){ noise(.12, { f:2600, q:.7, vol:.12 }); noise(.12, { f:2400, q:.7, vol:.12, at:.16 }); return; }
+  if (/^(부욱|스윽|스르륵|휙)/.test(t)) return noise(t.startsWith('부욱') ? .35 : .3, { f: t.startsWith('휙') ? 900 : 1600, q:.5, vol:.14 });
+  if (/^하아암/.test(t)) return tone(420, 220, .8, { type:'triangle', vol:.05 });
+  if (/^(냠냠|킁킁|꾹꾹)/.test(t)){ const f = t.startsWith('꾹') ? 200 : 520; tone(f, f*.8, .07, { vol:.07 }); tone(f, f*.8, .07, { vol:.07, at:.16 }); return; }
+  if (/시$/.test(t)){ tone(880, 880, .45, { vol:.07 }); tone(660, 660, .7, { vol:.07, at:.32 }); return; }
+  if (/^징/.test(t)) return tone(120, 118, .45, { type:'square', vol:.04 });
+  if (/^(반짝|야호|하하|주문|택배)/.test(t)){ tone(988, 988, .14, { vol:.07 }); tone(1318, 1318, .22, { vol:.07, at:.12 }); return; }
+  if (/^에취/.test(t)) return noise(.18, { f:1400, q:.6, vol:.18 });
+  if (/^휴/.test(t)) return tone(300, 200, .5, { vol:.04 });
+}
+// 말풍선: 글자 수만큼 짧은 소리
+function blip(t){
+  if (!SND.on) return;
+  const n = Math.min(10, Math.ceil(String(t).length / 2));
+  for (let i = 0; i < n; i++) tone(520 + (i % 3) * 60, 500, .035, { type:'square', vol:.025, at: i * .06 });
+}
+// 스피커 아이콘
+const SND_ICON = on => `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#24273f"/>${on
+  ? '<path d="M16 8.5q2 3.5 0 7M18.5 6q4 6 0 12" stroke="#24273f" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  : '<path d="M16 9l5 6M21 9l-5 6" stroke="#e5484d" stroke-width="2.2" stroke-linecap="round"/>'}</svg>`;
+function sndButton(){
+  const sc = $('sc'); if (!sc || $('sndb')) return;
+  sc.insertAdjacentHTML('beforeend', `<button id="sndb" class="sndbtn" type="button" aria-label="${SND.on ? '소리 끄기' : '소리 켜기'}" aria-pressed="${SND.on}">${SND_ICON(SND.on)}</button>`);
+  const b = $('sndb');
+  b.addEventListener('pointerdown', e => e.stopPropagation());
+  b.addEventListener('click', e => {
+    e.stopPropagation();
+    SND.on = !SND.on;
+    try { localStorage.setItem('catgame-sound', SND.on ? 'on' : 'off'); } catch(_){}
+    if (SND.on){ sndCtx(); tone(988, 988, .1, { vol:.06 }); } else if (SND.ctx) SND.ctx.suspend().catch(() => {});
+    b.innerHTML = SND_ICON(SND.on); b.setAttribute('aria-label', SND.on ? '소리 끄기' : '소리 켜기'); b.setAttribute('aria-pressed', String(SND.on));
+  });
+}
+/* ================= 픽셀 그림: 장면(SVG)을 낮은 해상도 캔버스에 다시 그린다 =================
+   SVG는 손가락 판정과 움직임을 맡고(안 보이게 숨김), 보이는 그림은 캔버스가 맡는다.
+   - 한 칸 = SVG PX.unit 단위. 두 배로 그린 뒤 칸마다 한 점만 집어서 가장자리를 딱 끊는다.
+   - 사물과 사람에는 진한 1칸 테두리, 위 가장자리는 밝게 아래 가장자리는 어둡게.
+   - 섞인 색은 장면에 쓰인 색 중 가장 가까운 색으로 맞춘다.
+   - 글자(시계 숫자, 편지 같은 것)와 말풍선, 시범 손은 SVG 그대로 또렷하게 둔다. */
+const PX = { unit: 2.3, on: true, outline: true, ss: 2, shade: true, cv: null, raf: 0, cache: new WeakMap(), ink: [36, 39, 63], t: 0, ms: 0, frames: 0 };
+function pxAttach(){
+  if (!PX.on) return;
+  const sc = $('sc'); if (!sc) return;
+  const svg = sc.querySelector('svg'); if (!svg) return;
+  const TH = VH + EXT.top + EXT.bot;
+  const cv = document.createElement('canvas');
+  cv.id = 'pxc'; cv.width = Math.round(VW / PX.unit); cv.height = Math.round(TH / PX.unit);
+  cv.setAttribute('aria-hidden', 'true');
+  sc.insertBefore(cv, svg);
+  PX.cv = cv; PX.svg = svg; PX.world = svg.querySelector('#world');
+  PX.main = pxLayer(cv, PX.ss); PX.mask = pxLayer(cv, PX.ss); PX.tm = pxLayer(cv, PX.ss); PX.fx = pxLayer(cv, 1);
+  PX.pal = new Map(); PX.snap = new Map();
+  sc.classList.add('px');
+  pxDraw();
+  if (!PX.raf) PX.raf = requestAnimationFrame(pxLoop);
+}
+function pxLayer(cv, k){ const c = document.createElement('canvas'); c.width = cv.width * k; c.height = cv.height * k; return { c, x: c.getContext('2d', { willReadFrequently: true }) }; }
+function pxLoop(ts){
+  PX.raf = requestAnimationFrame(pxLoop);
+  if (!PX.cv || !PX.cv.isConnected) return;
+  if (ts - PX.t < 40) return;            // 25장/초. 도트 게임처럼 살짝 끊기는 정도
+  PX.t = ts;
+  try { const t0 = performance.now(); pxDraw(); PX.ms += performance.now() - t0; PX.frames++; }
+  catch (e){ console.error(e); PX.on = false; const sc = $('sc'); if (sc) sc.classList.remove('px'); }
+}
+const pxRGB = c => { const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(c); return m ? [+m[1], +m[2], +m[3]] : null; };
+function pxStyle(el){
+  let st = PX.cache.get(el);
+  if (st) return st;
+  const cs = getComputedStyle(el), tag = el.tagName;
+  st = { tag, dyn: el.hasAttribute('class') || el.hasAttribute('style'), disp: cs.display !== 'none' };
+  pxPaint(st, cs);
+  const n = k => parseFloat(el.getAttribute(k)) || 0;
+  if (tag === 'path') st.p = new Path2D(el.getAttribute('d') || '');
+  else if (tag === 'rect'){ const p = new Path2D(), w = n('width'), h = n('height'), rx = Math.min(n('rx') || n('ry'), w/2, h/2); if (rx > 0 && p.roundRect) p.roundRect(n('x'), n('y'), w, h, rx); else p.rect(n('x'), n('y'), w, h); st.p = p; st.wide = w >= VW * .9; }
+  else if (tag === 'circle'){ const p = new Path2D(); p.arc(n('cx'), n('cy'), n('r'), 0, Math.PI*2); st.p = p; }
+  else if (tag === 'ellipse'){ const p = new Path2D(); p.ellipse(n('cx'), n('cy'), n('rx'), n('ry'), 0, 0, Math.PI*2); st.p = p; }
+  else if (tag === 'line'){ const p = new Path2D(); p.moveTo(n('x1'), n('y1')); p.lineTo(n('x2'), n('y2')); st.p = p; st.fill = 'none'; st.wide = Math.abs(n('x2') - n('x1')) >= VW * .9; st.isLine = true; }
+  else if (tag === 'polygon' || tag === 'polyline'){ const pts = (el.getAttribute('points') || '').trim().split(/[ ,]+/).map(parseFloat); const p = new Path2D(); for (let i = 0; i + 1 < pts.length; i += 2) i ? p.lineTo(pts[i], pts[i+1]) : p.moveTo(pts[i], pts[i+1]); if (tag === 'polygon') p.closePath(); st.p = p; if (tag === 'polyline') st.fill = 'none'; }
+  else if (tag === 'image'){ st.img = new Image(); st.img.src = el.getAttribute('href') || el.getAttribute('xlink:href'); st.box = [n('x'), n('y'), n('width'), n('height')]; }
+  PX.cache.set(el, st);
+  return st;
+}
+function pxPaint(st, cs){
+  st.fill = cs.fill; st.stroke = cs.stroke; st.sw = parseFloat(cs.strokeWidth) || 0; st.cap = cs.strokeLinecap; st.join = cs.strokeLinejoin;
+  st.dash = cs.strokeDasharray && cs.strokeDasharray !== 'none' ? cs.strokeDasharray.split(/[ ,]+/).map(parseFloat) : null;
+  st.fo = parseFloat(cs.fillOpacity); st.so = parseFloat(cs.strokeOpacity); st.op = parseFloat(cs.opacity);
+  if (!st.fill || st.fill === 'transparent' || /rgba\(.*,\s*0\)$/.test(st.fill) || st.fill.startsWith('url')) st.fill = 'none';
+  if (!st.stroke || st.stroke === 'transparent' || /rgba\(.*,\s*0\)$/.test(st.stroke) || st.stroke.startsWith('url')) st.stroke = 'none';
+}
+function pxPal(c){ if (c === 'none' || PX.pal.has(c)) return; const v = pxRGB(c); if (v){ PX.pal.set(c, v); PX.snap.clear(); } }
+function pxDraw(){
+  const cv = PX.cv, W = cv.width, H = cv.height, SS = PX.ss;
+  if (!PX.svg.getBoundingClientRect().width) return;
+  const M = PX.main.x, K = PX.mask.x, T = PX.tm.x, F = PX.fx.x;
+  for (const x of [M, K, T, F]){ x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.clearRect(0, 0, x.canvas.width, x.canvas.height); }
+  K.fillStyle = '#fff'; K.strokeStyle = '#fff'; T.fillStyle = '#fff'; T.strokeStyle = '#fff';
+  const base = PX.svg.getScreenCTM().inverse();
+  const unitK = W / VW, oy = EXT.top;
+  const put = (x, m, kk) => x.setTransform(kk*m.a, kk*m.b, kk*m.c, kk*m.d, kk*m.e, kk*(m.f + oy));
+  const walk = (node, alpha) => {
+    for (let el = node.firstElementChild; el; el = el.nextElementSibling){
+      const tag = el.tagName;
+      if (tag === 'text' || tag === 'title' || tag === 'defs') continue;
+      const st = pxStyle(el);
+      if (!st.disp) continue;
+      if (st.dyn){ const cs = getComputedStyle(el); if (cs.display === 'none') continue; pxPaint(st, cs); }
+      const a = alpha * st.op;
+      if (a <= 0.02) continue;
+      if (tag === 'g' || tag === 'svg' || tag === 'a'){ walk(el, a); continue; }
+      const sm = el.getScreenCTM(); if (!sm) continue;
+      const m = base.multiply(sm);                  // 요소 → 장면 좌표(viewBox)
+      if (st.img){ if (st.img.complete && st.img.naturalWidth){ put(M, m, unitK * SS); M.globalAlpha = a; M.imageSmoothingEnabled = false; M.drawImage(st.img, ...st.box); } continue; }
+      if (!st.p) continue;
+      // 화면 전체를 덮는 반투명(어둠, 번쩍임)은 맨 위에 따로. 나머지는 순서대로 한 장에.
+      const overlay = st.wide && !st.isLine && a < .97;
+      const tgt = overlay ? F : M, kk = overlay ? unitK : unitK * SS;
+      put(tgt, m, kk);
+      const sc = Math.sqrt(Math.abs(m.a*m.d - m.b*m.c)) * kk;
+      const solid = !overlay && !st.wide && a >= .97;     // 테두리를 두를 덩어리
+      if (solid) put(K, m, kk);
+      if (st.fill !== 'none'){
+        const fa = a * (isNaN(st.fo) ? 1 : st.fo);
+        tgt.globalAlpha = fa; tgt.fillStyle = st.fill; tgt.fill(st.p);
+        if (!overlay && fa >= .97) pxPal(st.fill);
+        if (solid && fa >= .97) K.fill(st.p);
+        if (!overlay && fa < .97){ put(T, m, kk); T.fill(st.p); }     // 일부러 비치게 칠한 곳은 색을 맞추지 않는다
+      }
+      if (st.stroke !== 'none' && st.sw > 0){
+        const sa = a * (isNaN(st.so) ? 1 : st.so);
+        tgt.globalAlpha = sa; tgt.strokeStyle = st.stroke;
+        tgt.lineWidth = Math.max(st.sw, (overlay ? 1.05 : 1.05 * SS) / Math.max(sc, .01)); tgt.lineCap = st.cap; tgt.lineJoin = st.join; tgt.setLineDash(st.dash || []);
+        tgt.stroke(st.p); if (!overlay && sa >= .6) pxPal(st.stroke);
+        if (solid && sa >= .97){ K.lineWidth = tgt.lineWidth; K.lineCap = st.cap; K.lineJoin = st.join; K.setLineDash(st.dash || []); K.stroke(st.p); }
+        if (!overlay && sa < .97){ put(T, m, kk); T.lineWidth = tgt.lineWidth; T.lineCap = st.cap; T.setLineDash(st.dash || []); T.stroke(st.p); }
+      }
+    }
+  };
+  walk(PX.world, 1);
+  // 두 배로 그린 것을 칸마다 한 점만 집어 온다 (섞인 가장자리 색이 거의 안 생긴다)
+  const sample = (L) => { const src = L.x.getImageData(0, 0, W * SS, H * SS).data, out = new ImageData(W, H), q = out.data, off = SS - 1;
+    for (let y = 0; y < H; y++){ const sy = (y * SS + off) * W * SS; for (let x = 0; x < W; x++){ const si = (sy + x * SS + off) * 4, di = (y * W + x) * 4; q[di] = src[si]; q[di+1] = src[si+1]; q[di+2] = src[si+2]; q[di+3] = src[si+3]; } }
+    return out; };
+  const o = sample(PX.main), d = o.data, mk = sample(PX.mask).data, tk = sample(PX.tm).data, solid = new Uint8Array(W * H);
+  for (let j = 0; j < W * H; j++) solid[j] = mk[j*4+3] >= 128 ? 1 : 0;
+  // 섞인 색은 장면의 색 중 가장 가까운 것으로. 반쯤 비치는 칸은 딱 정한다.
+  const pal = [...PX.pal.values()]; pal.push(PX.ink);
+  const S = PX.snap;
+  for (let i = 0; i < d.length; i += 4){
+    const al = d[i+3];
+    if (al < 110){ d[i+3] = 0; continue; }
+    if (al < 255){ const f = 255 / al; d[i] = Math.min(255, d[i] * f); d[i+1] = Math.min(255, d[i+1] * f); d[i+2] = Math.min(255, d[i+2] * f); }
+    d[i+3] = 255;
+    if (pal.length > 1 && tk[i+3] < 128){
+      const key = (d[i] >> 3) << 10 | (d[i+1] >> 3) << 5 | (d[i+2] >> 3);
+      let c = S.get(key);
+      if (!c){ let best = 1e9; for (const p of pal){ const dr = d[i]-p[0], dg = d[i+1]-p[1], db = d[i+2]-p[2], e = dr*dr*.3 + dg*dg*.59 + db*db*.11; if (e < best){ best = e; c = p; } } S.set(key, c); }
+      d[i] = c[0]; d[i+1] = c[1]; d[i+2] = c[2];
+    }
+  }
+  // 위쪽 가장자리는 밝게, 아래쪽 가장자리는 어둡게 (덩어리감)
+  if (PX.shade){
+    for (let y = 1; y < H - 1; y++) for (let x = 0; x < W; x++){
+      const j = y * W + x; if (!solid[j]) continue; const i = j * 4;
+      if (!solid[j - W]){ d[i] += (255 - d[i]) * .25; d[i+1] += (255 - d[i+1]) * .25; d[i+2] += (255 - d[i+2]) * .25; }
+      else if (!solid[j + W]){ d[i] *= .8; d[i+1] *= .8; d[i+2] *= .84; }
+    }
+  }
+  // 덩어리 바깥 한 칸에 진한 테두리
+  if (PX.outline){
+    const [orr, og, ob] = PX.ink;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){
+      const j = y * W + x; if (solid[j]) continue;
+      if ((x > 0 && solid[j-1]) || (x < W-1 && solid[j+1]) || (y > 0 && solid[j-W]) || (y < H-1 && solid[j+W])){ const i = j * 4; d[i] = orr; d[i+1] = og; d[i+2] = ob; d[i+3] = 255; }
+    }
+  }
+  const out = cv.getContext('2d', { willReadFrequently: true });
+  out.setTransform(1, 0, 0, 1, 0, 0); out.globalAlpha = 1; out.imageSmoothingEnabled = false;
+  out.putImageData(o, 0, 0);
+  out.drawImage(PX.fx.c, 0, 0);       // 어둠, 번쩍임은 그 위에
+}
+
+/* ================= 배경판: ChatGPT로 만든 방 그림을 장면 뒤에 깐다 =================
+   배경판 한 장 = 장면 좌표 x 0..360, y -150..630 을 그대로 덮는다. 사람, 고양이, 움직이는 물건만 내가 그린다. */
+let PLATE = null;
+const PLATE_NAMES = ["bedR-day","bedR-eve","bedR-dark","bedL-day","bedD-day","bedD-eve","bedD-rain","bedZ-day","livL-day","livW-day","cat-dark","cat-day","sofa-day","offL-day","offL-dusk","offR-day","street"];
+const plateURL = n => `assets/bg/${n}.webp`;
+function plateDiv(n, TH){
+  return `<div id="pxbg" aria-hidden="true" style="background-image:url(${plateURL(n)});top:${((EXT.top - 150) / TH * 100).toFixed(3)}%;height:${(780 / TH * 100).toFixed(3)}%"></div>`;
+}
+function setPlate(n){ PLATE = n; const d = $('pxbg'); if (d) d.style.backgroundImage = `url(${plateURL(n)})`; }
+const PLATE_CACHE = [];
+function preloadPlates(){ if (PLATE_CACHE.length) return; PLATE_NAMES.forEach(n => { const im = new Image(); im.src = plateURL(n); PLATE_CACHE.push(im); }); }
 
 /* ================= 그림: 사람 ================= */
 // (x,y)는 두 발 가운데 바닥. 키는 약 190. 팔은 손 위치를 정하면 팔꿈치가 따라온다.
@@ -555,8 +848,15 @@ function person(x, y, o={}){
 // 뒤에서 본 앉은 사람 (저녁 노트북)
 function personBack(x, y, o={}){
   const W = OUT[o.wear || "shirt"];
-  return `<g transform="translate(${x},${y})"><g class="${o.typing ? 'typing' : ''}">
+  if (o.cheer) return `<g transform="translate(${x},${y})">
     <path d="M-34,0 L-30,-58 Q-28,-78 -8,-80 H8 Q28,-78 30,-58 L34,0 Z" fill="${W.top}"/>
+    ${o.wear === "hoodie" ? `<path d="M-22,-80 q22,22 44,0 q-4,18 -22,18 q-18,0 -22,-18 z" fill="var(--hoodie-d)"/>` : ""}
+    <rect x="-7" y="-92" width="14" height="14" fill="var(--skin)"/><circle cx="0" cy="-110" r="22" fill="var(--hair)"/>
+    <path d="M-28,-66 L-46,-120 L-40,-160 M28,-66 L46,-120 L40,-160" stroke="${W.sleeve}" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="-40" cy="-164" r="7" fill="var(--skin)"/><circle cx="40" cy="-164" r="7" fill="var(--skin)"/></g>`;
+  if (o.slump) y += 10;
+  return `<g transform="translate(${x},${y})${o.slump ? ' rotate(4)' : ''}"><g class="${o.typing ? 'typing' : ''}">
+    <path d="M-34,0 L-30,-58 Q-28,-78 -8,-80 H8 Q28,-78 30,-58 L34,0 Z" fill="${W.top}"/>${o.fur ? furOnSuit(o.fur, -24, -72, 48, 56) : ""}
     ${o.wear === "hoodie" ? `<path d="M-22,-80 q22,22 44,0 q-4,18 -22,18 q-18,0 -22,-18 z" fill="var(--hoodie-d)"/>` : `<path d="M-10,-80 h20 v8 h-20 z" fill="${o.wear==='tee'?'var(--tee)':'#fff'}"/>`}
     <rect x="-7" y="-92" width="14" height="14" fill="var(--skin)"/>
     <circle cx="-21" cy="-106" r="4.6" fill="var(--skin)"/><circle cx="21" cy="-106" r="4.6" fill="var(--skin)"/>
@@ -645,7 +945,7 @@ function handsAt(C, h, m){
 function clockFace(id, cx, cy, r, h, m, o={}){
   const C = { cx, cy, r }; CLOCKS[id] = C;
   const P = (a, rr) => [cx + Math.sin(a*Math.PI/180)*rr, cy - Math.cos(a*Math.PI/180)*rr];
-  let g = `<g id="${id}"><circle cx="${cx}" cy="${cy}" r="${r+5}" fill="${o.rim||'var(--wood-d)'}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#fffdf6"/>`;
+  let g = `<g id="${id}"><circle cx="${cx}" cy="${cy}" r="${r+5}" fill="${o.rim||'var(--wood-d)'}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${o.face||'#fffdf6'}"/>`;
   if (o.red){ const a0 = o.red[0]*6, a1 = o.red[1]*6, p0 = P(a0, r-2), p1 = P(a1, r-2);
     g += `<path id="${id}-red" d="M${cx},${cy} L${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r-2},${r-2} 0 ${a1-a0>180?1:0},1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)} Z" fill="#ff5a4a" opacity=".5"/>`; }
   for (let i=0;i<12;i++){ const a = i*30, q = P(a, r-3), w = P(a, r - (i%3 ? 7 : 11)); g += `<line x1="${q[0].toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${w[0].toFixed(1)}" y2="${w[1].toFixed(1)}" stroke="#3a3045" stroke-width="${i%3?1.6:3}"/>`; }
@@ -831,13 +1131,13 @@ function bedroomBg(o={}){
 // 옆에서 본 침대 (머리는 왼쪽). y: 다리가 닿는 바닥
 function bedSide(x, y, w, o={}){
   const top = y - 58;
-  return `<g><rect x="${x}" y="${top-64}" width="18" height="${y-top+64}" rx="4" fill="var(--wood-d)"/>
-    <rect x="${x+14}" y="${top}" width="${w-14}" height="30" rx="7" fill="var(--sheet)"/>
-    <rect x="${x+14}" y="${top+28}" width="${w-14}" height="20" fill="var(--wood)"/>
-    <rect x="${x+w-12}" y="${top-10}" width="12" height="${y-top+10}" rx="3" fill="var(--wood-d)"/>
-    <ellipse cx="${x+46}" cy="${top-1}" rx="27" ry="11" fill="#fff" stroke="#d6d9ea" stroke-width="2"/>
-    ${o.messy ? `<path d="M${x+60},${top+4} q20,-24 46,-8 q16,-14 ${w-110},4 v26 h-${w-46} z" fill="var(--blanket)"/>`
-      : `<path d="M${x+66},${top+2} q${(w-80)/2},-10 ${w-80},0 v26 h-${w-80} z" fill="var(--blanket)"/>`}
+  let checks = "";
+  for (let i = 1; i < 4; i++) checks += `<path d="M${x + 66 + (w - 80) * i / 4},${top + 2} v26" stroke="#a9bde9" stroke-width="2.2" opacity=".8"/>`;
+  return `<g><rect x="${x}" y="${top + 22}" width="${w}" height="${y - top - 22}" rx="5" fill="#efe6d6"/><rect x="${x}" y="${y - 8}" width="${w}" height="8" fill="#ddd1bc"/>
+    <rect x="${x + 4}" y="${top}" width="${w - 8}" height="30" rx="7" fill="#f6f1ea"/>
+    <ellipse cx="${x + 40}" cy="${top - 1}" rx="27" ry="11" fill="#fbf7ef" stroke="#d6d2c8" stroke-width="2"/>
+    ${o.messy ? `<path d="M${x+60},${top+4} q20,-24 46,-8 q16,-14 ${w-110},4 v26 h-${w-46} z" fill="#5a7cc4"/>`
+      : `<path d="M${x+66},${top+2} q${(w-80)/2},-10 ${w-80},0 v26 h-${w-80} z" fill="#5a7cc4"/>${checks}`}
     ${o.hoodie ? hoodieFold(x+w-74, top-14, 56) : ""}</g>`;
 }
 // 의자. 등받이는 오른쪽. o.jacket: 걸쳐 둔 정장, o.cat: 그 위에 잠든 보리, o.fur: 정장 위 털
@@ -962,6 +1262,13 @@ function catWorldBg(o={}){
 // 보리 높이에서 본 커다란 방문. gap: lamp | blue | dark
 function bigDoor(o={}){
   const gc = o.gap === "lamp" ? "#ffd87a" : o.gap === "blue" ? "#9ec0ff" : "#121427";
+  if (PLATE && PLATE.startsWith("cat")){     // 문은 배경판에 있다. 틈, 빛, 긁은 자국, 후드티만
+    let scr = "";
+    for (let i=0;i<(o.scratch||0);i++){ const x0 = 196 + i*24; scr += `<path d="M${x0},330 l7,40 M${x0+8},326 l7,42 M${x0+16},330 l6,38" stroke="#262a45" stroke-width="2.6" stroke-linecap="round" opacity=".75"/>`; }
+    return `<g>${scr}<rect x="150" y="394" width="190" height="6" fill="${gc}"/>
+      ${o.gap === "lamp" || o.gap === "blue" ? `<path d="M150,400 H340 L376,452 H118 Z" fill="${gc}" opacity=".18"/>` : ""}
+      ${o.hoodie ? `<path d="M152,402 q60,-30 150,-8 q20,6 24,12 z" fill="var(--hoodie)"/><path d="M172,400 q50,-16 110,-4" stroke="var(--hoodie-d)" stroke-width="4" fill="none"/>` : ""}</g>`;
+  }
   let scr = "";
   for (let i=0;i<(o.scratch||0);i++){ const x0 = 200 + i*22; scr += `<path d="M${x0},336 l7,40 M${x0+8},332 l7,42 M${x0+16},336 l6,38" stroke="#5e4c39" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>`; }
   return `<g><rect x="128" y="-160" width="232" height="564" fill="#4f4134"/>
@@ -1039,16 +1346,131 @@ function stripIcon(L){
   return `<svg viewBox="0 0 26 44">${g}</svg>`;
 }
 
+/* ================= 그림 3: ChatGPT 배경판 위에 얹는 것들 =================
+   배경판에 이미 그려진 방문, 옷걸이, 책상, 창문 자리에 맞춰 움직이는 부분만 그린다. */
+// 침실(오른쪽) 배경판 속 자리
+const BRD = { x:213, y:54, w:102, h:258 };            // 방문 (경첩은 오른쪽)
+const RACK = { x0:72, x1:178, bar:112, shelf:292 };   // 옷걸이 봉과 아래 선반
+const BFLOOR = 312;                                    // 벽과 바닥이 만나는 선
+// 책상(가운데) 배경판 속 자리
+const DESK = { x0:139, x1:318, top:226, win:[32, 68, 118, 104], curL:-20, curR:148 };
+// 문. 닫혀 있으면 배경판의 문이 그대로 보이고 틈, 발, 후드티만 얹는다. 열리면 문짝을 그린다.
+function doorG(D, open, o={}){
+  const E = "#3c4058";
+  if (open > 0){
+    const hx = D.x + D.w, ww = Math.max(9, D.w * (1 - open * .86));
+    return `<g><rect x="${D.x}" y="${D.y}" width="${D.w}" height="${D.h}" fill="${o.beyond || '#1c1f3a'}"/>
+      <rect x="${D.x}" y="${D.y + D.h * .74}" width="${D.w}" height="${D.h * .26}" fill="${o.floorB || '#2a2e52'}"/>
+      ${o.inDoor || ""}
+      <path d="M${hx},${D.y} L${hx - ww},${D.y + 9 * open} L${hx - ww},${D.y + D.h - 7 * open} L${hx},${D.y + D.h} Z" fill="${o.leaf || '#e4e5ec'}" stroke="${E}" stroke-width="2"/>
+      ${ww > 34 ? `<rect x="${hx - ww + 8}" y="${D.y + 22}" width="${ww - 16}" height="${D.h * .38}" fill="none" stroke="${o.panel || '#c9cbd6'}" stroke-width="2"/><circle cx="${hx - ww + 10}" cy="${D.y + D.h * .54}" r="5" fill="#d9dae2" stroke="${E}" stroke-width="1.5"/>` : ""}</g>`;
+  }
+  return `<g>${o.gap ? `<rect x="${D.x + 3}" y="${D.y + D.h - 4}" width="${D.w - 6}" height="5" fill="${o.gap}"/>` : ""}
+    ${o.paws ? `<g fill="var(--paw)"><ellipse cx="${D.x + D.w * .38}" cy="${D.y + D.h + 1}" rx="8" ry="3.4"/><ellipse cx="${D.x + D.w * .62}" cy="${D.y + D.h + 1}" rx="8" ry="3.4"/></g>` : ""}
+    ${o.hoodie ? `<rect x="${D.x + D.w * .2}" y="${D.y + D.h - 2}" width="${D.w * .6}" height="6" rx="3" fill="var(--hoodie)"/>` : ""}
+    ${o.scratch ? `<path d="M${D.x + D.w * .3},${D.y + D.h - 44} l5,26 M${D.x + D.w * .42},${D.y + D.h - 48} l5,28 M${D.x + D.w * .54},${D.y + D.h - 44} l5,26" stroke="#9a9cab" stroke-width="2.2" stroke-linecap="round"/>` : ""}</g>`;
+}
+// 옷걸이에 걸린 정장. o.fallen: 정장이 선반에 떨어져 있음(보리가 그 위에서 잤다)
+function rackSuit(o={}){
+  if (o.none) return "";
+  if (o.fallen) return `<g><path d="M90,${RACK.shelf - 2} q38,-16 76,0 v8 h-76 z" fill="var(--suit)"/><path d="M104,${RACK.shelf - 8} l14,6 l-6,6 z" fill="#fff"/><path d="M112,${RACK.shelf - 6} l4,8 l-3,3 z" fill="var(--tie)"/>${furOnSuit(o.fur || 0, 96, RACK.shelf - 10, 64, 10)}</g>`;
+  return `<g>${hangSuit(125, RACK.bar + 8, 1.12)}${furOnSuit(o.fur || 0, 98, RACK.bar + 30, 54, 50)}</g>`;
+}
+function furOnSuit(n, x0, y0, w, h){ let g = ""; for (let i = 0; i < n; i++){ const fx = x0 + (i * 37 + 11) % w, fy = y0 + (i * 23 + 7) % h; g += `<path d="M${fx},${fy} q3,${i % 2 ? -3 : 3} 7,${i % 2 ? 1 : -1}" stroke="var(--fur)" stroke-width="2.6" fill="none" stroke-linecap="round"/>`; } return g; }
+// 사료 봉지. level 0..1, kind: tuna(보리가 좋아함) | chick(싼 사료)
+function foodBag(x, y, o={}){
+  const lv = clamp(o.level == null ? 1 : o.level, 0, 1), big = o.kind === "chick";
+  const w = big ? 40 : 32, h = big ? 52 : 42, c = big ? "#e3b75e" : "#6f9fd8", c2 = big ? "#b98a34" : "#4b77b3";
+  const wy = y - h + 12, wh = h - 22, fill = wh * lv;
+  return `<g transform="translate(${x},${y}) rotate(${o.tilt || 0}) translate(${-x},${-y})">
+    <path d="M${x - w/2},${y} L${x - w/2 + 2},${y - h} L${x + w/2 - 2},${y - h} L${x + w/2},${y} Z" fill="${c}"/>
+    <rect x="${x - w/2 + 2}" y="${y - h - 4}" width="${w - 4}" height="6" rx="1" fill="${c2}"/>
+    <rect x="${x - 6}" y="${wy}" width="12" height="${wh}" rx="2" fill="#f4efe2"/>
+    ${fill > 0 ? `<rect x="${x - 6}" y="${wy + wh - fill}" width="12" height="${fill}" rx="2" fill="#a0673a"/>` : ""}
+    ${big ? `<path d="M${x + 8},${y - h + 14} q8,-2 8,6 q0,6 -6,5 l-4,6 l-3,-2 l3,-6 q-4,-4 2,-9 z" fill="#fff" opacity=".85"/>`
+          : `<path d="M${x + 6},${y - h + 18} q6,-6 12,0 q-6,6 -12,0 z M${x + 18},${y - h + 18} l4,-4 v8 z" fill="#fff" opacity=".9"/>`}
+  </g>`;
+}
+// 밥그릇. food: 0 빈 그릇, .5 반쯤, 1 가득
+function bowl(x, y, food=0){
+  return `<g><ellipse cx="${x}" cy="${y - 2}" rx="20" ry="6" fill="#d9534f"/>
+    <path d="M${x - 20},${y - 6} q0,10 6,12 h28 q6,-2 6,-12 z" fill="#d9534f"/><path d="M${x - 17},${y - 4} q0,6 4,8 h26 q4,-2 4,-8" fill="none" stroke="#b5403b" stroke-width="2"/>
+    ${food > 0 ? `<ellipse cx="${x}" cy="${y - 7 - food * 2}" rx="${10 + food * 6}" ry="${2 + food * 3}" fill="#a0673a"/><circle cx="${x - 5}" cy="${y - 9 - food * 3}" r="2" fill="#c08452"/><circle cx="${x + 4}" cy="${y - 10 - food * 3}" r="2" fill="#c08452"/>` : `<ellipse cx="${x}" cy="${y - 6}" rx="14" ry="3" fill="#8f3430"/>`}</g>`;
+}
+// 쏟아지는 사료 알갱이
+function kibbleFall(x, y0, y1, n=7){ let g = `<g class="pourfall">`; for (let i = 0; i < n; i++) g += `<rect x="${x - 6 + (i * 5) % 12}" y="${y0 + (i * 13) % Math.max(4, y1 - y0)}" width="4" height="4" fill="#a0673a"/>`; return g + `</g>`; }
+// 빗줄기 (창 유리 위)
+function rainOn(x, y, w, h, n=9){ let g = `<g class="rain">`; for (let i = 0; i < n; i++){ const xx = x + 6 + i * (w - 12) / (n - 1); g += `<line x1="${xx.toFixed(1)}" y1="${y + 6 + (i % 3) * 18}" x2="${(xx - 4).toFixed(1)}" y2="${y + 20 + (i % 3) * 18}" stroke="#aab4d8" stroke-width="2"/><line x1="${(xx - 3).toFixed(1)}" y1="${y + 50 + (i % 2) * 22}" x2="${(xx - 7).toFixed(1)}" y2="${y + 64 + (i % 2) * 22}" stroke="#aab4d8" stroke-width="2"/>`; } return g + `</g>`; }
+// 커튼을 닫는다. v: 0 열림 ~ 1 닫힘. 배경판의 크림색 커튼이 가운데로 모인다.
+function curtainPull(x, y, w, h, v){
+  if (v <= 0) return "";
+  const cw = w / 2 * v;
+  const fold = (x0, ww) => { let g = ""; for (let k = 1; k < 4; k++) g += `<path d="M${(x0 + ww * k / 4).toFixed(1)},${y + 6} V${y + h - 4}" stroke="#e7d9c6" stroke-width="2.4"/>`; return g; };
+  return `<g><rect x="${x}" y="${y - 6}" width="${cw.toFixed(1)}" height="${h + 14}" fill="#fbf1e4"/>${fold(x, cw)}
+    <rect x="${(x + w - cw).toFixed(1)}" y="${y - 6}" width="${cw.toFixed(1)}" height="${h + 14}" fill="#fbf1e4"/>${fold(x + w - cw, cw)}</g>`;
+}
+// 앞쪽에 크게 보이는 침대 (누워서 보는 밤). y: 매트리스 윗면
+function bedFront(y=382){
+  let checks = "";
+  for (let i = 0; i < 6; i++) checks += `<path d="M${30 + i * 42},${y + 6} v60" stroke="#c9d6f4" stroke-width="3" opacity=".6"/>`;
+  return `<g><rect x="0" y="${y - 90}" width="20" height="${VH + 150 - y + 90}" rx="4" fill="#efe6d6"/>
+    <rect x="12" y="${y}" width="272" height="64" rx="8" fill="#f6f1ea"/><rect x="12" y="${y + 48}" width="272" height="${VH + 150 - y}" fill="#e6dccb"/>
+    <ellipse cx="62" cy="${y - 10}" rx="50" ry="18" fill="#fbf7ef" stroke="#d6d2c8" stroke-width="2"/></g>`;
+}
+function blanketFront(lx, ty, rx=290){
+  let g = `<path d="M${lx},${ty} Q${(lx + rx) / 2},${ty - 18} ${rx},${ty + 10} V${VH + 100} H${lx} Z" fill="#5a7cc4"/>`;
+  for (let i = 1; i < 6; i++){ const xx = lx + (rx - lx) * i / 6; g += `<path d="M${xx.toFixed(1)},${ty + 2} V${VH + 100}" stroke="#a9bde9" stroke-width="2.4" opacity=".75"/>`; }
+  for (let j = 1; j < 4; j++) g += `<path d="M${lx},${ty + j * 26} H${rx}" stroke="#a9bde9" stroke-width="2.4" opacity=".75"/>`;
+  return g;
+}
+// 화면 위쪽에 늘 보이는 작은 표시: 사료 봉지 (남은 횟수만큼 칸)
+function hudFood(){
+  if (s.food == null) return "";
+  const n = s.food, max = s.foodMax || 4, low = n <= 1;
+  let dots = "";
+  for (let i = 0; i < max; i++) dots += `<rect x="${30 + i * 9}" y="-5" width="7" height="10" rx="1" fill="${i < n ? '#a0673a' : '#e2ddd2'}" stroke="#24273f" stroke-width="1.2"/>`;
+  const w = 36 + max * 9;
+  return `<g id="hudF" class="${low ? 'blinkR' : ''}" ${hitA("hudF", "남은 사료")} transform="translate(10,__TOP__)">
+    <rect x="0" y="-15" width="${w}" height="30" rx="7" fill="#fff" stroke="#24273f" stroke-width="2"/>
+    <g transform="translate(15,11) scale(.52) translate(-15,-11)">${foodBag(15, 11, { level: max ? n / max : 0, kind: s.foodKind })}</g>${dots}
+    ${low ? `<circle cx="${w}" cy="-14" r="8" fill="#e5484d"/><text x="${w}" y="-10" text-anchor="middle" font-size="12" fill="#fff">!</text>` : ""}</g>`;
+}
+// 사료 알림 (남은 양을 눌러 봐도, 모자라면 저절로도 뜬다)
+function foodNotice(then){
+  const n = s.food || 0;
+  const art = `<g transform="scale(1.5)">${foodBag(0, 24, { level: s.foodMax ? n / s.foodMax : 0, kind: s.foodKind })}</g>`;
+  const like = s.foodKind === "chick" ? "닭고기 사료" : `${CATi()} 좋아하는 참치 사료`;
+  let lines;
+  if (MO && MO.parcel && !MO.gone && n <= 1) lines = ["주문한 사료가 왔어요.", "문 앞 상자를 눌러 열어요."];
+  else if (s.order) lines = [`주문한 사료는 내일 아침에 와요.`, `지금 남은 사료: ${n}번`];
+  else if (n <= 0) lines = ["사료가 다 떨어졌어요.", "저녁에 휴대폰으로 주문해요."];
+  else if (n === 1) lines = ["사료가 한 번 남았어요.", "저녁에 휴대폰으로 주문해요."];
+  else lines = [like, `남은 사료: ${n}번`];
+  notice(lines, art, typeof then === "function" ? then : null);
+}
+
+// 창 유리 위 계절 (프롤로그 2): 하늘빛과 눈, 꽃잎, 잎
+function seasonGlass(kind, W){
+  const [x, y, w, h] = W;
+  let g = "";
+  if (kind === "winter"){ g = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#dfe6f2" opacity=".35"/><g class="snow">${[0,1,2,3,4,5,6,7,8].map(i=>`<circle cx="${x+8+i*(w-16)/8}" cy="${y+10+(i%3)*h*.28}" r="2.6" fill="#fff"/>`).join('')}</g>`; }
+  if (kind === "spring") g = [0,1,2,3,4,5,6].map(i=>`<circle cx="${x+10+i*(w-20)/6}" cy="${y+14+(i%2)*h*.42}" r="4" fill="#f6b8c8"/>`).join('');
+  if (kind === "summer") g = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#7cc4f2" opacity=".3"/><circle cx="${x+18}" cy="${y+h-6}" r="22" fill="#5aa257"/><circle cx="${x+48}" cy="${y+h}" r="18" fill="#6fb46b"/>`;
+  if (kind === "fall") g = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#f2b56a" opacity=".3"/>` + [0,1,2,3,4].map(i=>`<rect x="${x+10+i*(w-24)/4}" y="${y+14+(i%2)*h*.38}" width="7" height="7" fill="#d9822b" transform="rotate(30 ${x+13+i*(w-24)/4} ${y+17+(i%2)*h*.38})"/>`).join('');
+  return `<svg x="${x}" y="${y}" width="${w}" height="${h}" overflow="hidden"><g transform="translate(${-x},${-y})">${g}</g></svg>`;
+}
+
 /* ================= 타이틀 ================= */
 function goTitle(){
-  reset();
+  reset(); preloadPlates();
   let saved = {}; try { saved = JSON.parse(localStorage.getItem('catgame-names') || '{}'); } catch(e){}
-  const w = `${catWorldBg()}${bigDoor({ gap:"lamp" })}
-    <text x="20" y="150" font-size="34" fill="#fff" stroke="#24273f" stroke-width="5" paint-order="stroke">Cat at</text>
-    <text x="20" y="190" font-size="34" fill="#fff" stroke="#24273f" stroke-width="5" paint-order="stroke">the Door</text>
-    <text x="22" y="222" font-size="15" fill="#e9ecf6" stroke="#24273f" stroke-width="4" paint-order="stroke">첫 출근부터 첫 월급까지</text>
+  PLATE = "cat-dark";
+  const w = `${bigDresser({ sleeve:true })}${bigDoor({ gap:"lamp" })}
+    <text x="170" y="66" font-size="34" fill="#fff" stroke="#24273f" stroke-width="5" paint-order="stroke">Cat at</text>
+    <text x="170" y="104" font-size="34" fill="#fff" stroke="#24273f" stroke-width="5" paint-order="stroke">the Door</text>
+    <text x="172" y="132" font-size="15" fill="#e9ecf6" stroke="#24273f" stroke-width="4" paint-order="stroke">첫 출근부터 첫 월급까지</text>
     <g transform="translate(252,476) scale(2.05)">${catAway(0, 0, 1)}</g>`;
-  show(w, { flat:true, label:"닫힌 방문 앞에 고양이가 앉아 있다", below: `
+  show(w, { flat:true, label:"닫힌 방문 앞에 고양이가 앉아 있다", bg:"cat-dark", below: `
     <div class="names">
       <label>내 이름<input id="pname" maxlength="6" placeholder="김신입" value="${esc(saved.me||'')}" autocomplete="off"></label>
       <label>고양이 이름<input id="cname" maxlength="6" placeholder="보리" value="${esc(saved.cat||'')}" autocomplete="off"></label>
@@ -1073,7 +1495,7 @@ function startGame(skip){
 let PS = null;
 function p1(){
   PS = { tilt:0, stage:"snow" };
-  show(p1World(), { card:"2년 전 겨울", label:"눈 오는 밤, 상자 속 새끼 고양이" });
+  show(p1World(), { card:"2년 전 겨울", label:"눈 오는 밤, 상자 속 새끼 고양이", bg:"street" });
   p1Hits();
   later(2400, () => teach("drag", 156, 160, 250, 206, { key:"umbrella" }));
 }
@@ -1092,7 +1514,7 @@ function p1World(){
     : st === "snow" ? `<g ${hitA("umb","우산을 기울이기")}>${umbrella(120 + hand[0], 436 + hand[1], t*40)}<rect x="${86 + t*40}" y="${120 + t*30}" width="140" height="96" fill="transparent"/></g>`
     : umbrella(120 + hand[0], 436 + hand[1], t*40);
   const kitHit = st === "look" ? `<rect ${hitA("kit","고양이를 안기")} x="222" y="364" width="80" height="70" fill="transparent"/>` : "";
-  return `${storeStreet()}${snowLayer()}${kit}${cardBox(262, 432)}${me}${meSnow}${umb}${kitHit}
+  return `${snowLayer()}${kit}${cardBox(262, 432)}${me}${meSnow}${umb}${kitHit}
     <g id="tgs"><g class="tg" id="tg-me"><rect x="68" y="236" width="110" height="200" rx="14" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g></g>`;
 }
 function p1Hits(){
@@ -1120,34 +1542,29 @@ function p1Hold(){
 const SEASONS = ["winter", "spring", "summer", "fall", "winter"];
 function p2(i){
   PS = { i, stage:"mail", rubs:0 };
-  show(p2World(), { label:"책상 앞, 노트북 메일" });
+  show(p2World(), { label:"책상 앞, 노트북 메일", bg:"bedD-day" });
   hits({ mail: { tap: p2Open, key: p2Open } });
-  if (i === 0) later(900, () => teach("tap", 250, 300, 0, 0, { key:"mail" }));
+  if (i === 0) later(900, () => teach("tap", 262, 104, 0, 0, { key:"mail" }));
   else if (i === 2 || i === 3) later(700, p2Open);
-  else teach("tap", 250, 300, 0, 0, { key:"mail" });
+  else teach("tap", 262, 104, 0, 0, { key:"mail" });
 }
 function p2World(){
   const P = PS, last = P.i === 4, st = P.stage;
-  const catSc = .62 + P.i * .1;
+  const catSc = .5 + P.i * .08;
   const near = st === "comfort" || st === "better";
-  const catX = near ? 240 : 312;
-  const face = { mail:"neutral", read: last ? "surprise" : "neutral", sad:"sad", comfort:"sad", better:"soft", cheer:"happy" }[st];
-  let hands = { L:[-40,-78], R:[40,-78] };
-  if (st === "better") hands = { L:[-40,-78], R:[catX - 176, -70 - 44*catSc] };
-  if (st === "cheer") hands = { L:[-48,-188], R:[48,-188] };
-  const pose = (st === "sad" || st === "comfort") ? "slump" : "stand";
+  const catX = near ? 204 : 178;
+  const lap = laptopFront(262, 226, { progress:.3 });
   const cat = st === "cheer"
-    ? `<g class="hop">${catSit(catX, 382, catSc, { flip:true })}</g>`
-    : catSit(catX, 382, catSc, { flip: near, happy: st === "better", wag: st === "better" });
-  return `${wallR("#e3d6c3", 0, 400)}${win(24, 40, 100, 96, SEASONS[P.i], { curtain:"#cbb08f" })}
-    ${calendarW(262, 50, { x: P.i * 5 + (st !== "mail" && !last ? 4 : 0) })}
-    ${person(176, 452, { wear:"hoodie", noLegs:true, face, pose, hands })}
-    ${deskFront(0, 380, 360)}
-    ${laptopBack(166, 382, { glow: st === "mail" })}
+    ? `<g class="hop">${catSit(catX, 226, catSc, { flip:true })}</g>`
+    : catSit(catX, 226, catSc, { flip: near, happy: st === "better", wag: st === "better" });
+  return `${seasonGlass(SEASONS[P.i], DESK.win)}
+    ${calendarW(204, 46, { x: P.i * 5 + (st !== "mail" && !last ? 4 : 0) })}
+    <g transform="translate(262,226) scale(.62) translate(-262,-226)">${lap}</g>
     <g id="pcat">${cat}</g>
-    ${st === "mail" ? `<g ${hitA("mail","메일 열기")}>${envelope(250, 300)}<rect x="214" y="268" width="72" height="62" fill="transparent"/></g>` : ""}
-    ${st === "comfort" ? `<rect ${hitA("pet","쓰다듬기")} x="200" y="300" width="84" height="86" fill="transparent"/>` : ""}
-    ${st === "cheer" ? `<text x="${catX}" y="306" text-anchor="middle" font-size="16" fill="#fff" stroke="#24273f" stroke-width="3.5" paint-order="stroke">냥!</text>` : ""}`;
+    ${personBack(238, 352, { wear:"hoodie", slump: st === "sad" || st === "comfort", cheer: st === "cheer", reach: st === "better" })}
+    ${st === "mail" ? `<g ${hitA("mail","메일 열기")}>${envelope(262, 112)}<rect x="226" y="80" width="72" height="62" fill="transparent"/></g>` : ""}
+    ${st === "comfort" ? `<rect ${hitA("pet","쓰다듬기")} x="166" y="160" width="84" height="76" fill="transparent"/>` : ""}
+    ${st === "cheer" ? `<text x="${catX}" y="150" text-anchor="middle" font-size="16" fill="#fff" stroke="#24273f" stroke-width="3.5" paint-order="stroke">냥!</text>` : ""}`;
 }
 function p2Open(){
   if (PS.stage !== "mail") return;
@@ -1161,123 +1578,124 @@ function p2Open(){
     PS.stage = "sad"; world(p2World());
     later(quick ? 600 : 1100, () => {
       PS.stage = "comfort"; world(p2World());
-      if (quick){ [0, 350, 700].forEach((d, k) => later(d + 300, () => heart(236 + k*6, 320 - k*5))); later(1400, p2Better); return; }
+      if (quick){ [0, 350, 700].forEach((d, k) => later(d + 300, () => heart(204 + k*6, 180 - k*5))); later(1400, p2Better); return; }
       hits({ pet: { rub: { fn: p2Rub, per: 50 }, key: p2Rub } });
-      later(400, () => teach("rub", 240, 340, 0, 0, { key:"petp", now: PS.i === 0 }));
+      later(400, () => teach("rub", 206, 196, 0, 0, { key:"petp", now: PS.i === 0 }));
     });
   });
 }
 function p2Rub(){
   if (PS.stage !== "comfort") return;
-  PS.rubs++; heart(232 + (PS.rubs % 3) * 7, 322); idlePoke();
+  PS.rubs++; heart(200 + (PS.rubs % 3) * 7, 180); idlePoke();
   if (PS.rubs >= 3) p2Better();
 }
 function p2Better(){
   if (PS.stage !== "comfort") return;
   PS.stage = "better"; world(p2World()); hits({}); idleKill();
-  sound('gol', '골골', 286, 318, { fs:14 });
+  sound('gol', '골골', 214, 160, { fs:14 });
   later(1700, () => fadeTo(() => p2(PS.i + 1), 600));
 }
 
 /* ================= 프롤로그 3: 지난주. 후드티를 벗어 서랍에, 정장을 입는다 ================= */
 function p3(){
   PS = { stage:"hoodie", lift:0 };
-  show(p3World(), { card:"지난주", label:"거실, 서랍장과 새 정장" });
+  show(p3World(), { card:"지난주", label:"거실, 서랍장과 새 정장", bg:"livL-day" });
   p3Hits();
-  later(2400, () => teach("drag", 188, 360, 188, 250, { key:"hoodieoff" }));
+  later(2400, () => teach("drag", 236, 360, 236, 250, { key:"hoodieoff" }));
 }
+const DR3 = [150, 168, 124, 138];     // 거실 서랍장 (벽에 붙여 둠)
 function p3World(){
-  const P = PS, st = P.stage, v = P.lift;
+  const P = PS, st = P.stage, v = P.lift, X = 236;
   let me;
   if (st === "hoodie"){
     const up = v > .45;
-    me = person(188, 440, { wear: up ? "tee" : "hoodie", face: "neutral",
+    me = person(X, 440, { wear: up ? "tee" : "hoodie", face: "neutral",
       hands:{ L:[-30 - v*18, -76 - v*112], R:[30 + v*18, -76 - v*112] } });
-    if (up) me += `<g transform="translate(188,${440 - 150 - v*60})"><rect x="-34" y="-30" width="68" height="44" rx="16" fill="var(--hoodie)"/><path d="M-20,-8 q20,14 40,0" stroke="var(--hoodie-d)" stroke-width="4" fill="none"/></g>`;
+    if (up) me += `<g transform="translate(${X},${440 - 150 - v*60})"><rect x="-34" y="-30" width="68" height="44" rx="16" fill="var(--hoodie)"/><path d="M-20,-8 q20,14 40,0" stroke="var(--hoodie-d)" stroke-width="4" fill="none"/></g>`;
   } else if (st === "hold"){
-    me = person(188, 440, { wear:"tee", face:"neutral", pose:"hold", held: hoodieFold(-28, -8, 56) });
+    me = person(X, 440, { wear:"tee", face:"neutral", pose:"hold", held: hoodieFold(-28, -8, 56) });
   } else if (st === "stored"){
-    me = person(188, 440, { wear:"tee", face:"neutral" });
+    me = person(X, 440, { wear:"tee", face:"neutral" });
   } else {
-    me = person(188, 440, { wear:"suit", face:"smile" });
+    me = person(X, 440, { wear:"suit", face:"smile" });
   }
   const suitOnHook = st !== "suit";
-  return `${livingBg()}
-    ${dresser(20, 258, 124, 150, { open: st === "hoodie" || st === "hold", sleeve: st === "stored" || st === "suit" })}
-    ${wallHook(300, 152)}${suitOnHook ? `<g ${hitA("suit","정장")}>${hangSuit(300, 170)}<rect x="262" y="150" width="76" height="104" fill="transparent"/></g>` : ""}
+  const [dx, dy, dw, dh] = DR3;
+  return `${dresser(dx, dy, dw, dh, { open: st === "hoodie" || st === "hold", sleeve: st === "stored" || st === "suit" })}
+    ${wallHook(70, 104)}${suitOnHook ? `<g ${hitA("suit","정장")}>${hangSuit(70, 122)}<rect x="32" y="102" width="76" height="104" fill="transparent"/></g>` : ""}
     <g id="me">${me}</g>
-    ${st === "hoodie" ? `<rect ${hitA("hood","후드티 벗기")} x="146" y="250" width="84" height="130" fill="transparent"/>` : ""}
-    ${st === "hold" ? `<rect ${hitA("hood2","후드티를 서랍에")} x="146" y="300" width="84" height="70" fill="transparent"/>` : ""}
-    <g id="bori" class="mover" style="transform:translate(${P.catX || 312}px,440px)">${catSit(0, 0, .95, { flip: (P.catX || 312) < 200 })}</g>
-    <g class="tg" id="tg-drawer"><rect x="14" y="350" width="136" height="64" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
-    <g class="tg" id="tg-me"><rect x="140" y="240" width="96" height="200" rx="14" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
+    ${st === "hoodie" ? `<rect ${hitA("hood","후드티 벗기")} x="${X-42}" y="250" width="84" height="130" fill="transparent"/>` : ""}
+    ${st === "hold" ? `<rect ${hitA("hood2","후드티를 서랍에")} x="${X-42}" y="300" width="84" height="70" fill="transparent"/>` : ""}
+    <g id="bori" class="mover" style="transform:translate(${P.catX || 320}px,444px)">${catSit(0, 0, .95, { flip: (P.catX || 320) < 236 })}</g>
+    <g class="tg" id="tg-drawer"><rect x="${dx-6}" y="${dy+dh-56}" width="${dw+12}" height="64" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    <g class="tg" id="tg-me"><rect x="${X-48}" y="240" width="96" height="200" rx="14" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
 }
 function p3Hits(){
   hits({
     hood: { pull: { progress:(a,b) => (a.y - b.y) / 80, move: v => { PS.lift = v; world(p3World()); }, done: p3Off, tapped: () => {} }, key: p3Off },
-    hood2: { drag: { ghost:(x,y) => hoodieFold(x-28, y-10, 56), targets:[{ key:"drawer", r:[10, 330, 146, 90], fn: p3Store }] }, key: p3Store },
-    suit: { drag: { ghost:(x,y) => hangSuit(x, y-40, .7), targets:[{ key:"me", r:[136, 230, 104, 214], fn: p3Suit }] }, key: p3Suit }
+    hood2: { drag: { ghost:(x,y) => hoodieFold(x-28, y-10, 56), targets:[{ key:"drawer", r:[DR3[0]-16, DR3[1]+DR3[3]-80, DR3[2]+32, 110], fn: p3Store }] }, key: p3Store },
+    suit: { drag: { ghost:(x,y) => hangSuit(x, y-40, .7), targets:[{ key:"me", r:[184, 230, 104, 214], fn: p3Suit }] }, key: p3Suit }
   });
 }
 function p3Off(){
   if (PS.stage !== "hoodie") return;
   PS.stage = "hold"; PS.lift = 0; world(p3World()); p3Hits(); idleKill();
-  later(500, () => teach("drag", 188, 336, 80, 384, { key:"hoodiein" }));
+  later(500, () => teach("drag", 236, 336, 212, 286, { key:"hoodiein" }));
 }
 function p3Store(){
   if (PS.stage !== "hold") return;
   PS.stage = "stored"; world(p3World()); p3Hits(); idleKill();
-  sound('tak', '탁', 90, 340, { fs:16 });
-  later(700, () => { PS.catX = 168; walk('bori', 168, 440, 1, 900, ""); });
-  later(1700, () => { const b = $('bori'); if (b) b.innerHTML = catSit(0, 0, .95, { flip:true }); sound('kk', '킁킁', 150, 360, { fs:14 }); });
-  later(2600, () => { dropFx('kk', 'tak'); teach("drag", 300, 210, 190, 330, { key:"suiton" }); });
+  sound('tak', '탁', 212, 260, { fs:16 });
+  later(700, () => { PS.catX = 180; walk('bori', 180, 444, 1, 900, ""); });
+  later(1700, () => { const b = $('bori'); if (b) b.innerHTML = catSit(0, 0, .95, { flip:true }); sound('kk', '킁킁', 180, 364, { fs:14 }); });
+  later(2600, () => { dropFx('kk', 'tak'); teach("drag", 70, 170, 236, 330, { key:"suiton" }); });
 }
 function p3Suit(){
   if (PS.stage !== "stored") return;
   PS.stage = "suit"; world(p3World()); hits({}); idleKill();
-  later(900, () => { PS.catX = 250; walk('bori', 250, 440, 1, 700); });
-  later(1800, () => sound('sneeze', '에취!', 252, 360, { fs:18 }));
+  later(900, () => { PS.catX = 290; walk('bori', 290, 444, 1, 700); });
+  later(1800, () => sound('sneeze', '에취!', 292, 364, { fs:18 }));
   later(3400, () => fadeTo(p4, 700));
 }
 
 /* ================= 프롤로그 4: 첫 출근 전날 밤. 처음으로 문을 닫는다 ================= */
 function p4(){
   PS = { stage:"cat", open:1, out:false };
-  show(p4World(), { card:"첫 출근 전날 밤", label:"침실, 침대 위 고양이와 열린 방문" });
+  show(p4World(), { card:"첫 출근 전날 밤", label:"침실, 침대 위 고양이와 열린 방문", bg:"bedR-eve" });
   p4Hits();
-  later(2400, () => teach("drag", 96, 330, 296, 280, { key:"carry" }));
+  later(2400, () => teach("drag", 92, 336, BRD.x + 50, 250, { key:"carry" }));
 }
 function p4World(){
-  const P = PS, D = BR.door;
-  const catOut = P.out ? catSit(D.x + 44, D.y + D.h - 2, .78, { sad:P.open <= 0 }) : "";
-  const door = doorIn(D.x, D.y, D.w, D.h, P.open, { paws: P.open <= 0, beyond:"#1c1f3a", inDoor: catOut });
+  const P = PS, D = BRD;
+  const catOut = P.out ? catSit(D.x + 50, D.y + D.h - 2, .78, { sad:P.open <= 0 }) : "";
+  const door = doorG(D, P.open, { paws: P.open <= 0, beyond:"#1c1f3a", inDoor: catOut });
   const lampOff = P.stage === "dark";
-  return `${bedroomBg({ night:true, lamp:!lampOff })}${clockFace("ck", BR.clock[0], BR.clock[1], BR.clock[2], 11, 0)}
+  return `${clockFace("ck", 128, 70, 24, 11, 0)}
     ${door}
-    ${bedSide(0, 410, 156, {})}
-    ${chair(226, 410, { jacket:true })}
-    ${P.out ? "" : `<g ${hitA("cat", CAT)}>${catLoaf(92, 354, .95, { awake:true })}<rect x="52" y="312" width="90" height="48" fill="transparent"/></g>`}
-    ${person(150, 448, { wear:"pj", face: P.open <= 0 ? "worry" : "neutral" })}
+    ${rackSuit({})}
+    ${bedSide(0, 418, 156, {})}
+    ${P.out ? "" : `<g ${hitA("cat", CAT)}>${catLoaf(92, 362, .95, { awake:true })}<rect x="52" y="320" width="90" height="48" fill="transparent"/></g>`}
+    ${person(190, 448, { wear:"pj", face: P.open <= 0 ? "worry" : "neutral" })}
     ${P.out && P.open > 0 ? `<rect ${hitA("door","방문 닫기")} x="${D.x-6}" y="${D.y}" width="${D.w+12}" height="${D.h}" fill="transparent"/>` : ""}
     <g class="tg" id="tg-out"><rect x="${D.x}" y="${D.y}" width="${D.w}" height="${D.h}" rx="6" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
-    ${lampOff ? `<rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#05060d" opacity=".55"/>` : ""}`;
+    ${lampOff ? `<rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#05060d" opacity=".62"/>` : ""}`;
 }
 function p4Hits(){
   hits({
-    cat: { drag: { ghost:(x,y) => `<g transform="translate(${x},${y+30})">${catSit(0, 0, .8, {})}</g>`, targets:[{ key:"out", r:[BR.door.x-10, BR.door.y-10, BR.door.w+20, BR.door.h+30], fn: p4Out }] }, key: p4Out },
-    door: { pull: { progress:(a,b) => (b.x - a.x) / 60, move: v => { PS.open = 1 - v; world(p4World()); }, done: p4Close, tapped: () => {} }, key: p4Close }
+    cat: { drag: { ghost:(x,y) => `<g transform="translate(${x},${y+30})">${catSit(0, 0, .8, {})}</g>`, targets:[{ key:"out", r:[BRD.x-10, BRD.y-10, BRD.w+20, BRD.h+30], fn: p4Out }] }, key: p4Out },
+    door: { pull: { progress:(a,b) => (a.x - b.x) / 60, move: v => { PS.open = 1 - v; world(p4World()); }, done: p4Close, tapped: () => {} }, key: p4Close }
   });
 }
 function p4Out(){
   if (PS.out) return;
   PS.out = true; world(p4World()); p4Hits(); idleKill();
-  later(600, () => teach("drag", BR.door.x + 8, 250, BR.door.x + 70, 250, { key:"doorclose" }));
+  later(600, () => teach("drag", BRD.x + BRD.w - 10, 200, BRD.x + 24, 200, { key:"doorclose" }));
 }
 function p4Close(){
   if (PS.stage !== "cat") return;
   PS.stage = "closed"; PS.open = 0; world(p4World()); hits({}); idleKill();
-  sound('tak', '탁', BR.door.x + 42, BR.door.y - 10, { fs:16 });
-  later(1200, () => { dropFx('tak'); sound('meow', '야옹?', BR.door.x + 44, BR.door.y + BR.door.h - 30, { fs:16 }); });
+  sound('tak', '탁', BRD.x + 50, BRD.y - 10, { fs:16 });
+  later(1200, () => { dropFx('tak'); sound('meow', '야옹?', BRD.x + 50, BRD.y + BRD.h - 30, { fs:16 }); });
   later(2800, () => { PS.stage = "dark"; world(p4World()); sound('click', '딸깍', 150, 230, { fs:14 }); });
   later(4200, () => throughDoor(() => { s.day = 0; catNight(); }, "82%", "62%"));
 }
@@ -1298,7 +1716,8 @@ function catNight(){
   const hoodieAt = s.hoodie === "door" ? "door" : (s.hoodie === "wear" || s.hoodie === "bed") ? "room" : "drawer";
   CN = { acts:0, busy:false, at:"start", strokes:0, toy:true, moth:true, drawer:0, hoodieAt,
          gap: first ? "lamp" : (s.laptopNight ? "blue" : "dark"), done:{} };
-  show(cnWorld(), { label:"거실 바닥, 닫힌 방문 앞. 나는 고양이" });
+  PLATE = "cat-dark";
+  show(cnWorld(), { label:"거실 바닥, 닫힌 방문 앞. 나는 고양이", bg:"cat-dark" });
   cnHits();
   if (first) later(1600, () => { CN.gap = "dark"; part('doorL', cnDoor()); sound('click', '딸깍', 324, 366, { fs:14 }); later(900, () => dropFx('click')); });
   if (CN.gap === "blue") every(900, () => { if (!CN || CN.end) return; sound('tak', '타닥타닥', 300, 386, { fs:12, color:"#cfe0ff" }); later(500, () => dropFx('tak')); });
@@ -1309,8 +1728,7 @@ const cnDoor = () => bigDoor({ gap: CN.gap, scratch: Math.min(4, CN.strokes), ho
 const cnDresser = () => bigDresser({ open: CN.drawer, sleeve: CN.hoodieAt === "drawer" && CN.drawer === 0, furClue: s.closetN > 0 });
 function cnWorld(){
   const [x, y, sc] = CSPOT[CN.at];
-  return `${catWorldBg()}
-    <g id="dresL">${cnDresser()}</g>
+  return `<g id="dresL">${cnDresser()}</g>
     <g id="hoodL">${CN.drawer >= 1 ? cnHoodieFloor() : ""}</g>
     <g id="doorL">${cnDoor()}</g>
     <g id="toyL">${CN.toy ? `<g ${hitA("toy","쥐 인형")}>${mouseToy(96, 452, 1.5)}<rect x="56" y="420" width="80" height="44" fill="transparent"/></g>` : ""}</g>
@@ -1453,80 +1871,105 @@ function nextDay(){
 }
 const hm = min => [7 + Math.floor(min / 60), min % 60];
 
-/* ================= 아침: 침실. 시계의 빨간 칸에 닿기 전에 나가야 한다 ================= */
+/* ================= 아침: 침실. 시계의 빨간 칸에 닿기 전에 나가야 한다 =================
+   할 일: (보리가 정장 위에서 자면 내려놓기) → 밥 주기 → 정장 입기 → (털이 있으면 돌돌이) → 문 열기 → (쓰다듬기) → 나가기 */
 let MO = null;
-const FAREWELL = [214, 446];
+const FAREWELL = [268, 444];
+const BOWL = [104, 350], BAG = [40, 224];
 function morning(){
   const opened = s.lastOpen, onJacket = opened && s.hoodie !== "bed";
   const furN = onJacket ? Math.min(16, 8 + s.slept) : opened ? 3 : 0;
   const auto = s.day >= 3 && !onJacket;
   MO = { min: s.tired >= 2 ? 45 : 40, dressed: auto, furJ: onJacket ? furN : 0, fur: auto ? furN : 0,
          catAt: onJacket ? "jacket" : opened ? (s.bond >= 2 ? "door" : "bedA") : "out",
-         door: opened ? 1 : 0, pets:0, gone:false, mePose:"stand", meFace:null, mx:150, late:false };
+         door: opened ? 1 : 0, pets:0, gone:false, mePose:"stand", meFace:null, mx:190, late:false,
+         fed:false, bowl:0, pour:0 };
   s.hiddenStrand = opened;
+  // 어젯밤 주문한 사료가 왔다
+  if (s.order){ MO.parcel = s.order; s.order = null; }
   moShow(true);
 }
 function moShow(first){
-  show(moWorld(), { card: first ? dayCard() : "", label:"아침 침실. 벽시계와 방문" });
+  show(moWorld(), { card: first ? dayCard() : "", label:"아침 침실. 벽시계와 방문", bg:"bedR-day" });
   moHits();
   every(1200, moTick);
   later(first ? 2300 : 400, moTeach);
-  if (first && s.tired >= 2){ MO.mePose = "yawn"; part('me', moMe()); sound('yawn', '하아암', 150, 236, { fs:15 }); later(1400, () => { dropFx('yawn'); MO.mePose = "stand"; part('me', moMe()); }); }
+  if (first && s.tired >= 2){ MO.mePose = "yawn"; part('me', moMe()); sound('yawn', '하아암', MO.mx, 236, { fs:15 }); later(1400, () => { dropFx('yawn'); MO.mePose = "stand"; part('me', moMe()); }); }
+  if (first && MO.parcel) later(2600, moParcel);
 }
 function moMe(){
   const M = MO;
   const face = M.meFace || (M.late ? "panic" : M.pets >= 3 ? "smile" : s.tired >= 2 ? "tired" : "neutral");
   const o = { wear: M.dressed ? "suit" : "pj", face, fur: M.dressed ? Math.min(M.fur, 12) : 0, pose: M.mePose };
-  if (M.mePose === "pet") o.handsW = { R:[FAREWELL[0] - M.mx + 2, FAREWELL[1] - 448 - 44] };
+  if (M.mePose === "pet") o.handsW = { R:[FAREWELL[0] - M.mx - 4, FAREWELL[1] - 444 - 40] };
   return person(0, 0, o);
 }
+function moCatHTML(){
+  const M = MO;
+  if (M.catAt === "door") return catSit(FAREWELL[0], FAREWELL[1], 1, { flip:true, wag:true, happy: M.pets >= 3 });
+  if (M.catAt === "bowl") return `<g class="${M.eating ? 'knead' : ''}">${catSit(BOWL[0] + 36, BOWL[1] + 2, .9, { flip:true, closed: M.eating, happy: M.eating && s.foodKind !== "chick" })}</g>`;
+  if (M.catAt === "bedA") return catAway(40, 384, .9, { wag:false });
+  return "";
+}
 function moWorld(){
-  const M = MO, D = BR.door;
-  const doorway = M.catAt === "doorway" ? catSit(D.x + 44, D.y + D.h - 2, .8, { wag:true }) : "";
-  const door = doorIn(D.x, D.y, D.w, D.h, M.door, { paws: M.catAt === "out" && s.bond >= 2, beyond:"#e9dcc4", inDoor: doorway });
-  const toys = M.door > 0 ? "" : Array.from({ length: Math.min(s.toys, 6) }, (_, i) => mouseToy(D.x + 10 + (i*23) % 70, 352 + (i % 2) * 8, .7)).join('');
+  const M = MO, D = BRD;
+  const doorway = M.catAt === "doorway" ? catSit(D.x + 50, D.y + D.h - 2, .8, { wag:true }) : "";
+  const door = doorG(D, M.door, { paws: M.catAt === "out" && s.bond >= 2, beyond:"#d6cfc0", floorB:"#c4b6a2", inDoor: doorway });
+  const toys = M.door > 0 ? "" : Array.from({ length: Math.min(s.toys, 6) }, (_, i) => mouseToy(D.x + 14 + (i*19) % 70, BFLOOR + 14 + (i % 2) * 6, .6)).join('');
   const anyFur = M.fur > 0 || M.furJ > 0;
-  return `${bedroomBg({ sky: s.day === 3 ? "rain" : "day" })}
-    ${clockFace("ck", BR.clock[0], BR.clock[1], BR.clock[2], 7, M.min, { red:[0, 15] })}
+  const bagLv = (s.foodMax ? s.food / s.foodMax : 0);
+  return `${clockFace("ck", 128, 70, 24, 7, M.min, { red:[0, 15] })}
     ${door}${toys}
-    ${bedSide(0, 410, 156, { messy:true, hoodie: s.hoodie === "bed" })}
-    ${M.catAt === "bedA" ? catAway(96, 352, .9, { wag:false }) : ""}
-    ${chair(226, 410, { jacket: !M.dressed, cat: M.catAt === "jacket", zz:true, fur: M.catAt === "jacket" ? 0 : M.furJ })}
-    ${s.day === 3 ? `<g transform="translate(240,410) rotate(-8)"><path d="M0,0 V-80" stroke="#5d7fd6" stroke-width="10" stroke-linecap="round"/><path d="M0,-80 q0,-10 8,-10" stroke="#3a3045" stroke-width="3" fill="none"/></g>` : ""}
-    ${anyFur ? `<g>${rollerG(66, 448, .62, 0)}</g>` : ""}
-    <g id="me" class="mover" style="transform:translate(${M.mx}px,448px)">${moMe()}</g>
-    <g id="bori">${M.catAt === "door" ? catSit(FAREWELL[0], FAREWELL[1], 1, { flip:true, wag:true, happy: M.pets >= 3 }) : ""}</g>
-    ${M.catAt === "jacket" ? `<rect ${hitA("cat", CAT)} x="186" y="318" width="80" height="50" fill="transparent"/>` : ""}
-    ${!M.dressed && M.catAt !== "jacket" ? `<rect ${hitA("jacket","정장")} x="186" y="268" width="84" height="104" fill="transparent"/>` : ""}
-    ${anyFur ? `<rect ${hitA("roller","돌돌이")} x="26" y="420" width="90" height="60" fill="transparent"/>` : ""}
-    ${M.catAt === "door" ? `<rect ${hitA("pet", CAT + " 쓰다듬기")} x="186" y="384" width="62" height="66" fill="transparent"/>` : ""}
+    ${M.parcel ? `<g id="parcel">${cardBox(D.x + 50, BFLOOR + 20, 64, 34)}</g>` : ""}
+    ${rackSuit({ none: M.dressed, fallen: M.catAt === "jacket" || M.catAt === "lifted", fur: M.furJ })}
+    ${M.catAt === "jacket" ? catLoaf(124, RACK.shelf - 6, .92, { zz:true }) : ""}
+    <g id="bowlL">${bowl(BOWL[0], BOWL[1], M.bowl)}</g>
+    <g id="bagL">${M.pour ? "" : `<g ${hitA("bag","사료 봉지")}>${foodBag(BAG[0], BAG[1], { level: bagLv, kind: s.foodKind })}<rect x="${BAG[0]-24}" y="${BAG[1]-56}" width="48" height="62" fill="transparent"/></g>`}</g>
+    ${anyFur ? `<g>${rollerG(46, 410, .6, 0)}</g>` : ""}
+    <g id="me" class="mover" style="transform:translate(${M.mx}px,444px)">${moMe()}</g>
+    <g id="bori">${moCatHTML()}</g>
+    ${M.catAt === "jacket" ? `<rect ${hitA("cat", CAT)} x="88" y="258" width="80" height="44" fill="transparent"/>` : ""}
+    ${!M.dressed && M.catAt !== "jacket" ? `<rect ${hitA("jacket","정장")} x="${M.catAt === "lifted" || M.furJ ? 86 : 92}" y="${M.catAt === "lifted" || M.furJ ? 270 : 112}" width="80" height="${M.catAt === "lifted" || M.furJ ? 34 : 104}" fill="transparent"/>` : ""}
+    ${anyFur ? `<rect ${hitA("roller","돌돌이")} x="10" y="386" width="74" height="60" fill="transparent"/>` : ""}
+    ${M.catAt === "door" ? `<rect ${hitA("pet", CAT + " 쓰다듬기")} x="${FAREWELL[0]-30}" y="${FAREWELL[1]-66}" width="62" height="68" fill="transparent"/>` : ""}
     <rect ${hitA("door","방문")} x="${D.x}" y="${D.y}" width="${D.w}" height="${D.h}" fill="transparent"/>
-    <g class="tg" id="tg-me"><rect x="${M.mx-50}" y="248" width="100" height="204" rx="14" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
-    <g class="tg" id="tg-bed"><rect x="10" y="300" width="146" height="70" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
+    ${M.parcel ? `<rect ${hitA("parcel","택배 상자")} x="${D.x + 8}" y="${BFLOOR - 30}" width="84" height="56" fill="transparent"/>` : ""}
+    <g class="tg" id="tg-me"><rect x="${M.mx-50}" y="248" width="100" height="200" rx="14" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    <g class="tg" id="tg-bowl"><ellipse cx="${BOWL[0]}" cy="${BOWL[1]-6}" rx="34" ry="22" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    <g class="tg" id="tg-floor"><rect x="10" y="320" width="150" height="90" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    ${hudFood()}`;
 }
 function moHits(){
   const meR = [MO.mx - 60, 240, 120, 220];
   hits({
     cat: { drag: { ghost:(x,y) => `<g transform="translate(${x},${y+18})">${catLoaf(0, 0, .95, { awake:true })}</g>`,
       from: on => { if (on && MO.catAt === "jacket"){ MO.catAt = "lifted"; world(moWorld()); moHits(); } },
-      targets:[{ key:"bed", r:[0, 280, 170, 120], fn: () => moCatDown() }], miss: () => moCatDown() }, key: () => { MO.catAt = "lifted"; moCatDown(); } },
+      targets:[{ key:"floor", r:[0, 300, 180, 140], fn: () => moCatDown() }], miss: () => moCatDown() }, key: () => { MO.catAt = "lifted"; moCatDown(); } },
     jacket: { drag: { ghost:(x,y) => hangSuit(x, y-30, .62), targets:[{ key:"me", r:meR, fn: moDress }] }, key: moDress },
-    roller: { drag: { ghost:(x,y) => rollerG(x, y-10, .62, 0), targets:[{ key:"me", r:meR, fn: moRoll }] }, key: moRoll },
+    roller: { drag: { ghost:(x,y) => rollerG(x, y-10, .6, 0), targets:[{ key:"me", r:meR, fn: moRoll }] }, key: moRoll },
+    bag: { drag: { ghost:(x,y) => foodBag(x, y + 20, { level: s.foodMax ? s.food / s.foodMax : 0, kind: s.foodKind, tilt:-30 }), from: on => { const b = $('bagL'); if (b) b.style.opacity = on ? .25 : 1; },
+      targets:[{ key:"bowl", r:[BOWL[0]-48, BOWL[1]-70, 96, 96], fn: moFeed }] }, key: moFeed },
     pet: { rub: { fn: moPet, per: 46 }, key: moPet },
-    door: { tap: moDoor, key: moDoor }
+    door: { tap: moDoor, key: moDoor },
+    parcel: { tap: moUnbox, key: moUnbox },
+    hudF: { tap: foodNotice, key: foodNotice }
   });
 }
+// 지금 해야 할 일 하나를 손과 화살표로 보여 준다
 function moTeach(){
-  const M = MO, D = BR.door;
-  if (M.gone) return;
-  if (M.catAt === "jacket") return teach("drag", 220, 344, 84, 336, { key:"liftcat" });
-  if (!M.dressed) return teach("drag", 226, 316, M.mx, 330, { key:"dress" });
-  if (M.fur > 0 && ACT(s.day) < 3) return teach("drag", 66, 444, M.mx, 340, { key:"roller" });
-  if (M.door === 0) return teach("tap", D.x + D.w - 16, D.y + D.h*.52, 0, 0, { key:"opendoor" });
+  const M = MO, D = BRD;
+  if (M.gone || M.busy) return;
+  if (M.catAt === "jacket") return teach("drag", 126, 276, 80, 360, { key:"liftcat" });
+  if (M.parcel && (s.food <= 0 || M.triedFeed)) return teach("tap", D.x + 50, BFLOOR + 2, 0, 0, { key:"parcel" });
+  if (!M.fed && !M.triedFeed) return teach("drag", BAG[0], BAG[1] - 20, BOWL[0], BOWL[1] - 10, { key:"feed" });
+  if (!M.dressed) return teach("drag", 126, 170, M.mx, 330, { key:"dress" });
+  if (M.fur > 0 && ACT(s.day) < 3) return teach("drag", 46, 404, M.mx, 340, { key:"roller" });
+  if (M.door === 0) return teach("tap", D.x + 14, D.y + D.h*.54, 0, 0, { key:"opendoor" });
   const L = [];
+  if (M.parcel) L.push(["tap", D.x + 50, BFLOOR + 2]);
   if (M.catAt === "door") L.push(["rub", FAREWELL[0], FAREWELL[1] - 40]);
-  if (M.fur > 0) L.push(["drag", 66, 444, M.mx, 340]);
-  L.push(["tap", D.x + 42, D.y + 120]);
+  if (M.fur > 0) L.push(["drag", 46, 404, M.mx, 340]);
+  L.push(["tap", D.x + 50, D.y + 120]);
   teachCycle(L, { key:"leave" + L.length });
 }
 function moTick(){
@@ -1535,10 +1978,61 @@ function moTick(){
   setClock("ck", 7, MO.min); setClock("ck2", 7, MO.min);
   if (MO.min === 60){ MO.late = true; const r = $('ck-red') || $('ck2-red'); if (r) r.classList.add('blinkR'); if ($('me')) part('me', moMe()); }
 }
+function moMin(n){ for (let i = 0; i < n; i++) moTick(); }
 function moCatDown(){
   if (MO.catAt !== "lifted") return;
-  MO.catAt = s.bond >= 2 ? "door" : "bedA";
-  sound('nya', '냥', 214, 360, { fs:14 }); later(900, () => dropFx('nya'));
+  MO.catAt = MO.bowl > 0 ? "bowl" : s.bond >= 2 ? "door" : "bedA";
+  sound('nya', '냥', 160, 330, { fs:14 }); later(900, () => dropFx('nya'));
+  world(moWorld()); moHits(); later(300, moTeach);
+}
+// 밥 주기: 봉지를 밥그릇에 끌어다 놓으면 쏟아진다. 봉지가 비었으면 아무것도 안 나온다.
+function moFeed(){
+  const M = MO;
+  if (M.gone || M.fed || M.pour) return;
+  idleKill();
+  M.pour = 1; world(moWorld()); moHits();
+  const empty = !(s.food > 0);
+  putFx('pourB', `<g id="pourB">${foodBag(BOWL[0] + 18, BOWL[1] - 34, { level: s.foodMax ? s.food / s.foodMax : 0, kind: s.foodKind, tilt:-118 })}${empty ? "" : kibbleFall(BOWL[0] + 2, BOWL[1] - 40, BOWL[1] - 12)}</g>`);
+  if (empty){
+    sound('pour', '툭', BOWL[0] + 30, BOWL[1] - 70, { fs:15 });
+    later(900, () => { dropFx('pourB', 'pour'); M.pour = 0; M.triedFeed = true; world(moWorld()); moHits(); sound('meow', '야옹…', BOWL[0], BOWL[1] - 50, { fs:15 }); later(1300, () => dropFx('meow')); foodNotice(moTeach); });
+    return;
+  }
+  sound('pour', '와르르', BOWL[0] + 30, BOWL[1] - 70, { fs:15 });
+  later(1000, () => {
+    dropFx('pourB', 'pour');
+    s.food--; M.fed = true; dayLog().fed = true; M.pour = 0; M.bowl = 1; moMin(2);
+    if (M.catAt === "door" || M.catAt === "bedA" || M.catAt === "doorway"){ M.catAt = "bowl"; }
+    world(moWorld()); moHits();
+    if (M.catAt === "bowl") moEat();
+    if (s.food <= 1) later(700, () => foodNotice(moTeach));
+    later(500, moTeach);
+  });
+}
+// 보리가 밥을 먹는다. 좋아하는 사료면 다 먹고 골골, 싼 사료면 조금 먹다 만다.
+function moEat(){
+  const M = MO; if (M.eating) return;
+  M.eating = true; part('bori', moCatHTML());
+  const liked = s.foodKind !== "chick";
+  sound('eat', liked ? '냠냠' : '킁킁', BOWL[0] + 36, BOWL[1] - 66, { fs:14 });
+  later(liked ? 2200 : 1300, () => {
+    if (!MO || MO.gone) return;
+    dropFx('eat'); M.eating = false; M.bowl = liked ? 0 : .5; part('bowlL', bowl(BOWL[0], BOWL[1], M.bowl));
+    if (liked){ heart(BOWL[0] + 36, BOWL[1] - 64); }
+    M.catAt = s.bond >= 2 ? "door" : "bedA"; part('bori', moCatHTML()); moHits();
+  });
+}
+// 택배: 주문한 사료가 문 앞에 왔다. 누르면 봉지를 바꾼다.
+function moParcel(){
+  const M = MO; if (!M || !M.parcel || M.gone) return;
+  sound('box', '택배', BRD.x + 50, BFLOOR - 20, { fs:14 }); later(1200, () => dropFx('box'));
+}
+function moUnbox(){
+  const M = MO; if (!M || !M.parcel || M.gone || M.pour) return;
+  idleKill();
+  const kind = M.parcel; M.parcel = null; delete HIT.parcel;
+  s.foodKind = kind; s.foodMax = kind === "chick" ? 8 : 4; s.food = s.foodMax; M.triedFeed = false;
+  sound('rip', '부욱', BRD.x + 50, BFLOOR - 20, { fs:14 }); later(900, () => dropFx('rip'));
   world(moWorld()); moHits(); later(300, moTeach);
 }
 function moDress(){
@@ -1557,20 +2051,21 @@ function moPet(){
   clearTimeout(MO.petT); MO.petT = later(900, () => { if (!MO.gone){ MO.mePose = "stand"; part('me', moMe()); } });
 }
 function moDoor(){
-  const M = MO, D = BR.door;
-  if (M.gone) return;
+  const M = MO, D = BRD;
+  if (M.gone || M.pour) return;
   if (M.door === 0){
     M.door = 1;
-    if (s.bond >= 2){ M.catAt = "doorway"; world(moWorld()); moHits(); later(700, () => { M.catAt = "door"; world(moWorld()); moHits(); moTeach(); }); }
+    sound('door', '딸깍', D.x + 20, D.y - 6, { fs:13 }); later(800, () => dropFx('door'));
+    if (s.bond >= 2){ M.catAt = "doorway"; world(moWorld()); moHits(); later(700, () => { M.catAt = M.bowl > 0 ? "bowl" : "door"; world(moWorld()); moHits(); if (M.catAt === "bowl") moEat(); moTeach(); }); }
     else { M.catAt = "none"; world(moWorld()); moHits(); moTeach(); }
     return;
   }
-  if (!M.dressed){ M.meFace = "surprise"; part('me', moMe()); later(900, () => { M.meFace = null; part('me', moMe()); }); return teach("drag", 226, 316, M.mx, 330, { key:"dress", now:true }); }
+  if (!M.dressed){ M.meFace = "surprise"; part('me', moMe()); later(900, () => { M.meFace = null; part('me', moMe()); }); return teach("drag", 126, 170, M.mx, 330, { key:"dress", now:true }); }
   if (M.fur > 0 && ACT(s.day) < 3){
     M.mePose = "worry"; M.meFace = "panic"; part('me', moMe());
     const e = $('me'); if (e){ e.classList.add('shake'); later(450, () => e.classList.remove('shake')); }
     later(1100, () => { M.mePose = "stand"; M.meFace = null; part('me', moMe()); });
-    return teach("drag", 66, 444, M.mx, 340, { key:"roller", now:true });
+    return teach("drag", 46, 404, M.mx, 340, { key:"roller", now:true });
   }
   // 나간다
   M.gone = true; idleKill(); hits({});
@@ -1578,9 +2073,12 @@ function moDoor(){
   M.leaveMin = M.min;
   if (M.min > 60){ L.late = true; s.lates++; s.face = clamp(s.face - 1, 0, 5); }
   if (M.pets >= 3){ L.pet = true; bond(1); }
+  if (!M.fed){ L.fed = false; s.hungry++; s.hungryToday = true; } else s.hungryToday = false;
+  if (M.parcel){ s.order = M.parcel; M.parcel = null; }
   s.furLeft = M.fur;
-  if (M.catAt === "door"){ part('bori', catSit(FAREWELL[0], FAREWELL[1], 1, { flip:true, wag: s.bond >= 4, sad: M.pets === 0 })); }
-  walk('me', D.x + 40, 440, .92, 1000);
+  if (M.catAt === "door"){ part('bori', catSit(FAREWELL[0], FAREWELL[1], 1, { flip:true, wag: s.bond >= 4, sad: M.pets === 0 || !M.fed })); }
+  if (!M.fed && M.catAt !== "none"){ sound('meow', '야옹!', FAREWELL[0], FAREWELL[1] - 80, { fs:16 }); }
+  walk('me', D.x + 50, BFLOOR + 8, .84, 1000);
   later(1100, () => fadeTo(office, 500));
 }
 /* ---- 돌돌이: 정장을 크게 본다. 문지르면 털이 롤에 붙는다 ---- */
@@ -1588,7 +2086,7 @@ let RL = null;
 function rollScene(){
   const n = MO.fur;
   RL = { st: rlStrands(n), left:n, total:n, x:296, y:430, stuck:0, last:null, done:false };
-  show(rlWorld(), { label:"정장에 붙은 고양이 털" });
+  show(rlWorld(), { label:"정장에 붙은 고양이 털", bg:"bedZ-day" });
   const RH = { down: rlDown, dragMove: rlMove, up: () => { RL.last = null; }, key: rlBand };
   hits({ _bg: RH, roll: RH });
   every(1200, moTick);
@@ -1607,8 +2105,7 @@ function rlStrands(n){
 function rlFace(){ return RL.left === 0 ? "smile" : MO.min >= 60 ? "panic" : "worry"; }
 function rlWorld(){
   const strands = RL.st.map((t, i) => t.on ? `<path id="st${i}" d="M${(t.x-6).toFixed(1)},${t.y.toFixed(1)} q6,-5 12,0" transform="rotate(${t.a.toFixed(0)} ${t.x.toFixed(1)} ${t.y.toFixed(1)})" stroke="var(--fur)" stroke-width="3.4" fill="none" stroke-linecap="round"/>` : "").join('');
-  return `${wallR("#efe4cf", 0, VH)}${win(-40, 36, 120, 120, s.day === 3 ? "rain" : "day", {})}
-    ${clockFace("ck2", 310, 58, 28, 7, MO.min, { red:[0, 15] })}
+  return `${clockFace("ck2", 58, 62, 26, 7, MO.min, { red:[0, 15] })}
     <g id="bigme">${person(180, 640, { sc:2.3, wear:"suit", face: rlFace() })}</g>
     <g id="strands">${strands}</g>
     <g id="rl">${rollerG(RL.x, RL.y, 1.25, RL.stuck)}</g>
@@ -1641,127 +2138,328 @@ function rlClean(){
 }
 function rlEnough(){ if (RL.done) return; RL.done = true; MO.fur = RL.left; part('bigme', person(180, 640, { sc:2.3, wear:"suit", face:"soft" })); later(500, () => fadeTo(() => moShow(false), 400)); }
 
-/* ================= 회사: 늦으면 팀장님이 시계를 본다. 6시가 되면 팀장님은 칼같이 일어난다 ================= */
-const DAYLINE = { 1:"9시 출근, 6시 퇴근이에요.", 2:"내일 비 온대요.", 4:"수습 면담은 다음 주 화요일이에요.", 8:"내일 면담, 10시예요.", 12:"첫 월급날이네요. 축하해요." };
+/* ================= 회사: 팀장님이 회의 자료를 준다. 쪽 번호 순서대로 정리해서 낸다 =================
+   - 한 장을 맞게 넣을 때마다 시계가 간다. 틀린 장은 튕겨 나오고 15분이 더 간다.
+   - 늦게 오면 그만큼 늦게 끝난다. 6시가 되면 팀장님은 칼같이 퇴근하고, 못 끝낸 만큼 야근이다.
+   - 야근한 만큼 저녁(보리와 노는 시간)이 줄어든다. */
+const DAYLINE = { 1:"9시 출근, 6시 퇴근이에요.", 2:"내일 비 온대요.", 3:"금요일에 사장님 오세요.", 4:"수습 면담은 다음 주 화요일이에요.", 8:"내일 면담, 10시예요.", 12:"첫 월급날이네요. 축하해요." };
+const PAGES = [0, 3, 4, 4, 5, 4, 0, 0, 5, 0, 6, 6, 5];
+const OCK = [339, 142], SEAT = [162, 404], BOSS_Y = 404, SIX = 660;
 let OF = null;
-function ofBoss(){
-  if (OF.bossUp) return person(OF.bossX, 452, { wear:"boss", hair:"boss", glasses:true, face:"smile", pose:"wave", bag:false });
-  return person(272, 452, { wear:"boss", hair:"boss", glasses:true, noLegs:true, face: OF.bossFace, pose: OF.bossPose });
-}
-function ofMe(){ return person(0, 0, { wear:"suit", face: OF.meFace, pose: OF.mePose, fur: Math.min(s.furLeft || 0, 12) }); }
+const sheaf = () => `<g>${[0, 1, 2, 3].map(i => `<rect x="${-20 + i*1.5}" y="${-14 - i*2.2}" width="40" height="28" rx="2" fill="#fff" stroke="#9aa0c0" stroke-width="1.2"/>`).join('')}</g>`;
+const ofBoss = () => person(0, 0, Object.assign({ wear:"boss", hair:"boss", glasses:true, face: OF.bossFace, pose: OF.bossPose, bag: OF.bossBag }, OF.bossHeld ? { held: OF.bossHeld } : {}));
+const ofMe = () => personBack(SEAT[0], SEAT[1], { wear:"suit", fur: Math.min(s.furLeft || 0, 8), slump: OF.meSlump, cheer: OF.meCheer });
 function ofWorld(){
-  const [h, m] = OF.clock;
-  return `${officeBg({ dusk: OF.dusk })}${clockFace("ock", 232, 82, 30, h, m, { rim:"#5c6286" })}
-    ${s.day >= 4 && s.day <= 8 ? calendarW(286, 46, { x: s.day - 1, circle: 8 }) : ""}
-    ${crayon(296, 248, 1.1)}
-    <g id="boss">${OF.bossUp ? "" : ofBoss()}</g>
-    ${deskFront(196, 380, 160)}${monitor(240, 380, { off: OF.bossUp })}
-    ${deskFront(-10, 392, 170)}${monitor(64, 392, {})}
-    <g id="bossU" class="mover" style="transform:translate(0px,0px)">${OF.bossUp ? ofBoss() : ""}</g>
-    <g id="me" class="mover" style="transform:translate(${OF.meX}px,452px)">${ofMe()}</g>`;
+  const [h, m] = hm(OF.min);
+  return `${clockFace("ock", OCK[0], OCK[1], 16, h, m, { rim:"#5c6286" })}
+    ${s.day >= 4 && s.day <= 8 ? calendarW(276, 300, { x: s.day - 1, circle: 8 }) : ""}
+    ${OF.pile ? `<g transform="translate(250,292)">${sheaf()}${OF.pile === "done" ? `<path d="M-10,-21 h8" stroke="#5c6286" stroke-width="2.4"/>` : ""}</g>` : ""}
+    <g id="me">${ofMe()}</g>
+    <g id="ceo" class="mover" style="transform:translate(${OF.ceoX}px,${BOSS_Y}px)">${OF.ceo ? person(0, 0, Object.assign({ wear:"ceo", hair:"ceo", face:"smile" }, OF.ceo)) : ""}</g>
+    <g id="boss" class="mover" style="transform:translate(${OF.bossX}px,${BOSS_Y}px)">${ofBoss()}</g>`;
 }
+function ofBossTo(x, ms){
+  OF.bossX = x; const e = $('boss'); if (!e) return;
+  if (!ms){ e.style.transitionDuration = '0ms'; e.style.transform = `translate(${x}px,${BOSS_Y}px) scale(1)`; return; }
+  walk('boss', x, BOSS_Y, 1, ms);
+}
+const ofClock = () => { const [h, m] = hm(OF.min); setClock("ock", h, m); setClock("sck", h, m); };
 function office(){
-  if (s.day === 5) return ceoDay();
   if (s.day === 9) return meeting();
   const L = dayLog(), late = !!L.late;
   const arrive = (MO && MO.leaveMin != null ? MO.leaveMin : 52) + 60;
-  OF = { clock: hm(arrive), dusk:false, bossUp:false, bossX:300, bossFace: s.face >= 4 ? "smile" : s.face <= 1 ? "stern" : "neutral", bossPose:"type",
-         meX:-70, meFace: late ? "panic" : s.tired >= 2 ? "tired" : "neutral", mePose:"stand" };
-  show(ofWorld(), { label:"사무실. 벽시계와 팀장님" });
-  const B = () => part('boss', ofBoss()), M = () => part('me', ofMe());
-  const seq = [[200, () => { OF.meX = 110; walk('me', 110, 452, 1, 1100); }]];
+  OF = { min: Math.max(arrive, 115), n: PAGES[s.day] || 4, bossX: 440, ceoX: 460, ceo: null, bossFace:"neutral", bossPose:"hold", bossBag:false, bossHeld: sheaf(),
+         pile:null, gone:false, miss:0, late, sort:null };
+  show(ofWorld(), { label:"사무실. 내 자리와 벽시계", bg:"offL-day" });
+  const B = () => part('boss', ofBoss());
+  const seq = [[500, () => ofBossTo(292, 1000)]];
   if (late){
-    seq.push([1400, () => { OF.bossPose = "look"; OF.bossFace = "surprise"; B(); }]);
-    seq.push([900, () => { OF.bossPose = "watch"; OF.bossFace = "stern"; B(); OF.mePose = "bow"; M(); say('b1', s.lates >= 3 ? "또 늦었네요." : "늦었네요.", 262, 262); }]);
-    seq.push([2000, () => { dropFx('b1'); OF.bossPose = "type"; B(); OF.mePose = "stand"; OF.meFace = "down"; M(); }]);
-  } else {
-    seq.push([1400, () => { OF.bossFace = "smile"; OF.bossPose = "wave"; B(); }]);
-    seq.push([1000, () => { OF.bossPose = "type"; OF.bossFace = s.face <= 1 ? "stern" : "neutral"; B(); }]);
+    seq.push([1200, () => { OF.bossPose = "watch"; OF.bossFace = "stern"; OF.bossHeld = ""; B(); OF.meSlump = true; part('me', ofMe()); say('b1', s.lates >= 3 ? "또 늦었네요." : "늦었네요.", 292, 236); }]);
+    seq.push([1900, () => { dropFx('b1'); OF.bossPose = "hold"; OF.bossFace = "neutral"; OF.bossHeld = sheaf(); B(); OF.meSlump = false; part('me', ofMe()); }]);
+  } else seq.push([1200, () => { OF.bossFace = "smile"; B(); }]);
+  if (s.day === 5) ofCeo(seq);
+  else if ((s.furLeft || 0) > 0 && !s.bossKnows){
+    seq.push([600, () => { OF.bossPose = "point"; OF.bossFace = "surprise"; OF.bossHeld = ""; B(); say('b3', "고양이 키워요?", 292, 236); }]);
+    seq.push([2000, () => { dropFx('b3'); OF.bossPose = "hold"; OF.bossFace = "smile"; OF.bossHeld = sheaf(); B(); s.bossKnows = true; }]);
   }
-  if ((s.furLeft || 0) > 0 && !s.bossKnows){
-    seq.push([600, () => { OF.bossPose = "point"; OF.bossFace = "surprise"; B(); say('b3', "고양이 키워요?", 262, 262); }]);
-    seq.push([2000, () => { dropFx('b3'); OF.bossPose = "type"; OF.bossFace = "smile"; B(); OF.meFace = "smile"; M(); s.bossKnows = true; }]);
-  }
-  if (DAYLINE[s.day]){
-    seq.push([600, () => { OF.bossPose = s.day === 4 || s.day === 8 ? "point" : "stand"; B(); say('b2', DAYLINE[s.day], 262, 262); }]);
-    seq.push([2600, () => { dropFx('b2'); OF.bossPose = "type"; B(); }]);
-  }
-  if (s.tired >= 2){
-    seq.push([500, () => { OF.mePose = "yawn"; OF.meFace = "yawn"; M(); sound('y', '하아암', 110, 246, { fs:15 }); }]);
-    seq.push([1400, () => { dropFx('y'); OF.mePose = "stand"; OF.meFace = "tired"; M(); }]);
-  }
-  seq.push([500, () => s.day === 12 ? payPhone(arrive) : ofToSix(arrive)]);
+  if (DAYLINE[s.day]) seq.push([700, () => say('b2', DAYLINE[s.day], 292, 236)], [2600, () => dropFx('b2')]);
+  seq.push([300, () => say('b4', s.day === 1 ? "오늘 회의 자료예요. 쪽 번호 순서대로 정리해서 주세요." : "오늘 자료예요. 순서대로 부탁해요.", 292, 236, { maxW:200 })]);
+  seq.push([2900, () => { dropFx('b4'); OF.bossHeld = ""; OF.bossPose = "stand"; OF.pile = "todo"; world(ofWorld()); sound('tk', '툭', 250, 266, { fs:14 }); }]);
+  seq.push([600, () => { dropFx('tk'); ofBossTo(440, 900); }]);
+  seq.push([900, ofSortOpen]);
   beats(seq);
 }
-// 시계가 6시까지 빨리 돈다. 6시 정각, 팀장님이 일어난다.
-function ofToSix(from, then){
-  const to = 18 * 60 - 7 * 60;   // 7시 기준 분
-  let cur = from;
-  const step = Math.max(6, Math.round((to - from) / 40));
+// 5일 금요일: 사장님이 들른다. 어깨에 고양이 털이 있으면 알아본다.
+function ofCeo(seq){
+  const strand = s.hiddenStrand || (s.furLeft || 0) > 0;
+  const C = o => { OF.ceo = o; part('ceo', person(0, 0, Object.assign({ wear:"ceo", hair:"ceo", face:"smile" }, o))); };
+  const ceoTo = (x, ms) => { OF.ceoX = x; walk('ceo', x, BOSS_Y, 1, ms); };
+  seq.push([500, () => { OF.bossFace = "surprise"; OF.bossPose = "stand"; OF.bossHeld = ""; part('boss', ofBoss()); ofBossTo(312, 500); C({ pose:"wave", face:"smile" }); ceoTo(232, 1300); }]);
+  if (strand){
+    seq.push([1600, () => { C({ pose:"point", face:"surprise" }); say('c1', "어? 어깨에 이 털…", 232, 236); }]);
+    seq.push([1900, () => { dropFx('c1'); C({ pose:"reach", face:"happy" });
+      putFx('photo', `<g id="photo" class="pop" pointer-events="none"><rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".45"/>
+        <rect x="110" y="96" width="140" height="236" rx="20" fill="#24273f"/><rect x="120" y="116" width="120" height="196" rx="6" fill="#fff3d6"/>
+        <svg x="120" y="140" width="120" height="150" viewBox="-36 -76 72 82">${catSit(0, 0, 1, { happy:true, wag:true })}</svg>
+        <text x="180" y="304" text-anchor="middle" font-size="13" fill="#8a6238">호떡</text></g>`); }]);
+    seq.push([1900, () => { dropFx('photo'); say('c2', "우리 호떡이랑 똑같은 색이네!", 232, 236); OF.bossFace = "smile"; part('boss', ofBoss()); s.bossCat = true; }]);
+    seq.push([2600, () => { dropFx('c2'); C({ pose:"wave", face:"happy" }); }]);
+  } else {
+    seq.push([1600, () => { C({ pose:"stand", face:"neutral" }); say('c1', "음, 다들 수고해요.", 232, 236); }]);
+    seq.push([1800, () => { dropFx('c1'); C({ pose:"wave", face:"smile" }); }]);
+  }
+  seq.push([800, () => ceoTo(470, 1200)]);
+  seq.push([1200, () => { OF.ceo = null; part('ceo', ""); OF.bossFace = "neutral"; OF.bossPose = "hold"; OF.bossHeld = sheaf(); part('boss', ofBoss()); ofBossTo(292, 400); }]);
+}
+// 책상 위를 가까이: 섞인 자료를 1쪽부터 서류함에 넣는다
+const SORT_SLOTS = [[30, 214], [150, 206], [270, 216], [36, 330], [152, 322], [268, 334]], SORT_ROW = [[34, 262], [150, 252], [266, 266]];
+function ofSortOpen(){
+  const n = OF.n;
+  let seed = s.day * 131 + 17; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const nums = Array.from({ length:n }, (_, i) => i + 1);
+  for (let i = n - 1; i > 0; i--){ const j = Math.floor(R() * (i + 1)); [nums[i], nums[j]] = [nums[j], nums[i]]; }
+  if (nums[0] === 1){ [nums[0], nums[n-1]] = [nums[n-1], nums[0]]; }
+  const slots = SORT_SLOTS.map((p, i) => i); for (let i = 5; i > 0; i--){ const j = Math.floor(R() * (i + 1)); [slots[i], slots[j]] = [slots[j], slots[i]]; }
+  OF.sort = { next:1, stapled:false, yawned:false, busy:false,
+    at: nums.map((num, i) => { const [x, y] = n <= 3 ? SORT_ROW[i] : SORT_SLOTS[slots[i]]; return { num, x: x + Math.round(R()*10 - 5), y: y + Math.round(R()*10 - 5), rot: Math.round(R()*16 - 8), on:true }; }) };
+  OF.chunk = Math.round(505 / n);
+  ofSortDraw(); ofSortHits();
+  const p1 = OF.sort.at.find(p => p.num === 1);
+  later(500, () => teach("drag", p1.x + 30, p1.y + 40, 180, 120, { key:"sort" }));
+}
+// 회의 자료 한 장: 제목 줄, 글 줄, 오른쪽 아래 큰 쪽 번호. 피곤하면 번호가 두 겹으로 흐리다.
+function pageCard(n, x, y, o={}){
+  const num = o.blur ? `<text x="${x+53}" y="${y+76}" text-anchor="end" font-size="30" fill="#24273f" opacity=".35">${n}</text><text x="${x+49}" y="${y+73}" text-anchor="end" font-size="30" fill="#24273f" opacity=".5">${n}</text>`
+    : `<text x="${x+50}" y="${y+74}" text-anchor="end" font-size="30" fill="#24273f">${n}</text>`;
+  return `<g transform="rotate(${o.rot||0} ${x+30} ${y+40})">
+    <rect x="${x}" y="${y}" width="60" height="80" rx="3" fill="#fff" stroke="#9aa0c0" stroke-width="1.6"/>
+    <rect x="${x+8}" y="${y+9}" width="${n === 1 ? 44 : 30}" height="6" rx="2" fill="${n === 1 ? '#5c6dd8' : '#c9cde0'}"/>
+    <path d="M${x+8},${y+24} h44 M${x+8},${y+32} h36 M${x+8},${y+40} h42" stroke="#dfe2ee" stroke-width="3"/>
+    ${o.stain ? `<circle cx="${x+38}" cy="${y+60}" r="13" fill="none" stroke="#c9a77a" stroke-width="3" opacity=".7"/>` : ""}${num}</g>`;
+}
+function staplerG(x, y){
+  return `<g transform="translate(${x},${y})"><rect x="-30" y="4" width="60" height="12" rx="5" fill="#3b3f5c"/><path d="M-28,4 L-26,-10 Q-24,-16 -16,-16 H26 Q32,-16 32,-8 V4 Z" fill="#e5484d"/><rect x="-22" y="-12" width="40" height="5" rx="2" fill="#ff8a8f"/></g>`;
+}
+function ofSortDraw(){
+  const S = OF.sort, [h, m] = hm(OF.min), tired = s.tired >= 2, inTray = S.next - 1;
+  const pages = S.at.map(p => p.on ? `<g id="pgc${p.num}" ${hitA("pg" + p.num, p.num + "쪽")} class="${p.shake ? 'shake' : ''}">${pageCard(p.num, p.x, p.y, { rot:p.rot, blur: tired, stain: tired && p.num === 2 })}</g>` : "").join('');
+  const under = Array.from({ length: Math.max(0, inTray - 1) }, (_, i) => `<rect x="${150 + i}" y="${82 - i*2}" width="60" height="80" rx="3" fill="#fff" stroke="#9aa0c0" stroke-width="1.2"/>`).join('');
+  putFx('sortv', `<g id="sortv">
+    <rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".5"/>
+    <rect x="12" y="46" width="336" height="404" rx="16" fill="#c8a77e" stroke="#24273f" stroke-width="3"/>
+    <rect x="20" y="54" width="320" height="388" rx="12" fill="none" stroke="#b08e64" stroke-width="2"/>
+    ${clockFace("sck", 64, 112, 30, h, m, { rim:"#5c6286" })}
+    <rect x="128" y="62" width="104" height="116" rx="8" fill="#5c6286"/><rect x="136" y="70" width="88" height="100" rx="4" fill="#7d84a8"/>
+    ${under}${inTray ? pageCard(inTray, 150 + Math.max(0, inTray - 1), 82 - Math.max(0, inTray - 1) * 2, {}) : ""}
+    ${S.stapled ? `<path d="M160,${88 - Math.max(0, inTray - 1) * 2} h14" stroke="#3b3f5c" stroke-width="3.4" stroke-linecap="round"/>` : ""}
+    <g class="tg" id="tg-tray"><rect x="122" y="56" width="116" height="128" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    ${S.next > OF.n && !S.stapled ? `<g ${hitA("stapler","스테이플러")} class="pop">${staplerG(292, 124)}<rect x="252" y="86" width="84" height="70" fill="transparent"/></g>` : ""}
+    ${pages}</g>`);
+}
+function ofSortHits(){
+  const S = OF.sort, H = {};
+  S.at.forEach(p => {
+    if (!p.on) return;
+    H["pg" + p.num] = { drag: { ghost: (x, y) => pageCard(p.num, x - 30, y - 40, { blur: s.tired >= 2 }),
+      targets: [{ key:"tray", r:[112, 48, 136, 146], fn: () => ofPut(p) }],
+      from: on => { const e = $('pgc' + p.num); if (e) e.style.opacity = on ? .25 : 1; } }, key: () => ofPut(p) };
+  });
+  if (S.next > OF.n && !S.stapled) H.stapler = { tap: ofStaple, key: ofStaple };
+  hits(H);
+}
+// 서류함에 한 장 넣기. 맞으면 일이 그만큼 진행되고, 틀리면 튕겨 나온다.
+function ofPut(p){
+  const S = OF.sort; if (S.busy || !p.on || S.stapled) return;
+  idlePoke();
+  if (p.num !== S.next){
+    OF.miss++; S.busy = true; p.shake = true;
+    ofSortDraw(); ofSortHits(); sound('tik', '틱', 180, 200, { fs:17, color:"#ffb3a8" });
+    return ofAdd(15, () => { p.shake = false; S.busy = false; dropFx('tik'); ofSortDraw(); ofSortHits(); });
+  }
+  p.on = false; S.next++; S.busy = true;
+  ofSortDraw(); hits({}); sound('tak', '착', 180, 200, { fs:17 });
+  ofAdd(OF.chunk, () => {
+    S.busy = false; dropFx('tak');
+    if (s.tired >= 2 && S.next === 3 && !S.yawned && OF.n > 2){ S.yawned = true; return ofYawn(); }
+    ofSortDraw(); ofSortHits();
+    if (S.next > OF.n) later(200, () => teach("tap", 292, 120, 0, 0, { key:"stapler" }));
+  });
+}
+// 시계를 min분 빨리 돌린다. 6시를 넘는 순간 팀장님이 퇴근한다.
+function ofAdd(min, then){
+  const to = OF.min + min, step = Math.max(2, Math.ceil(min / 14));
   const iv = every(40, () => {
-    cur = Math.min(to, cur + step); const [h, m] = hm(cur); setClock("ock", h, m);
-    if (cur >= to){
-      clearInterval(iv); OF.dusk = true; OF.clock = [18, 0];
-      later(300, () => { OF.bossUp = true; world(ofWorld()); sound('six', '6시 정각', 232, 140, { fs:14 }); });
-      later(1300, () => { dropFx('six'); walk('bossU', 140, 0, 1, 1300); });
-      later(2800, () => fadeTo(then || evening, 600));
-    }
+    OF.min = Math.min(to, OF.min + step); ofClock();
+    if (!OF.gone && OF.min >= SIX){ clearInterval(iv); return ofSixDuring(() => ofAdd(to - OF.min, then)); }
+    if (OF.min >= to){ clearInterval(iv); if (then) then(); }
+  });
+}
+function ofSixDuring(then){
+  const v = $('sortv'); if (v) v.style.display = 'none';
+  const saved = HIT; HIT = {}; idleKill();
+  ofSix(() => { const v2 = $('sortv'); if (v2) v2.style.display = ''; HIT = saved; then(); });
+}
+// 6시 정각. 팀장님은 가방을 들고 내 자리를 지나 퇴근한다.
+function ofSix(then){
+  OF.gone = true; setPlate("offL-dusk");
+  const left = OF.sort && OF.sort.next <= OF.n;
+  sound('six', '6시', OCK[0] - 4, OCK[1] + 36, { fs:14 });
+  OF.bossPose = "stand"; OF.bossFace = "smile"; OF.bossBag = true; OF.bossHeld = "";
+  ofBossTo(440, 0); part('boss', ofBoss());
+  later(120, () => ofBossTo(292, 900));
+  later(1100, () => { OF.bossPose = "wave"; part('boss', ofBoss()); say('bye', left ? "먼저 가요. 너무 늦지 말아요." : "먼저 가요.", 292, 236, { maxW:200 }); });
+  later(2700, () => { dropFx('bye', 'six'); OF.bossPose = "stand"; part('boss', ofBoss()); ofBossTo(450, 1000); });
+  later(3800, then);
+}
+function ofYawn(){
+  const v = $('sortv'); if (v) v.style.display = 'none';
+  OF.meSlump = true; part('me', ofMe()); sound('y', '하아암', SEAT[0], 250, { fs:15 });
+  ofAdd(20, () => later(700, () => { dropFx('y'); OF.meSlump = false; part('me', ofMe()); ofSortDraw(); ofSortHits(); }));
+}
+function ofStaple(){
+  const S = OF.sort; if (!S || S.stapled || S.next <= OF.n) return;
+  S.stapled = true; idleKill(); hits({});
+  sound('chk', '철컥', 292, 92, { fs:17 });
+  ofSortDraw();
+  s.work++; s.workMiss += OF.miss;
+  if (OF.miss === 0 && !OF.late) s.face = clamp(s.face + 1, 0, 5);
+  if (OF.miss >= 4) s.face = clamp(s.face - 1, 0, 5);
+  ofAdd(10, () => later(700, () => { dropFx('sortv', 'chk'); OF.pile = "done"; world(ofWorld()); ofHandIn(); }));
+}
+// 다 됐으면 팀장님께 낸다. 팀장님이 먼저 갔으면 자리에 두고 나온다.
+function ofHandIn(){
+  const over = Math.max(0, OF.min - SIX);
+  s.overtimeToday = over; if (over > 0) s.overtime++;
+  if (OF.gone){
+    later(500, () => { OF.meSlump = true; part('me', ofMe()); sound('hu', '휴…', SEAT[0], 250, { fs:15 }); });
+    return later(1900, () => fadeTo(evening, 700));
+  }
+  const line = OF.miss === 0 ? "깔끔하네요. 고마워요." : OF.miss >= 4 ? "음, 받았어요." : "고마워요.";
+  const seq = [[300, () => { OF.bossPose = "stand"; OF.bossFace = OF.miss >= 4 ? "neutral" : "smile"; part('boss', ofBoss()); ofBossTo(292, 900); }],
+    [1100, () => { OF.pile = null; OF.bossHeld = sheaf(); OF.bossPose = "hold"; world(ofWorld()); say('b5', line, 292, 236); }],
+    [2200, () => { dropFx('b5'); OF.bossHeld = ""; OF.bossPose = "stand"; part('boss', ofBoss()); ofBossTo(440, 900); }]];
+  seq.push([1000, () => s.day === 12 ? payPhone() : ofToSix()]);
+  beats(seq);
+}
+// 남은 시간은 빨리 돌린다. 6시 정각, 팀장님이 퇴근하고 나도 나온다.
+function ofToSix(then){
+  const go = () => later(300, () => fadeTo(then || evening, 700));
+  if (OF.gone) return go();
+  const step = Math.max(6, Math.round((SIX - OF.min) / 30));
+  const iv = every(40, () => {
+    OF.min = Math.min(SIX, OF.min + step); ofClock();
+    if (OF.min >= SIX){ clearInterval(iv); ofSix(go); }
   });
 }
 
 /* ================= 저녁: 노트북(수습 과제)과 낚싯대. 시계는 11시를 향해 간다 ================= */
 let EV = null;
 const EV_END = 210;  // 19:30 + 210분 = 23:00
+const LAP = [262, 226], CUP = [158, 226], PHONE = [304, 224];
 function evening(){
   if (s.day === 9) return hoodieEvening();
   if (s.day === 12) return paydayEvening();
-  EV = { min:0, work:0, catAt:"desk", pounces:0, wand:null, taps:0, trips:0, garble:0, done:false, leap:0, lastF:null };
-  show(evWorld(), { label:"저녁 책상. 노트북 화면과 고양이" });
+  const rain = s.day === 3;
+  EV = { min: clamp(s.overtimeToday || 0, 0, 150), work:0, catAt: rain ? "hide" : "desk", pounces:0, wand:null, taps:0, trips:0, garble:0, done:false, leap:0, lastF:null,
+         rain, curtain:0, phone: (s.food <= 1 && !s.order) ? "ring" : null, hungry: !!s.hungryToday };
+  show(evWorld(), { label:"저녁 책상. 노트북 화면과 고양이", bg: rain ? "bedD-rain" : "bedD-eve" });
   evHits();
   every(1500, () => evAdd(1));
-  later(500, () => teachCycle([["tap", 180, 250], ["drag", 66, 196, 160, 120]], { key:"evening" }));
+  if (rain){ every(2600, evThunder); later(700, evThunder); }
+  if (EV.hungry) every(3800, () => { if (EV.done || EV.wand) return; sound('hm', '야옹!', 200, 190, { fs:14 }); later(900, () => dropFx('hm')); });
+  later(500, evTeach);
+}
+function evTeach(){
+  if (!EV || EV.done) return;
+  const L = [];
+  if (EV.rain && EV.curtain < 1) L.push(["drag", 154, 120, 96, 120]);
+  if (EV.phone === "ring") L.push(["tap", PHONE[0], PHONE[1] - 8]);
+  if (EV.catAt === "keys") L.push(["drag", LAP[0], LAP[1] - 10, 120, 300]);
+  L.push(["rub", LAP[0], LAP[1] - 40], ["drag", CUP[0], CUP[1] - 60, 90, 300]);
+  teachCycle(L.slice(0, 3), { key:"evening" + L.length });
 }
 const evClock = () => { const t = 19*60 + 30 + EV.min; return [Math.floor(t / 60), t % 60]; };
 function evCatIn(){
-  if (EV.catAt === "keys") return catLoaf(186, 300, 1.25, { awake:true });
-  if (EV.catAt === "leap" && EV.lastF) return catLeap(EV.lastF.x - 20, EV.lastF.y + 70, 1.15);
+  if (EV.catAt === "keys") return catLoaf(LAP[0] - 4, LAP[1] - 2, .82, { awake:true });
+  if (EV.catAt === "leap" && EV.lastF) return catLeap(EV.lastF.x - 20, EV.lastF.y + 70, 1.05);
   if (EV.catAt === "held") return "";
-  return catSit(304, 306, 1.08, { wag: EV.pounces > 0, happy: EV.pounces >= 4 });
+  if (EV.catAt === "hide") return `<g class="shiver">${catLoaf(232, 374, .9, { })}</g><polygon points="245,352 250,344 254,353" fill="var(--fur)"/>`;
+  return catSit(196, 226, .78, { wag: EV.pounces > 0, happy: EV.pounces >= 4 });
 }
 function evScreen(){
-  if (EV.catAt === "keys" || EV.garble > 0) {
-    return `<g>${laptopFront(180, 336, { progress: EV.work })}<text x="136" y="262" font-size="12" fill="#5c6286">${"ㅁㄴㅇㄹ".repeat(Math.min(4, 1 + EV.garble))}</text></g>`;
-  }
-  return laptopFront(180, 336, { progress: EV.work }) + (EV.work >= 1 ? `<text x="180" y="256" text-anchor="middle" font-size="16" fill="#2f9e6a">완료</text>` : "");
+  const lap = (inner) => `<g transform="translate(${LAP[0]},${LAP[1]}) scale(.62) translate(${-LAP[0]},${-LAP[1]})">${inner}</g>`;
+  if (EV.catAt === "keys" || EV.garble > 0) return lap(`${laptopFront(LAP[0], LAP[1], { progress: EV.work })}<text x="${LAP[0]-44}" y="${LAP[1]-74}" font-size="18" fill="#5c6286">${"ㅁㄴㅇㄹ".repeat(Math.min(3, 1 + EV.garble))}</text>`);
+  return lap(laptopFront(LAP[0], LAP[1], { progress: EV.work }) + (EV.work >= 1 ? `<text x="${LAP[0]}" y="${LAP[1]-80}" text-anchor="middle" font-size="22" fill="#2f9e6a">완료</text>` : ""));
 }
 const evWear = () => s.hoodie === "wear" ? "hoodie" : "tee";
-const evMe = () => personBack(180, 480, { wear: evWear(), reach: !EV.wand, typing: EV.typingNow, wand: EV.wand ? [46, -138] : null });
-const evCup = () => EV.wand ? "" : `<g ${hitA("wand","낚싯대")}>${toyCup(50, 306)}<rect x="22" y="176" width="78" height="134" fill="transparent"/></g>`;
+const evMe = () => personBack(238, 352, { wear: evWear(), reach: !EV.wand, typing: EV.typingNow, wand: EV.wand ? [-40, -150] : null });
+const evCup = () => EV.wand ? "" : `<g ${hitA("wand","낚싯대")}>${toyCup(CUP[0], CUP[1])}<rect x="${CUP[0]-24}" y="${CUP[1]-124}" width="56" height="128" fill="transparent"/></g>`;
+const evPhone = () => EV.phone ? `<g id="phoneL" class="${EV.phone === 'ring' ? 'vib' : ''}" ${hitA("phone","휴대폰")}><rect x="${PHONE[0]-10}" y="${PHONE[1]-6}" width="22" height="8" rx="2" fill="#24273f"/><rect x="${PHONE[0]-8}" y="${PHONE[1]-5}" width="18" height="5" rx="1" fill="${EV.phone === 'ring' ? '#cfe0ff' : '#3b3f5c'}"/>
+    ${EV.phone === 'ring' ? `<circle cx="${PHONE[0]+12}" cy="${PHONE[1]-10}" r="6" fill="#e5484d"/>` : ""}<rect x="${PHONE[0]-20}" y="${PHONE[1]-30}" width="42" height="40" fill="transparent"/></g>` : "";
 function evWorld(){
   const [h, m] = evClock();
-  const f = EV.wand;
-  return `${wallR("#d6cde6", 0, 300)}${win(24, 40, 96, 90, s.day === 3 ? "rain" : "night", { curtain:"#5c6290", lightning: s.day === 3 })}
-    ${calendarW(140, 46, { x: s.day - 1, circle: s.day >= 4 ? 8 : null })}
-    ${clockFace("eck", 292, 80, 30, h, m)}
-    <path d="M0,300 H${VW} V404 H0 Z" fill="var(--wood)"/><path d="M0,300 H${VW}" stroke="#c9a57e" stroke-width="3"/>
-    <rect x="0" y="404" width="${VW}" height="${VH+150-404}" fill="var(--wood-d)"/>
+  const f = EV.wand, W = DESK.win;
+  return `${EV.rain ? `<svg x="${W[0]}" y="${W[1]}" width="${W[2]}" height="${W[3]}" overflow="hidden"><g transform="translate(${-W[0]},${-W[1]})">${rainOn(W[0], W[1], W[2], W[3])}</g></svg><rect id="winFlash" x="${W[0]}" y="${W[1]}" width="${W[2]}" height="${W[3]}" fill="#fff" opacity="0"/>` : ""}
+    <g id="curt">${curtainPull(W[0], W[1], W[2], W[3], EV.curtain)}</g>
+    ${calendarW(204, 46, { x: s.day - 1, circle: s.day >= 4 ? 8 : null })}
+    ${clockFace("eck", 300, 80, 22, h, m)}
     <g id="scr">${evScreen()}</g>
     <g id="evcup">${evCup()}</g>
     <g id="evcat">${evCatIn()}</g>
-    <g id="evwand">${f ? wand(226, 342, f.x, f.y) : ""}</g>
+    <g id="evwand">${f ? wand(198, 222, f.x, f.y) : ""}</g>
     <g id="evme">${evMe()}</g>
-    <rect ${hitA("keys","노트북 자판")} x="112" y="196" width="138" height="112" fill="transparent"/>
-    ${EV.catAt === "keys" ? `<rect ${hitA("cat", CAT + " 내려놓기")} x="140" y="270" width="96" height="44" fill="transparent"/>` : ""}
-    <g class="tg" id="tg-side"><rect x="262" y="230" width="90" height="84" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
+    <rect ${hitA("keys","노트북 자판")} x="214" y="136" width="100" height="96" fill="transparent"/>
+    ${EV.catAt === "keys" ? `<rect ${hitA("cat", CAT + " 내려놓기")} x="226" y="196" width="76" height="34" fill="transparent"/>` : ""}
+    <g id="evphone">${evPhone()}</g>
+    ${EV.rain && EV.curtain < 1 ? `<rect ${hitA("curtain","커튼 치기")} x="${W[0] + W[2] - 6 - W[2]/2*EV.curtain}" y="${W[1] - 10}" width="56" height="${W[3] + 24}" fill="transparent"/>` : ""}
+    <g class="tg" id="tg-side"><rect x="10" y="250" width="160" height="120" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    ${hudFood()}`;
 }
 function evHits(){
   hits({
     keys: { rub: { fn: evType, per: 70 }, key: evType },
-    cat: { drag: { ghost:(x,y) => `<g transform="translate(${x},${y+14})">${catLoaf(0, 0, 1.1, { awake:true })}</g>`,
+    cat: { drag: { ghost:(x,y) => `<g transform="translate(${x},${y+14})">${catLoaf(0, 0, 1, { awake:true })}</g>`,
       from: on => { if (on){ EV.catAt = "held"; part('evcat', ""); } },
-      targets:[{ key:"side", r:[240, 200, 120, 130], fn: evCatOff }], miss: evCatOff }, key: evCatOff },
-    wand: { down: evWandOn, dragMove: evWandMove, up: evWandOff, key: () => { evWandOn({ x:150, y:150 }); evPounce(); evWandOff(); } }
+      targets:[{ key:"side", r:[0, 230, 190, 160], fn: evCatOff }], miss: evCatOff }, key: evCatOff },
+    wand: { down: evWandOn, dragMove: evWandMove, up: evWandOff, key: () => { evWandOn({ x:110, y:250 }); evPounce(); evWandOff(); } },
+    curtain: { pull: { progress:(a,b) => (a.x - b.x) / 60, move: v => { if (!EV || EV.curtain >= 1) return; EV.curtain = v; part('curt', curtainPull(DESK.win[0], DESK.win[1], DESK.win[2], DESK.win[3], v)); }, done: evCurtain, tapped: () => {} }, key: evCurtain },
+    phone: { tap: evPhoneOpen, key: evPhoneOpen },
+    hudF: { tap: () => foodNotice(), key: () => foodNotice() }
   });
+}
+// 천둥: 창이 번쩍, 보리가 떤다. 커튼을 치면 거의 안 보인다.
+function evThunder(){
+  if (!EV || EV.done) return;
+  const shut = EV.curtain >= 1;
+  const w = $('winFlash'); if (w && !shut){ w.setAttribute('opacity', '.9'); later(120, () => w.setAttribute('opacity', '0')); later(260, () => w.setAttribute('opacity', '.7')); later(360, () => w.setAttribute('opacity', '0')); }
+  if (!shut){ putFx('flash', `<rect id="flash" class="pop" x="0" y="-150" width="${VW}" height="${VH+300}" fill="#fff" opacity=".2" pointer-events="none"/>`); later(160, () => dropFx('flash')); }
+  sound('thun', '우르릉', 92, 52, { fs: shut ? 11 : 15, color:"#cfe0ff" }); later(1100, () => dropFx('thun'));
+}
+function evCurtain(){
+  if (!EV || EV.curtain >= 1 && EV.curtainDone) return;
+  EV.curtain = 1; EV.curtainDone = true; s.curtain = true; idleKill();
+  part('curt', curtainPull(DESK.win[0], DESK.win[1], DESK.win[2], DESK.win[3], 1));
+  sound('sw', '스르륵', 90, 120, { fs:14 }); later(900, () => dropFx('sw'));
+  world(evWorld()); evHits();
+  later(1000, () => { if (!EV || EV.done) return; if (EV.catAt === "hide"){ EV.catAt = "desk"; part('evcat', evCatIn()); sound('nya', '냥', 196, 150, { fs:14 }); later(900, () => dropFx('nya')); } evTeach(); });
+  evAdd(5);
+}
+// 사료 주문: 휴대폰을 누르면 두 가지 중 하나를 고른다
+function evPhoneOpen(){
+  if (!EV || EV.phone !== "ring" || $('shop')) return;
+  idleKill();
+  const card = (x, kind, title, sub, n) => `<g ${hitA("buy_" + kind, title)}><rect x="${x}" y="150" width="128" height="190" rx="12" fill="#fff" stroke="#24273f" stroke-width="2.5"/>
+    <g transform="translate(${x + 64},248) scale(1.6) translate(${-x - 64},-248)">${foodBag(x + 64, 248, { kind, level:1 })}</g>
+    <text x="${x + 64}" y="282" text-anchor="middle" font-size="14" fill="#24273f">${title}</text>
+    <text x="${x + 64}" y="302" text-anchor="middle" font-size="13" fill="#64688c">${sub}</text>
+    <g>${Array.from({ length:n }, (_, i) => `<rect x="${x + 64 - n * 5 + i * 10}" y="314" width="8" height="10" rx="1" fill="#a0673a" stroke="#24273f" stroke-width="1"/>`).join('')}</g></g>`;
+  putFx('shop', `<g id="shop" class="pop"><rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".6"/>
+    <rect x="16" y="96" width="328" height="272" rx="18" fill="#eef1fb" stroke="#24273f" stroke-width="3"/>
+    <text x="180" y="132" text-anchor="middle" font-size="17" fill="#24273f">사료 주문 (값은 같아요)</text>
+    ${card(30, "tuna", `${CATi()} 좋아하는 맛`, "참치맛 · 4번", 4)}${card(202, "chick", "양이 많은 것", "닭고기맛 · 8번", 8)}</g>`);
+  const pick = kind => { if (!$('shop')) return; modalClose('shop'); s.order = kind; EV.phone = "done"; part('evphone', evPhone()); evAdd(10);
+    sound('ok', '주문 완료', 180, 200, { fs:16, color:"#ffd84d" }); later(1300, () => dropFx('ok')); later(400, evTeach); };
+  modalOpen('shop', { buy_tuna: { tap: () => pick("tuna"), key: () => pick("tuna") }, buy_chick: { tap: () => pick("chick"), key: () => pick("chick") } });
 }
 function evAdd(min){
   if (EV.done) return;
@@ -1772,39 +2470,41 @@ function evAdd(min){
 function evType(){
   if (EV.done || EV.wand) return;
   idlePoke();
-  if (EV.catAt === "keys"){ EV.garble++; part('scr', evScreen()); sound('ng', '냥', 230, 262, { fs:13 }); later(500, () => dropFx('ng')); evAdd(5);
-    if (EV.garble === 1) teachCycle([["drag", 186, 286, 306, 270], ["drag", 66, 196, 160, 120]], { key:"catkeys", now:true });
+  if (EV.catAt === "keys"){ EV.garble++; part('scr', evScreen()); sound('ng', '냥', LAP[0] + 30, LAP[1] - 60, { fs:13 }); later(500, () => dropFx('ng')); evAdd(5);
+    if (EV.garble === 1) teachCycle([["drag", LAP[0], LAP[1] - 10, 120, 300], ["drag", CUP[0], CUP[1] - 60, 90, 300]], { key:"catkeys", now:true });
     return; }
   if (EV.work >= 1){ evAdd(5); return; }
   EV.taps++; EV.work = Math.min(1, EV.work + 1/12);
   EV.typingNow = true; part('scr', evScreen());
-  sound('tk', '타닥', 150 + (EV.taps % 3) * 30, 190, { fs:13 }); later(400, () => dropFx('tk'));
+  sound('tk', '타닥', 236 + (EV.taps % 3) * 22, 128, { fs:13 }); later(400, () => dropFx('tk'));
   if (EV.work >= 1){ s.prep++; dayLog().work = true; part('scr', evScreen()); }
   evAdd(15);
-  // 보리가 자판 위로 올라온다
-  if ((EV.taps === 4 && EV.trips === 0) || (EV.taps === 9 && EV.trips === 1)){
-    EV.trips++; later(300, () => { if (EV.done || EV.wand) return; EV.catAt = "keys"; EV.garble = 0; world(evWorld()); evHits(); sound('ng', '냥', 230, 262, { fs:14 }); later(800, () => dropFx('ng')); EV.typingNow = false; });
+  // 보리가 자판 위로 올라온다 (배가 고프면 더 자주)
+  const trips = EV.hungry ? [2, 5, 8] : [4, 9];
+  if (EV.catAt !== "hide" && trips[EV.trips] === EV.taps){
+    EV.trips++; later(300, () => { if (EV.done || EV.wand) return; EV.catAt = "keys"; EV.garble = 0; world(evWorld()); evHits(); sound('ng', EV.hungry ? '야옹!' : '냥', LAP[0] + 30, LAP[1] - 60, { fs:14 }); later(800, () => dropFx('ng')); EV.typingNow = false; });
   }
 }
 function evCatOff(){ if (EV.catAt === "desk") return; EV.catAt = "desk"; EV.garble = 0; world(evWorld()); evHits(); armIdle(); }
 function evWandOn(p){
   if (EV.done) return;
-  EV.wand = { x: clamp(p.x, 20, 340), y: clamp(p.y, 40, 300) }; EV.lastF = null;
+  EV.wand = { x: clamp(p.x, 20, 340), y: clamp(p.y, 60, 330) }; EV.lastF = null;
   if (EV.catAt === "keys" || EV.catAt === "held"){ EV.catAt = "desk"; EV.garble = 0; part('scr', evScreen()); }
-  part('evcup', ""); part('evcat', evCatIn()); part('evwand', wand(226, 342, EV.wand.x, EV.wand.y)); part('evme', evMe());
+  part('evcup', ""); part('evcat', evCatIn()); part('evwand', wand(198, 222, EV.wand.x, EV.wand.y)); part('evme', evMe());
   dropFx('gh');
 }
 function evWandMove(p){
   if (!EV.wand || EV.done) return;
-  const f = { x: clamp(p.x, 20, 340), y: clamp(p.y, 40, 300) };
+  const f = { x: clamp(p.x, 20, 340), y: clamp(p.y, 60, 330) };
   const v = EV.lastF ? Math.hypot(f.x - EV.lastF.x, f.y - EV.lastF.y) : 0;
   EV.wand = f;
-  part('evwand', wand(226, 342, f.x, f.y));
+  part('evwand', wand(198, 222, f.x, f.y));
   if (v > 16 && Date.now() > EV.leap) evPounce(f);
   EV.lastF = f;
 }
 function evPounce(f){
-  f = f || EV.wand || { x:200, y:160 };
+  f = f || EV.wand || { x:110, y:250 };
+  if (EV.catAt === "hide"){ sound('no', '…', 232, 340, { fs:14 }); later(600, () => dropFx('no')); EV.leap = Date.now() + 900; return; }   // 무서워서 안 나온다
   EV.leap = Date.now() + 700; EV.pounces++; EV.lastF = f; EV.catAt = "leap";
   part('evcat', evCatIn());
   heart(f.x, f.y - 10);
@@ -1818,49 +2518,45 @@ function evWandOff(){
 }
 function evEnd(){
   if (EV.done) return;
-  EV.done = true; hits({}); idleKill();
+  EV.done = true; hits({}); idleKill(); dropFx('shop', 'note');
   s.laptopNight = EV.work >= .6;
-  sound('late', '11시', 292, 136, { fs:15 });
+  if (EV.hungry) bond(-1);
+  sound('late', '11시', 300, 132, { fs:15 });
   later(1200, () => fadeTo(() => night(false), 600));
 }
 
 /* ================= 밤: 누워서. 문을 열까, 이불을 머리끝까지 덮을까 ================= */
 let NT = null;
-const ND = { x:238, y:70, w:90, h:230 };
+const ND = BRD;
 function night(final){
   NT = { final:!!final, open:0, cover:0, holding:false, done:false, t0:0, tries:0 };
   const thunder = s.day === 3;
-  show(ntWorld(), { card: final ? "마지막 밤" : "", label:"밤. 침대에 누워 있다. 닫힌 방문 아래로 고양이 발" });
+  show(ntWorld(), { card: final ? "마지막 밤" : "", label:"밤. 침대에 누워 있다. 닫힌 방문 아래로 고양이 발", bg:"bedR-dark" });
   ntHits();
   const meowOn = () => { ntMeow(); every(thunder ? 2000 : 2800, ntMeow); };
   if (final) later(2200, meowOn); else meowOn();
-  later(final ? 2300 : 900, () => teachCycle([["drag", ND.x + ND.w - 14, ND.y + ND.h*.52, ND.x + 10, ND.y + ND.h*.52], ["drag", 170, 400, 170, 316]], { key:"night", wait:6500 }));
+  later(final ? 2300 : 900, () => teachCycle([["drag", ND.x + 14, ND.y + ND.h*.54, ND.x - 46, ND.y + ND.h*.54], ["drag", 170, 410, 170, 322]], { key:"night", wait:6500 }));
 }
 const ntQuiet = () => s.hoodie === "door" || s.bond <= 0;
 function ntDoor(){
   const inDoor = NT.open >= .55 && !ntQuiet() ? catSit(ND.x + 46, ND.y + ND.h - 2, .8, { wag:true }) : "";
-  return doorIn(ND.x, ND.y, ND.w, ND.h, NT.open, { paws: !ntQuiet() && s.bond >= 1, hoodie: s.hoodie === "door", scratch: s.day === 3, beyond:"#141629", inDoor });
+  return doorG(ND, NT.open, { paws: !ntQuiet() && s.bond >= 1, hoodie: s.hoodie === "door", scratch: s.day === 3 || s.hungryToday, beyond:"#141629", floorB:"#1c1f3a", leaf:"#4a5078", panel:"#5a608a", gap:"#3a3f63", inDoor });
 }
 function ntBlanket(){
   const c = NT.cover, ty = 378 - c*96, lx = 86 - c*80;
-  return `<path d="M${lx},${ty} Q${(lx+264)/2},${ty-18} 264,${ty+10} V446 H${lx} Z" fill="var(--blanket)"/>
-    <path d="M${lx+20},${ty+22} q${(260-lx)*.4},-12 ${(260-lx)*.85},4" stroke="#7c8fc8" stroke-width="3" fill="none"/>`;
+  return blanketFront(lx, ty, 290);
 }
 function ntFace(){ return NT.cover >= 1 ? "sleep" : NT.open > 0 ? "surprise" : s.day === 3 ? "worry" : ntQuiet() ? "neutral" : "worry"; }
 function ntWorld(){
-  const thunder = s.day === 3;
-  return `${wallR("#363b63", 0, 300)}${floorBand(300, "#2a2d4c", "#22243d")}
-    ${win(20, 46, 90, 90, thunder ? "rain" : "night", { curtain:"#5c6290", lightning: thunder })}
-    ${clockFace("nck", 172, 62, 22, 11, NT.final ? 30 : 0)}
+  return `${clockFace("nck", 128, 70, 22, 11, NT.final ? 30 : 0, { face:"#8d8fae", rim:"#3a3550" })}
     <g id="ndoor">${ntDoor()}</g>
-    <rect x="0" y="292" width="20" height="160" rx="4" fill="var(--wood-d)"/>
-    <rect x="16" y="382" width="250" height="64" rx="8" fill="var(--sheet)"/><rect x="16" y="430" width="250" height="40" fill="var(--wood)"/>
-    <ellipse cx="62" cy="372" rx="48" ry="17" fill="#fff" stroke="#d6d9ea" stroke-width="2"/>
+    ${bedFront(382)}
     <g id="nhead"><g transform="translate(62,352) scale(1.15) translate(0,168)">${headG({ face: ntFace() })}</g></g>
     <g id="ncat"></g>
     <g id="nblk">${ntBlanket()}</g>
     <rect ${hitA("door","방문 열기")} x="${ND.x}" y="${ND.y}" width="${ND.w}" height="${ND.h}" fill="transparent"/>
-    <rect ${hitA("blanket","이불을 머리끝까지")} x="70" y="350" width="200" height="110" fill="transparent"/>
+    <rect ${hitA("blanket","이불을 머리끝까지")} x="70" y="350" width="220" height="130" fill="transparent"/>
+    ${hudFood()}
     <rect id="ndim" class="dimmer" x="0" y="-150" width="${VW}" height="${VH+300}" fill="#05060d" opacity="0" pointer-events="none"/>`;
 }
 function ntHits(){
@@ -1873,13 +2569,14 @@ function ntMeow(){
   if (!NT || NT.done) return;
   const x = ND.x + ND.w/2, y = ND.y + ND.h - 40;
   dropFx('meow');
-  if (s.day === 3 && !NT.holding){ putFx('flash', `<rect id="flash" class="pop" x="0" y="-150" width="${VW}" height="${VH+300}" fill="#fff" opacity=".25" pointer-events="none"/>`); later(160, () => dropFx('flash')); sound('thun', '우르릉', 66, 36, { fs:14, color:"#cfe0ff" }); later(1100, () => dropFx('thun')); }
+  if (s.day === 3 && !NT.holding){ putFx('flash', `<rect id="flash" class="pop" x="0" y="-150" width="${VW}" height="${VH+300}" fill="#fff" opacity="${s.curtain ? .08 : .25}" pointer-events="none"/>`); later(160, () => dropFx('flash')); sound('thun', '우르릉', 66, 36, { fs: s.curtain ? 11 : 14, color:"#cfe0ff" }); later(1100, () => dropFx('thun')); }
   if (s.hoodie === "door"){ sound('meow', '골골…', x, y, { fs:13 }); return; }
   if (s.bond <= 0) return;
   const loud = NT.holding ? Math.max(0, 1 - (Date.now() - NT.t0) / (2600 * SPEED)) : 1;
   if (loud <= .15) return;
-  const t = s.day === 3 ? "냐아앙!" : s.bond >= 6 ? "야옹~ 야옹~" : s.bond >= 3 ? "야옹" : "…";
-  sound('meow', t, x - (s.bond >= 6 ? 10 : 0), y, { fs: Math.round((s.bond >= 6 || s.day === 3 ? 19 : 16) * (.55 + loud*.45)) });
+  const scared = s.day === 3 && !s.curtain, hungry = s.hungryToday;
+  const t = scared ? "냐아앙!" : hungry ? "야옹! 야옹!" : s.bond >= 6 ? "야옹~ 야옹~" : s.bond >= 3 ? "야옹" : "…";
+  sound('meow', t, x - (s.bond >= 6 || hungry ? 10 : 0), y, { fs: Math.round((s.bond >= 6 || scared || hungry ? 19 : 16) * (.55 + loud*.45)) });
 }
 function ntPull(p){
   if (NT.done || NT.y0 == null) return;
@@ -1908,7 +2605,7 @@ function ntOpen(){
   s.slept++; s.lastOpen = !empty; s.tired = clamp(s.tired + (empty ? 0 : 1), 0, 3);
   bond(NT.tries > 0 || empty ? 1 : 2);
   later(700, () => {
-    part('ndoor', doorIn(ND.x, ND.y, ND.w, ND.h, 1, { beyond:"#141629" }));
+    part('ndoor', doorG(ND, 1, { beyond:"#141629", floorB:"#1c1f3a", leaf:"#4a5078", panel:"#5a608a" }));
     if (!empty){ part('ncat', catLoaf(146, 384, 1.05, { awake:true })); sound('gol', '골골', 172, 330, { fs:15 }); heart(130, 340); }
     part('nhead', `<g transform="translate(62,352) scale(1.15) translate(0,168)">${headG({ face: empty ? "sad" : "happy" })}</g>`);
   });
@@ -1921,13 +2618,13 @@ function ntOpen(){
 }
 // 같이 잔 밤의 새벽: 보리가 얼굴을 밟는다 (그래서 아침이 피곤하다)
 function dawn(){
-  show(`${wallR("#22264a", 0, 300)}${floorBand(300, "#1c1f3a", "#15172c")}${clockFace("nck", 172, 62, 22, 5, 0)}
-    <rect x="0" y="292" width="20" height="160" rx="4" fill="var(--wood-d)"/><rect x="16" y="382" width="250" height="64" rx="8" fill="var(--sheet)"/><rect x="16" y="430" width="250" height="40" fill="var(--wood)"/>
-    <ellipse cx="62" cy="372" rx="48" ry="17" fill="#fff" stroke="#d6d9ea" stroke-width="2"/>
+  show(`${clockFace("nck", 128, 70, 22, 5, 0, { face:"#8d8fae", rim:"#3a3550" })}
+    ${doorG(ND, s.lastOpen ? 1 : 0, { beyond:"#141629", floorB:"#1c1f3a", leaf:"#4a5078", panel:"#5a608a" })}
+    ${bedFront(382)}
     <g transform="translate(62,352) scale(1.15) translate(0,168)">${headG({ face:"surprise" })}</g>
-    <path d="M86,378 Q175,360 264,388 V446 H86 Z" fill="var(--blanket)"/>
-    <g class="knead">${catStand(70, 372, 1.05)}</g>`, { label:"새벽 다섯 시, 고양이가 얼굴을 밟는다" });
-  sound('nya', '냐앙', 120, 250, { fs:17 });
+    ${blanketFront(86, 378, 290)}
+    <g class="knead">${catStand(70, 372, 1.05)}</g>`, { label:"새벽 다섯 시, 고양이가 얼굴을 밟는다", bg:"bedR-dark" });
+  sound('nya', s.hungryToday ? '냐앙! 냐앙!' : '냐앙', 120, 250, { fs:17 });
   later(2600, () => fadeTo(nextDay, 600));
 }
 function ntSleep(){
@@ -1940,97 +2637,71 @@ function ntSleep(){
   later(700, () => throughDoor(catNight, "78%", "52%"));
 }
 
-/* ================= 5일 금요일: 고양이를 좋아하는 사장님 ================= */
-function ceoDay(){
-  const L = dayLog(), late = !!L.late;
-  const strand = s.hiddenStrand || (s.furLeft || 0) > 0;
-  const arrive = (MO && MO.leaveMin != null ? MO.leaveMin : 52) + 60;
-  OF = { clock: hm(arrive), dusk:false, bossUp:false, bossX:300, bossFace:"neutral", bossPose:"type", meX:-70, meFace: late ? "panic" : "neutral", mePose:"stand" };
-  show(ofWorld() + `<g id="ceo" class="mover" style="transform:translate(430px,452px)">${person(0, 0, { wear:"ceo", hair:"ceo", face:"smile", flip:true })}</g>`, { label:"사무실. 사장님이 들어온다" });
-  const B = () => part('boss', ofBoss()), M = () => part('me', ofMe());
-  const C = (o) => part('ceo', person(0, 0, Object.assign({ wear:"ceo", hair:"ceo", face:"smile", flip:true }, o)));
-  const seq = [[200, () => { OF.meX = 110; walk('me', 110, 452, 1, 1100); }]];
-  if (late) seq.push([1300, () => { OF.bossPose = "watch"; OF.bossFace = "stern"; B(); OF.mePose = "bow"; M(); }], [1400, () => { OF.bossPose = "type"; B(); OF.mePose = "stand"; M(); }]);
-  seq.push([700, () => { OF.bossPose = "stand"; OF.bossFace = "surprise"; B(); walk('ceo', 196, 452, 1, 1300); }]);
-  if (strand){
-    seq.push([1500, () => { C({ pose:"point", face:"surprise" }); say('c1', "어? 어깨에 이 털…", 196, 262); }]);
-    seq.push([1900, () => { dropFx('c1'); C({ pose:"reach", face:"happy" });
-      putFx('photo', `<g id="photo" class="pop" pointer-events="none"><rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".45"/>
-        <rect x="110" y="96" width="140" height="236" rx="20" fill="#24273f"/><rect x="120" y="116" width="120" height="196" rx="6" fill="#fff3d6"/>
-        <svg x="120" y="140" width="120" height="150" viewBox="-36 -76 72 82">${catSit(0, 0, 1, { happy:true, wag:true })}</svg>
-        <text x="180" y="304" text-anchor="middle" font-size="13" fill="#8a6238">호떡</text></g>`); }]);
-    seq.push([1800, () => { dropFx('photo'); say('c2', "우리 호떡이랑 똑같은 색이네!", 196, 262); OF.meFace = "smile"; M(); OF.bossFace = "smile"; B(); s.bossCat = true; }]);
-    seq.push([2600, () => { dropFx('c2'); C({ pose:"wave", face:"happy" }); }]);
-  } else {
-    seq.push([1500, () => { C({ pose:"stand", face:"neutral" }); say('c1', "음, 좋네요.", 196, 262); }]);
-    seq.push([1800, () => { dropFx('c1'); C({ pose:"wave", face:"smile" }); }]);
-  }
-  seq.push([900, () => walk('ceo', 430, 452, 1, 1200)]);
-  seq.push([1300, () => { OF.bossPose = "type"; OF.bossFace = "neutral"; B(); ofToSix(arrive); }]);
-  beats(seq);
-}
-
 /* ================= 9일 화요일 아침: 면담 날, 보리가 없다 ================= */
 let SR = null;
-const SPOTS9 = { curtain:[76, 452], sofa:[214, 452], shoes:[300, 456], drawer:[150, 452] };
+const SR_Y = 376, SR_SC = .8;
+const SPOTS9 = { mid:[186, SR_Y], curtain:[234, SR_Y], sofa:[290, SR_Y], drawer:[84, SR_Y] };
 function searchMorning(){
   MO = { min:40, leaveMin:null, gone:false };
   SR = { looked:{}, at:"mid", found:false, busy:false };
-  show(srWorld(), { card: dayCard(), label:"거실. 고양이가 보이지 않는다" });
+  s.hungryToday = false;
+  if (s.order){ s.foodKind = s.order; s.foodMax = s.order === "chick" ? 8 : 4; s.food = s.foodMax; s.order = null; }
+  show(srWorld(), { card: dayCard(), label:"거실. 고양이가 보이지 않는다", bg:"livW-day" });
   srHits();
   every(1200, () => { if (SR.found || MO.gone) return; MO.min++; setClock("ck", 7, MO.min); if (MO.min === 60){ const r = $('ck-red'); if (r) r.classList.add('blinkR'); } });
-  later(2400, () => { sound('q', `${CAT}?`, 214, 236, { fs:16 }); later(1300, () => dropFx('q')); teachCycle([["tap", 76, 150], ["tap", 210, 360], ["tap", 92, 380], ["tap", 322, 300]], { key:"search", each:1800 }); });
+  later(2400, () => { sound('q', `${CAT}?`, 186, 200, { fs:16 }); later(1300, () => dropFx('q')); teachCycle([["tap", 232, 170], ["tap", 272, 290], ["tap", 72, 280]], { key:"search", each:1800 }); });
 }
+const srDresser = (o={}) => dresser(22, 202, 100, 98, Object.assign({ sleeve:true, fur: s.closetN > 0 }, o));
+function srMe(){ const [x] = SPOTS9[SR.at] || SPOTS9.mid; return `<g id="me" class="mover" style="transform:translate(${x}px,${SR_Y}px) scale(${SR_SC})">${person(0, 0, { wear:"suit", face: SR.face || "worry", pose: SR.pose || "stand" })}</g>`; }
 function srWorld(){
   const L = SR.looked;
-  return `${livingBg()}${curtain(18, 40, 116, 168, SR.shake === "curtain")}
-    ${clockFace("ck", 222, 70, 26, 7, MO.min, { red:[0, 15] })}
-    ${dresser(10, 262, 124, 146, { sleeve:true, fur: s.closetN > 0 })}
-    ${sofa(150, 410, 112)}
-    ${L.sofa ? `<g><circle cx="194" cy="414" r="6" fill="#b9b2c8"/><circle cx="202" cy="416" r="4" fill="#b9b2c8"/></g>` : ""}
-    ${frontDoor(292, 150, 60, 256)}
-    <g id="me" class="mover" style="transform:translate(${SPOTS9[SR.at] ? SPOTS9[SR.at][0] : 222}px,452px)">${person(0, 0, { wear:"suit", face: SR.face || "worry", pose: SR.pose || "stand" })}</g>
-    <rect ${hitA("curtain","커튼 뒤")} x="14" y="36" width="124" height="176" fill="transparent"/>
-    <rect ${hitA("sofa","소파 밑")} x="140" y="316" width="134" height="96" fill="transparent"/>
-    <rect ${hitA("drawer","서랍장")} x="6" y="256" width="132" height="156" fill="transparent"/>
-    <rect ${hitA("shoes","현관")} x="286" y="140" width="72" height="280" fill="transparent"/>`;
+  return `${clockFace("ck", 70, 118, 22, 7, MO.min, { red:[0, 15] })}
+    ${srDresser()}
+    ${SR.shake === "curtain" ? `<g class="shake"><path d="M212,122 h40 q-6,46 4,92 h-44 z" fill="#fbf1e4" stroke="#d9cbb6" stroke-width="2"/></g>` : ""}
+    ${L.sofa ? `<g><circle cx="262" cy="310" r="5" fill="#b9b2c8"/><circle cx="270" cy="312" r="3.4" fill="#b9b2c8"/><circle cx="300" cy="311" r="4" fill="#b9b2c8"/></g>` : ""}
+    ${srMe()}
+    <rect ${hitA("curtain","커튼 뒤")} x="206" y="116" width="56" height="104" fill="transparent"/>
+    <rect ${hitA("sofa","소파 밑")} x="196" y="220" width="152" height="100" fill="transparent"/>
+    <rect ${hitA("drawer","서랍장")} x="14" y="192" width="116" height="114" fill="transparent"/>
+    ${hudFood()}`;
 }
 function srHits(){
   hits({ curtain: { tap: () => srLook("curtain"), key: () => srLook("curtain") }, sofa: { tap: () => srLook("sofa"), key: () => srLook("sofa") },
-         drawer: { tap: () => srLook("drawer"), key: () => srLook("drawer") }, shoes: { tap: srDoor, key: srDoor } });
+         drawer: { tap: () => srLook("drawer"), key: () => srLook("drawer") }, hudF: { tap: () => foodNotice(), key: () => foodNotice() } });
+  if (Object.keys(SR.looked).length) nextArrow(srDoor, "그냥 나간다");
 }
 function srLook(k){
   if (SR.busy || SR.found || MO.gone) return;
   if (SR.looked[k] && k !== "drawer") return;
-  SR.busy = true; idleKill();
+  SR.busy = true; idleKill(); dropNext();
   const [x] = SPOTS9[k];
-  walk('me', x, 452, 1, 600); SR.at = k;
+  walk('me', x, SR_Y, SR_SC, 600); SR.at = k;
   later(650, () => {
     MO.min += 3; setClock("ck", 7, MO.min);
     if (k === "drawer") return srFound();
     SR.looked[k] = true; SR.pose = "bow"; SR.face = "worry"; if (k === "curtain") SR.shake = "curtain";
-    world(srWorld()); srHits();
+    world(srWorld()); srHits(); dropNext();
     later(900, () => { SR.pose = "stand"; SR.face = "sad"; SR.shake = null; world(srWorld()); srHits(); SR.busy = false; armIdle(); });
   });
 }
-// 현관으로: 못 찾고 그냥 나간다
+// 못 찾고 그냥 나간다
 function srDoor(){
   if (SR.busy || SR.found || MO.gone) return;
-  if (!SR.confirm){ SR.confirm = true; walk('me', 300, 456, 1, 700); SR.at = "shoes"; later(800, () => { sound('q', `${CAT}…`, 300, 240, { fs:15 }); }); return; }
-  MO.gone = true; s.found9 = false; bond(-2); hits({}); idleKill();
+  MO.gone = true; s.found9 = false; bond(-2); hits({}); idleKill(); dropNext();
+  s.hungry++; s.hungryToday = true;
+  sound('q', `${CAT}…`, 186, 200, { fs:15 });
   MO.leaveMin = MO.min; srLateCheck();
-  fadeTo(meeting, 700);
+  later(900, () => fadeTo(meeting, 700));
 }
 function srLateCheck(){ const L = dayLog(); if (MO.leaveMin > 60){ L.late = true; s.lates++; s.face = clamp(s.face - 1, 0, 5); } }
 // 맨 아래 서랍, 그 회색 후드티 위
 function srFound(){
-  SR.found = true; s.found9 = true; bond(2); hits({});
-  const inside = `<g>${hoodieFold(30, 366, 86)}${catLoaf(82, 384, .9, { awake:true })}</g>`;
-  const draw = (o) => `${livingBg()}${curtain(18, 40, 116, 168, false)}${clockFace("ck", 222, 70, 26, 7, MO.min, { red:[0, 15] })}
-    ${dresser(10, 262, 124, 146, { open:true, inside })}${sofa(150, 410, 112)}${frontDoor(292, 150, 60, 256)}
-    <g transform="translate(150,452)">${person(0, 0, Object.assign({ wear:"suit" }, o))}</g>`;
+  SR.found = true; s.found9 = true; bond(2); hits({}); dropNext();
+  const inside = `<g>${hoodieFold(30, 270, 84)}${catLoaf(66, 288, .62, { awake:true })}</g>`;
+  const draw = (o) => `${clockFace("ck", 70, 118, 22, 7, MO.min, { red:[0, 15] })}${srDresser({ open:true, inside })}
+    <g transform="translate(${SPOTS9.drawer[0] + 20},${SR_Y}) scale(${SR_SC})">${person(0, 0, Object.assign({ wear:"suit" }, o))}</g>`;
   world(draw({ face:"surprise", pose:"bow" }));
-  later(600, () => sound('nya', '냐', 96, 340, { fs:15 }));
+  later(600, () => sound('nya', '냐', 72, 250, { fs:15 }));
   later(1800, () => {
     dropFx('nya');
     putFx('mem', `<g id="mem" class="pop" pointer-events="none"><rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#000" opacity=".5"/>
@@ -2039,99 +2710,102 @@ function srFound(){
   later(4400, () => {
     dropFx('mem');
     world(draw({ face:"soft", pose:"hold", held:`<g>${hoodieFold(-30, -6, 60)}<g transform="translate(0,-2)">${catLoaf(-4, 0, .62, {})}</g></g>` }));
-    [0, 300, 600].forEach((d, i) => later(d, () => heart(150 + i*8, 300 - i*6)));
+    [0, 300, 600].forEach((d, i) => later(d, () => heart(104 + i*8, 250 - i*6)));
   });
-  later(6400, () => { MO.leaveMin = MO.min; srLateCheck(); s.furLeft = 4; fadeTo(meeting, 700); });
+  // 찾았으니 밥도 준다 (사료가 있으면)
+  later(5600, () => { if (s.food > 0){ s.food--; s.hungryToday = false; sound('nyam', '냠냠', 104, 230, { fs:14 }); } else { s.hungry++; s.hungryToday = true; } });
+  later(6800, () => { MO.leaveMin = MO.min; srLateCheck(); s.furLeft = 4; fadeTo(meeting, 700); });
 }
 
 /* ================= 9일 면담: 팀장님의 단 한 번 긴 이야기 ================= */
 function meeting(){
   const L = dayLog();
-  const good = s.prep >= 3 && s.lates <= 2;
+  const good = s.prep >= 3 && s.lates <= 2 && s.workMiss <= 8;
   s.meet = good ? "good" : "watch";
   s.face = clamp(s.face + (good ? 1 : 0), 0, 5);
-  const draw = (bo, mo) => `${wallR("#e6e9f2", 0, 330)}${floorBand(330, "#bfc5d9", "#a9b0c8")}
-    <rect x="40" y="60" width="120" height="90" rx="4" fill="#d3d8e8"/><rect x="200" y="60" width="120" height="90" rx="4" fill="#d3d8e8"/>
-    ${person(258, 452, Object.assign({ wear:"boss", hair:"boss", glasses:true, noLegs:true, flip:true }, bo))}
-    ${person(100, 452, Object.assign({ wear:"suit", noLegs:true, fur: Math.min(s.furLeft || 0, 6) }, mo))}
-    <rect x="30" y="380" width="300" height="16" rx="4" fill="var(--wood)"/><rect x="40" y="396" width="280" height="84" fill="var(--wood-d)"/>
-    <rect x="150" y="364" width="60" height="18" rx="2" fill="#fff" stroke="#c9cde0"/>`;
-  show(draw({ face:"neutral", pose:"type" }, { face: L.late ? "panic" : "worry", pose:"type" }), { label:"면담실. 팀장님과 마주 앉았다" });
+  const draw = (bo, mo, extra="") => `${crayon(196, 160, 1.1)}
+    ${person(266, 474, Object.assign({ wear:"boss", hair:"boss", glasses:true, noLegs:true, flip:true }, bo))}
+    ${person(96, 474, Object.assign({ wear:"suit", noLegs:true, fur: Math.min(s.furLeft || 0, 6) }, mo))}${extra}
+    <rect x="14" y="398" width="332" height="16" rx="4" fill="var(--wood)"/><rect x="24" y="414" width="312" height="${VH + 150 - 414}" fill="var(--wood-d)"/>
+    <g transform="translate(176,392)">${sheaf()}</g>`;
+  show(draw({ face:"neutral", pose:"type" }, { face: L.late ? "panic" : "worry", pose:"type" }), { label:"팀장님 자리 앞. 마주 앉았다", bg:"offR-day" });
   const lines = [
-    [{ face: L.late ? "stern" : "neutral", pose:"type" }, { face: L.late ? "down" : "worry", pose:"type" }, L.late ? "늦었네요." : "앉아요."],
+    [{ face: L.late ? "stern" : "neutral", pose:"type" }, { face: L.late ? "down" : "worry", pose:"type" }, L.late ? "늦었네요. 앉아요." : "앉아요."],
     [{ face: good ? "smile" : "neutral", pose:"type" }, { face: good ? "smile" : "down", pose:"type" }, good ? "과제는 잘 봤어요." : "남은 기간, 지켜볼게요."],
   ];
+  if (s.workMiss <= 3 && s.work >= 4) lines.push([{ face:"smile", pose:"type" }, { face:"smile", pose:"type" }, "회의 자료도 늘 순서가 맞았어요."]);
+  else if (s.workMiss >= 9) lines.push([{ face:"neutral", pose:"point" }, { face:"down", pose:"type" }, "회의 자료는 순서를 한 번 더 봐요."]);
   if (s.found9 === false) lines.push([{ face:"worry", pose:"type" }, { face:"sad", pose:"type" }, "…얼굴이 안 좋네요."]);
-  lines.push([{ face:"soft", pose:"hold", held: crayon(-17, -14, 1) }, { face:"surprise", pose:"type" }, "나도 집에 지킬 게 있어서, 6시에 가요."]);
+  lines.push([{ face:"soft", pose:"hold", held: crayon(-17, -14, 1) }, { face:"surprise", pose:"type" }, "나도 집에 아이가 있어서, 6시엔 꼭 가요."]);
   lines.push([{ face:"smile", pose:"type" }, { face:"soft", pose:"type" }, "다 잘하는 사람은 없어요. 어디까지 할지 정하는 거지."]);
   const seq = [];
   lines.forEach(([bo, mo, t], i) => {
-    seq.push([i === 0 ? 900 : 3000, () => { world(draw(bo, mo)); say('m', t, 250, 262, { maxW:210 }); }]);
+    seq.push([i === 0 ? 900 : 3000, () => { world(draw(bo, mo)); say('m', t, 262, 290, { maxW:200 }); }]);
   });
-  if (s.bossCat) seq.push([3200, () => { world(draw({ face:"happy", pose:"type" }, { face:"smile", pose:"type" }) + person(340, 452, { wear:"ceo", hair:"ceo", face:"happy", pose:"wave", flip:true })); say('m', "호떡이도 6시엔 밥 먹어요!", 320, 262); }]);
+  if (s.bossCat) seq.push([3200, () => { world(draw({ face:"happy", pose:"type" }, { face:"smile", pose:"type" }, person(330, 474, { wear:"ceo", hair:"ceo", face:"happy", pose:"wave", flip:true, noLegs:true }))); say('m', "호떡이도 6시엔 밥 먹어요!", 300, 290, { maxW:200 }); }]);
   seq.push([3200, () => { dropFx('m'); fadeTo(hoodieEvening, 700); }]);
   beats(seq);
 }
 
 /* ================= 9일 저녁: 꺼낸 후드티를 어디에 둘까 ================= */
 function hoodieEvening(){
-  const D = BR.door;
-  const draw = (st) => `${bedroomBg({ night:true, lamp:true })}${clockFace("ck", BR.clock[0], BR.clock[1], BR.clock[2], 9, 0)}
-    ${doorIn(D.x, D.y, D.w, D.h, 0, { hoodie: st === "door" })}
-    ${bedSide(0, 410, 156, { hoodie: st === "bed" })}
-    ${person(150, 448, st === "hold" ? { wear:"tee", face:"neutral", pose:"hold", held: hoodieFold(-28, -8, 56) } : { wear: st === "wear" ? "hoodie" : "tee", face:"smile" })}
-    ${catSit(212, 448, 1, { flip:true, wag:true, happy: st !== "hold" })}
-    ${st === "hold" ? `<rect ${hitA("hood","후드티")} x="106" y="320" width="88" height="56" fill="transparent"/>` : ""}
-    <g class="tg" id="tg-wear"><circle cx="150" cy="276" r="40" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+  const D = BRD;
+  const draw = (st) => `${clockFace("ck", 128, 70, 24, 9, 0)}
+    ${doorG(D, 0, { hoodie: st === "door" })}
+    ${rackSuit({})}
+    ${bedSide(0, 418, 156, { hoodie: st === "bed" })}
+    ${person(190, 448, st === "hold" ? { wear:"tee", face:"neutral", pose:"hold", held: hoodieFold(-28, -8, 56) } : { wear: st === "wear" ? "hoodie" : "tee", face:"smile" })}
+    ${catSit(258, 448, 1, { flip:true, wag:true, happy: st !== "hold" })}
+    ${st === "hold" ? `<rect ${hitA("hood","후드티")} x="146" y="320" width="88" height="56" fill="transparent"/>` : ""}
+    <g class="tg" id="tg-wear"><circle cx="190" cy="276" r="40" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
     <g class="tg" id="tg-door"><rect x="${D.x-4}" y="${D.y+D.h-60}" width="${D.w+8}" height="70" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
-    <g class="tg" id="tg-bed"><rect x="60" y="310" width="100" height="56" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
-  show(draw("hold"), { label:"침실. 손에 회색 후드티" });
+    <g class="tg" id="tg-bed"><rect x="40" y="318" width="110" height="56" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    ${hudFood()}`;
+  show(draw("hold"), { label:"침실. 손에 회색 후드티", bg:"bedR-eve" });
   const put = k => {
     if (s.hoodie) return;
     s.hoodie = k; idleKill(); hits({});
     world(draw(k));
-    if (k === "wear"){ [0, 300].forEach((d, i) => later(d, () => heart(206 + i*8, 380))); sound('gol', '골골', 236, 370, { fs:14 }); }
-    if (k === "door") sound('ssk', '스윽', D.x + 42, D.y + D.h - 70, { fs:14 });
-    if (k === "bed") sound('pok', '폭', 110, 300, { fs:14 });
+    if (k === "wear"){ [0, 300].forEach((d, i) => later(d, () => heart(250 + i*8, 380))); sound('gol', '골골', 276, 370, { fs:14 }); }
+    if (k === "door") sound('ssk', '스윽', D.x + 50, D.y + D.h - 70, { fs:14 });
+    if (k === "bed") sound('pok', '폭', 100, 300, { fs:14 });
     later(2600, () => fadeTo(() => night(false), 600));
   };
   hits({ hood: { drag: { ghost:(x,y) => hoodieFold(x-28, y-10, 56), targets:[
-    { key:"wear", r:[100, 226, 100, 90], fn: () => put("wear") },
+    { key:"wear", r:[140, 226, 100, 90], fn: () => put("wear") },
     { key:"door", r:[D.x-20, D.y+D.h-90, D.w+40, 110], fn: () => put("door") },
-    { key:"bed", r:[40, 290, 130, 90], fn: () => put("bed") } ] }, key: () => put("wear") } });
-  later(700, () => teachCycle([["drag", 150, 346, 150, 270], ["drag", 150, 346, D.x + 42, D.y + D.h - 20], ["drag", 150, 346, 100, 336]], { key:"hoodie3", each:2200 }));
+    { key:"bed", r:[20, 296, 150, 90], fn: () => put("bed") } ] }, key: () => put("wear") } });
+  later(700, () => teachCycle([["drag", 190, 346, 190, 270], ["drag", 190, 346, D.x + 50, D.y + D.h - 20], ["drag", 190, 346, 90, 344]], { key:"hoodie3", each:2200 }));
 }
 
 /* ================= 6일 토요일: 해가 창을 건너는 동안 세 번 ================= */
 let SA = null;
 function saturday(){
-  SA = { block:0, busy:false, did:[] };
-  show(saWorld(), { card: dayCard(), label:"토요일 낮. 햇볕 속 고양이, 책상 위 노트북" });
+  SA = { block:0, busy:false, did:[] }; s.hungryToday = false;
+  show(saWorld(), { card: dayCard(), label:"토요일 낮. 햇볕 속 고양이, 책상 위 노트북", bg:"bedL-day" });
   saHits();
   later(2400, saTeach);
 }
-function saSky(){ return ["#bfe0f5", "#9fd0f5", "#f0a86e"][SA.block] || "#f0a86e"; }
+const saLap = () => `<g transform="translate(262,234) scale(.72) translate(-262,-234)">${laptopBack(262, 234, { glow:true })}</g>`;
 function saWorld(o={}){
-  const sunX = [126, 180, 236][SA.block] || 236, sunY = [118, 70, 120][SA.block] || 120;
-  const me = o.me != null ? o.me : person(206, 448, { wear:"tee", face:"neutral" });
-  return `${wallR("#efe4cf", 0, 330)}${floorBand(330, "#cdbb9e", "#b5a283")}
-    <rect x="106" y="34" width="152" height="124" rx="4" fill="var(--wood-d)"/><rect x="112" y="40" width="140" height="112" fill="${saSky()}"/>
-    <circle cx="${sunX}" cy="${sunY}" r="16" fill="${SA.block === 2 ? '#ffd27a' : 'var(--sun)'}"/>
-    <path d="M182,40 V152 M112,96 H252" stroke="var(--wood-d)" stroke-width="4"/>
-    ${bedSide(0, 410, 150, {})}
-    <path d="M${30 + SA.block*24},352 l70,0 l18,30 l-70,0 z" fill="#fff6c9" opacity=".7"/>
-    ${o.noCat ? "" : `<g ${hitA("sun", CAT + "와 햇볕 낮잠")}>${catLoaf(70 + SA.block*24, 354, .95, { zz: !o.awake })}<rect x="${30 + SA.block*24}" y="318" width="100" height="44" fill="transparent"/></g>`}
-    ${deskFront(236, 360, 124)}${laptopBack(298, 362, { glow:true })}
-    <rect ${hitA("lap","노트북")} x="246" y="290" width="110" height="80" fill="transparent"/>
+  const B = Math.min(SA.block, 2);
+  const sunX = [136, 168, 202][B], sunY = [112, 88, 132][B];
+  const me = o.me != null ? o.me : person(212, 452, { wear:"tee", face:"neutral" });
+  return `<circle cx="${sunX}" cy="${sunY}" r="15" fill="${B === 2 ? '#ffd27a' : 'var(--sun)'}"/>
+    ${B === 2 ? `<rect x="107" y="68" width="119" height="107" fill="#f0a86e" opacity=".3"/>` : ""}
+    <path d="M${34 + B*40},282 l70,0 l16,44 l-70,0 z" fill="#ffe9a0" opacity=".42"/>
+    ${o.noCat ? "" : `<g ${hitA("sun", CAT + "와 햇볕 낮잠")}>${catLoaf(56 + B*40, 308, .9, { zz: !o.awake })}<rect x="${30 + B*40}" y="262" width="100" height="56" fill="transparent"/></g>`}
+    ${o.noLap ? "" : saLap()}
+    <rect ${hitA("lap","노트북")} x="216" y="176" width="100" height="70" fill="transparent"/>
     ${o.noCup ? "" : `<g ${hitA("wand","낚싯대")}>${toyCup(150, 466)}<rect x="124" y="342" width="62" height="130" fill="transparent"/></g>`}
     <g id="sme">${me}</g>
     <g id="sfx"></g>`;
 }
 function saHits(){
   hits({ lap: { tap: saWork, key: saWork }, sun: { tap: saNap, key: saNap },
-         wand: { drag: { ghost:(x,y) => wand(206, 340, x, y), targets:[{ key:"cat", r:[0, 260, 230, 160], fn: saPlay }], miss: () => saPlay() }, key: saPlay } });
+         wand: { drag: { ghost:(x,y) => wand(212, 340, x, y), targets:[{ key:"cat", r:[0, 220, 220, 140], fn: saPlay }], miss: () => saPlay() }, key: saPlay } });
 }
-function saTeach(){ teachCycle([["tap", 298, 330], ["drag", 166, 380, 90, 330], ["tap", 92 + SA.block*24, 340]], { key:"sat", each:2000 }); }
+function saTeach(){ teachCycle([["tap", 262, 206], ["drag", 166, 380, 80, 290], ["tap", 78 + Math.min(SA.block, 2)*40, 296]], { key:"sat", each:2000 }); }
 function saNext(){
   SA.block++; SA.busy = false;
   if (SA.block >= 3){ s.tired = clamp(s.tired - 1, 0, 3); return later(600, () => fadeTo(() => night(false), 700)); }
@@ -2140,8 +2814,8 @@ function saNext(){
 function saWork(){
   if (SA.busy) return; SA.busy = true; idleKill(); hits({});
   s.prep++; s.satWork++; SA.did.push("work");
-  world(saWorld({ me:"", awake:true }) + `${person(298, 446, { wear:"tee", noLegs:true, face:"neutral", pose:"type" })}${deskFront(236, 360, 124)}${laptopBack(298, 362, { glow:true })}`);
-  let k = 0; const iv = every(500, () => { sound('tk', '타닥', 270 + (k++ % 3) * 20, 270, { fs:13 }); });
+  world(saWorld({ me:"", awake:true, noLap:true }) + `${saLap()}${personBack(300, 356, { wear:"tee", typing:true })}`);
+  let k = 0; const iv = every(500, () => { sound('tk', '타닥', 276 + (k++ % 3) * 18, 196, { fs:13 }); });
   later(2400, () => { clearInterval(iv); dropFx('tk'); saNext(); });
 }
 function saPlay(){
@@ -2149,8 +2823,8 @@ function saPlay(){
   SA.did.push("play"); s.satPlay = true;
   let n = 0;
   const frame = () => {
-    const fx = 70 + Math.sin(n) * 50, fy = 250 + Math.cos(n*1.7) * 30;
-    world(saWorld({ noCat:true, noCup:true, me: person(206, 448, { wear:"tee", face:"happy", pose:"wave" }) }) + wand(254, 274, fx, fy) + (n % 2 ? catLeap(fx - 10, fy + 80, 1.1) : catSit(100, 400, 1, { wag:true, happy:true })));
+    const fx = 80 + Math.sin(n) * 50, fy = 236 + Math.cos(n*1.7) * 24;
+    world(saWorld({ noCat:true, noCup:true, me: person(212, 452, { wear:"tee", face:"happy", pose:"wave" }) }) + wand(260, 276, fx, fy) + (n % 2 ? catLeap(fx - 10, fy + 70, 1) : catSit(96, 318, .9, { wag:true, happy:true })));
     if (n % 2) heart(fx, fy - 10);
     n++;
   };
@@ -2160,9 +2834,10 @@ function saPlay(){
 function saNap(){
   if (SA.busy) return; SA.busy = true; idleKill(); hits({});
   SA.did.push("nap"); bond(1); s.tired = clamp(s.tired - 1, 0, 3);
-  world(saWorld({ noCat:true, me:"" }) + `<g transform="translate(${92 + SA.block*24},350) scale(.95) translate(0,168)">${headG({ face:"sleep" })}</g>
-    <path d="M${110 + SA.block*24},346 q30,-14 60,0 v12 h-60 z" fill="var(--tee)"/>${catLoaf(150 + SA.block*24, 352, .9, { zz:true })}`);
-  sound('zz', 'z z', 140, 290, { fs:16 });
+  const B = Math.min(SA.block, 2);
+  world(saWorld({ noCat:true, me:"" }) + `<g transform="translate(118,226) scale(.86) translate(0,168)">${headG({ face:"sleep" })}</g>
+    ${catLoaf(74 + B*40, 312, .85, { zz:true })}`);
+  sound('zz', 'z z', 150, 200, { fs:16 });
   later(2600, () => { dropFx('zz'); saNext(); });
 }
 
@@ -2170,46 +2845,44 @@ function saNap(){
 let SU = null;
 function sunday(){
   const busy = s.satWork >= 2;
-  SU = { busy, acts:0, at:"start", lock:false, mouse:true };
-  show(suWorld(), { card: dayCard(), label:"일요일. 고양이 높이에서 본 나" });
+  SU = { busy, acts:0, at:"start", lock:false, mouse:true }; s.hungryToday = false;
+  show(suWorld(), { card: dayCard(), label:"일요일. 고양이 높이에서 본 나", bg:"sofa-day" });
   suHits();
-  later(2400, () => teachCycle([["tap", 250, 260], ["drag", 66, 446, 230, 360], ["tap", 120, 440]], { key:"sun", each:2000 }));
+  later(2400, () => teachCycle([["tap", 176, 270], ["drag", 60, 446, 176, 330], ["tap", 120, 450]], { key:"sun", each:2000 }));
 }
 function suMe(o={}){
   const B = SU.busy;
-  return person(262, 468, Object.assign({ sc:1.45, wear:"hoodie", noLegs:true, face: B ? "tired" : "smile", pose: B ? "type" : "hold", held: B ? "" : phone(0, -6, { screen:"#cfe0ff" }) }, o));
+  return person(176, 398, Object.assign({ sc:1.25, wear:"hoodie", noLegs:true, face: B ? "tired" : "smile", pose: B ? "type" : "hold", held: B ? "" : `<g transform="scale(.4)">${phone(0, -6, { screen:"#cfe0ff" })}</g>` }, o));
 }
 function suWorld(meO, catHTML){
-  return `${catWorldBg({ day:true })}
-    ${bigDresser({ sleeve:false })}
+  return `<path d="M24,436 L196,436 L226,480 L-6,480 Z" fill="#ffe9a0" opacity=".4"/>
     <g id="sume">${suMe(meO)}</g>
-    <rect x="176" y="376" width="184" height="18" rx="4" fill="var(--wood)"/><rect x="186" y="394" width="164" height="12" fill="var(--wood-d)"/>
-    ${SU.busy ? laptopBack(262, 378, { glow:true }) : `<rect x="214" y="364" width="46" height="12" rx="3" fill="#8f6ad8"/>`}
-    <rect ${hitA("sunp","햇볕 자리")} x="40" y="406" width="160" height="74" fill="transparent"/>
-    ${SU.mouse ? `<g ${hitA("mouse","쥐 인형")}>${mouseToy(66, 452, 1.5)}<rect x="22" y="418" width="84" height="48" fill="transparent"/></g>` : ""}
-    <rect ${hitA("me","나에게")} x="180" y="150" width="170" height="250" fill="transparent"/>
-    <g id="bori" class="mover" pointer-events="none" style="transform:translate(150px,476px) scale(1.9)">${catHTML || catAway(0, 0, 1)}</g>`;
+    ${SU.busy ? `<g transform="translate(176,350) scale(.9) translate(-176,-350)">${laptopBack(176, 350, { glow:true })}</g>` : ""}
+    <rect ${hitA("sunp","햇볕 자리")} x="10" y="432" width="200" height="48" fill="transparent"/>
+    ${SU.mouse ? `<g ${hitA("mouse","쥐 인형")}>${mouseToy(60, 452, 1.5)}<rect x="18" y="420" width="84" height="48" fill="transparent"/></g>` : ""}
+    <rect ${hitA("me","나에게")} x="100" y="150" width="160" height="270" fill="transparent"/>
+    <g id="bori" class="mover" pointer-events="none" style="transform:translate(150px,478px) scale(1.9)">${catHTML || catAway(0, 0, 1)}</g>`;
 }
 function suHits(){
   hits({ me: { tap: suMeTap, key: suMeTap }, sunp: { tap: suSun, key: suSun },
-         mouse: { drag: { ghost:(x,y) => mouseToy(x, y+8, 1.5), targets:[{ key:"me", r:[170, 140, 190, 270], fn: suMouse }] }, key: suMouse } });
+         mouse: { drag: { ghost:(x,y) => mouseToy(x, y+8, 1.5), targets:[{ key:"me", r:[90, 140, 190, 280], fn: suMouse }] }, key: suMouse } });
 }
 function suAct(){ SU.acts++; SU.lock = false; if (SU.acts >= 2) later(1400, () => fadeTo(() => night(false), 700)); else { world(suWorld()); suHits(); armIdle(); } }
 function suMeTap(){
   if (SU.lock) return; SU.lock = true; idleKill();
-  walk('bori', 250, 400, 1.3, 900);
+  walk('bori', 246, 404, 1.3, 900);
   later(950, () => {
     if (SU.busy){
       part('bori', catLoaf(0, 0, 1, { awake:true }));
       later(600, () => {
-        if (s.bond >= 6){ part('sume', suMe({ face:"happy", pose:"pet" })); heart(260, 330); bond(1); }
+        if (s.bond >= 6){ part('sume', suMe({ face:"happy", pose:"pet" })); heart(220, 300); bond(1); }
         else { part('sume', suMe({ face:"soft", pose:"reach" })); bond(0); }
       });
-      later(2200, () => { if (s.bond < 6){ walk('bori', 150, 470, 1.8, 700); part('bori', catSit(0, 0, 1, {})); } suAct(); });
+      later(2200, () => { if (s.bond < 6){ walk('bori', 150, 476, 1.8, 700); part('bori', catSit(0, 0, 1, {})); } suAct(); });
     } else {
       part('bori', catLoaf(0, 0, 1, { zz:true }));
       part('sume', suMe({ face:"happy", pose:"hold", held:"" }));
-      [0, 300, 600].forEach((d, i) => later(d, () => heart(250 + i*6, 330 - i*6)));
+      [0, 300, 600].forEach((d, i) => later(d, () => heart(230 + i*6, 320 - i*6)));
       bond(2);
       later(2200, suAct);
     }
@@ -2218,75 +2891,83 @@ function suMeTap(){
 function suMouse(){
   if (SU.lock || !SU.mouse) return; SU.lock = true; SU.mouse = false; idleKill();
   world(suWorld()); hits({});
-  walk('bori', 230, 440, 1.6, 700);
+  walk('bori', 200, 446, 1.6, 700);
   later(800, () => {
     part('sume', suMe({ face: SU.busy ? "neutral" : "happy", pose:"wave" }));
-    putFx('flyM', `<g id="flyM" style="transition:transform ${800*SPEED}ms ease-out">${mouseToy(230, 360, 1.3)}</g>`);
-    later(60, () => { const m = $('flyM'); if (m) m.style.transform = 'translate(-170px,90px)'; });
-    later(400, () => { walk('bori', 70, 466, 1.8, 600); part('bori', catLeap(0, 0, 1)); });
+    putFx('flyM', `<g id="flyM" style="transition:transform ${800*SPEED}ms ease-out">${mouseToy(220, 300, 1.3)}</g>`);
+    later(60, () => { const m = $('flyM'); if (m) m.style.transform = 'translate(-150px,150px)'; });
+    later(400, () => { walk('bori', 76, 470, 1.8, 600); part('bori', catLeap(0, 0, 1)); });
     later(1200, () => { dropFx('flyM'); part('bori', catSit(0, 0, 1, { happy:true, wag:true })); bond(1); });
     later(2200, suAct);
   });
 }
 function suSun(){
   if (SU.lock) return; SU.lock = true; idleKill();
-  walk('bori', 110, 452, 1.7, 800);
-  later(850, () => { part('bori', catLoaf(0, 0, 1, { zz:true })); sound('zz', '골골', 110, 380, { fs:14 }); });
+  walk('bori', 110, 462, 1.7, 800);
+  later(850, () => { part('bori', catLoaf(0, 0, 1, { zz:true })); sound('zz', '골골', 116, 388, { fs:14 }); });
   later(2600, () => { dropFx('zz'); SU.acts = 2; suAct(); });
 }
 
 /* ================= 12일 금요일: 첫 월급 ================= */
 function paydayEvening(){
-  const D = BR.door;
-  const draw = (st) => `${bedroomBg({ night:true, lamp:true })}${clockFace("ck", BR.clock[0], BR.clock[1], BR.clock[2], 7, 30)}
-    ${doorIn(D.x, D.y, D.w, D.h, 0, { hoodie: s.hoodie === "door" })}${bedSide(0, 410, 156, { hoodie: s.hoodie === "bed" })}
-    ${st === "box" ? person(150, 448, { wear: s.hoodie === "wear" ? "hoodie" : "tee", face:"happy", pose:"hold", held:`<g transform="translate(0,30)">${cardBox(0, 0, 70, 40)}<path d="M-35,-20 h70 M0,-40 v40" stroke="#e5484d" stroke-width="4"/></g>` })
-      : person(150, 448, { wear: s.hoodie === "wear" ? "hoodie" : "tee", face:"happy", pose: st === "laugh" ? "cheer" : "stand" })}
-    ${st === "box" ? "" : `<g>${cardBox(240, 452, 84, 46)}${st === "in" || st === "laugh" ? `<g transform="translate(240,420)">${catSit(0, 0, .9, { happy:true })}</g>${cardBox(240, 452, 84, 30)}` : ""}</g>`}
-    ${st === "box" ? catSit(232, 448, 1, { flip:true, wag:true }) : ""}
-    ${st === "box" ? `<rect ${hitA("gift","선물 상자")} x="110" y="330" width="80" height="70" fill="transparent"/>` : ""}
-    <g class="tg" id="tg-cat"><rect x="190" y="370" width="90" height="84" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>`;
-  show(draw("box"), { label:"월급날 저녁. 선물 상자" });
+  const D = BRD;
+  const W = s.hoodie === "wear" ? "hoodie" : "tee";
+  const draw = (st) => `${clockFace("ck", 128, 70, 24, 7, 30)}
+    ${doorG(D, 0, { hoodie: s.hoodie === "door" })}${rackSuit({})}${bedSide(0, 418, 156, { hoodie: s.hoodie === "bed" })}
+    ${st === "box" ? person(170, 448, { wear: W, face:"happy", pose:"hold", held:`<g transform="translate(0,30)">${cardBox(0, 0, 70, 40)}<path d="M-35,-20 h70 M0,-40 v40" stroke="#e5484d" stroke-width="4"/></g>` })
+      : person(170, 448, { wear: W, face:"happy", pose: st === "laugh" ? "cheer" : "stand" })}
+    ${st === "box" ? "" : `<g>${cardBox(270, 452, 84, 46)}${st === "in" || st === "laugh" ? `<g transform="translate(270,420)">${catSit(0, 0, .9, { happy:true })}</g>${cardBox(270, 452, 84, 30)}` : ""}</g>`}
+    ${st === "box" ? catSit(262, 448, 1, { flip:true, wag:true }) : ""}
+    ${st === "box" ? `<rect ${hitA("gift","선물 상자")} x="130" y="330" width="80" height="70" fill="transparent"/>` : ""}
+    <g class="tg" id="tg-cat"><rect x="220" y="370" width="90" height="84" rx="10" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6"/></g>
+    ${hudFood()}`;
+  show(draw("box"), { label:"월급날 저녁. 선물 상자", bg:"bedR-eve" });
   const give = () => {
     idleKill(); hits({});
-    world(draw("open")); sound('rip', '부욱', 240, 380, { fs:15 });
-    later(1200, () => { world(draw("in")); sound('nya', '냥!', 250, 336, { fs:17 }); });
-    later(2600, () => { dropFx('nya'); world(draw("laugh")); sound('ha', '하하', 150, 236, { fs:15 }); });
+    world(draw("open")); sound('rip', '부욱', 270, 380, { fs:15 });
+    later(1200, () => { world(draw("in")); sound('nya', '냥!', 280, 336, { fs:17 }); });
+    later(2600, () => { dropFx('nya'); world(draw("laugh")); sound('ha', '하하', 170, 236, { fs:15 }); });
     later(4400, () => fadeTo(() => night(true), 700));
   };
-  hits({ gift: { drag: { ghost:(x,y) => cardBox(x, y+20, 70, 40), targets:[{ key:"cat", r:[180, 340, 120, 140], fn: give }] }, key: give } });
-  later(600, () => teach("drag", 150, 360, 236, 410, { key:"gift" }));
+  hits({ gift: { drag: { ghost:(x,y) => cardBox(x, y+20, 70, 40), targets:[{ key:"cat", r:[210, 340, 120, 140], fn: give }] }, key: give } });
+  later(600, () => teach("drag", 170, 360, 266, 410, { key:"gift" }));
 }
-function payPhone(arrive){
-  part('fx', "");
-  putFx('ph', `<g id="ph" class="vib" ${hitA("phone","휴대폰")}>${phone(110, 362, { screen:"#cfe0ff", inner:`<text x="0" y="6" text-anchor="middle" font-size="22">₩</text>` })}<rect x="80" y="310" width="60" height="104" fill="transparent"/></g>`);
-  sound('zing', '징-', 140, 300, { fs:14 });
-  addHits({ phone: { tap: () => payOpen(arrive), key: () => payOpen(arrive) } });
-  teach("tap", 110, 362, 0, 0, { key:"pay" });
+function payPhone(){
+  putFx('ph', `<g id="ph" class="vib" ${hitA("phone","휴대폰")}><g transform="translate(112,284) scale(.45)">${phone(0, 0, { screen:"#cfe0ff", inner:`<text x="0" y="8" text-anchor="middle" font-size="26">₩</text>` })}</g><rect x="86" y="250" width="52" height="70" fill="transparent"/></g>`);
+  sound('zing', '징-', 112, 240, { fs:14 });
+  hits({ phone: { tap: payOpen, key: payOpen } });
+  teach("tap", 112, 286, 0, 0, { key:"pay" });
 }
-function payOpen(arrive){
+function payOpen(){
   if (!$('ph')) return;
-  dropFx('ph', 'zing'); idleKill(); delete HIT.phone;
+  dropFx('ph', 'zing'); idleKill(); hits({});
   putFx('pay', `<g id="pay" class="pop" pointer-events="none"><rect x="0" y="-150" width="${VW}" height="${VH+300}" fill="#0b0d1c" opacity=".45"/>
     <rect x="96" y="80" width="168" height="290" rx="22" fill="#24273f"/><rect x="108" y="102" width="144" height="246" rx="6" fill="#fff"/>
     <text x="180" y="150" text-anchor="middle" font-size="16" fill="#64688c">급여 입금</text>
     <text x="180" y="200" text-anchor="middle" font-size="24" fill="#2f9e6a">첫 월급</text>
     <path d="M128,226 h104" stroke="#d6dbef" stroke-width="4"/></g>`);
-  later(1900, () => { dropFx('pay'); OF.mePose = "cheer"; OF.meFace = "happy"; part('me', ofMe()); });
-  later(3300, () => { OF.mePose = "stand"; part('me', ofMe()); ofToSix(arrive); });
+  later(1900, () => { dropFx('pay'); OF.meCheer = true; part('me', ofMe()); sound('ya', '야호!', SEAT[0], 226, { fs:16 }); });
+  later(3300, () => { dropFx('ya'); OF.meCheer = false; part('me', ofMe()); ofToSix(); });
 }
 
-/* ================= 엔딩: 좋고 나쁨이 아니라 균형의 모양 ================= */
+/* ================= 엔딩: 열이틀 동안 무엇을 가장 많이 했는지 ================= */
 const ENDINGS = {
-  lost:   { t:"나를 잃은 열이틀" }, far: { t:"닿지 않는 문" }, hotteok:{ t:"호떡이 친구" },
-  night:  { t:"밤의 사람" }, morning:{ t:"아침의 사람" }, evening:{ t:"저녁의 사람" },
-  hoodie: { t:"후드티의 사람" }, all: { t:"모든 시간의 사람" }
+  lost:   { t: () => "수습 기간 연장" },
+  hungry: { t: () => "빈 밥그릇" },
+  far:    { t: () => `멀어진 ${CAT}` },
+  hotteok:{ t: () => "고양이 키우는 사장님" },
+  night:  { t: () => "매일 밤 같이 잤다" },
+  morning:{ t: () => "아침마다 인사했다" },
+  evening:{ t: () => "저녁마다 같이 놀았다" },
+  hoodie: { t: () => "문 앞의 후드티" },
+  all:    { t: () => "밤, 아침, 저녁 다 함께" }
 };
 const TOTAL_ENDINGS = Object.keys(ENDINGS).length;
 function tally(){ let n = 0, m = 0, e = 0; for (let d=0; d<=12; d++){ const L = s.log[d]; if (!L) continue; if (L.open) n++; if (L.pet) m++; if (L.play) e++; } return { n, m, e }; }
 function endingKey(){
   const { n, m, e } = tally();
   if (s.face <= 0 || s.lates >= 5) return "lost";
+  if (s.hungry >= 3) return "hungry";
   if (s.bond <= 1) return "far";
   if (n >= 3 && m >= 3 && e >= 3 && s.lates <= 2) return "all";
   if (s.bossCat && s.bond >= 7 && s.meet === "good") return "hotteok";
@@ -2297,38 +2978,40 @@ function endingKey(){
 function endingLines(k){
   const { n, m, e } = tally();
   return {
-    lost:   ["수습 기간이 연장됐다.", n >= 6 ? `${CATe()} 매일 밤 옆에 있었다.` : `${CATe()} 매일 밤 문 앞에 있었다.`],
-    far:    ["이름을 불렀다.", "거실 어딘가에서, 아주 작게 대답했다."],
-    hotteok:["사장님께 보낼 사진을 고른다.", `호떡이랑 ${CAT}, 같은 색.`],
-    night:  [`같이 잔 밤 ${n}번.`, "아침은 늘 조금 늦었다."],
-    morning:[`나가기 전 쓰다듬은 아침 ${m}번.`, "문 앞에서 꼬리가 흔들렸다."],
-    evening:[`같이 논 저녁 ${e}번.`, "낚싯대 끝이 다 닳았다."],
-    hoodie: ["문은 닫혀 있다.", `문 앞의 후드티 위에서, ${CATi()} 잔다.`],
-    all:    ["밤에도, 아침에도, 저녁에도.", "피곤하지만, 나쁘지 않다."]
+    lost:   ["지각이 잦아서 수습 기간이 한 달 늘어났다.", n >= 6 ? `그래도 ${CATw()} 거의 매일 밤 같이 잤다.` : `${CATe()} 거의 매일 밤 방문 앞에서 잤다.`],
+    hungry: [`밥을 못 준 아침 ${s.hungry}번.`, `${CATe()} 빈 밥그릇 앞에서 자주 울었다.`],
+    far:    [`${CATe()} 이제 불러도 잘 오지 않는다.`, "거실 구석에서 혼자 잔다."],
+    hotteok:[`사장님께 ${CAT} 사진을 보냈다.`, "호떡이 사진이 답장으로 왔다."],
+    night:  [`같이 잔 밤 ${n}번.`, "그 대신 아침은 늘 조금 바빴다."],
+    morning:[`나가기 전에 쓰다듬은 아침 ${m}번.`, `${CATe()} 매일 방문 앞까지 배웅했다.`],
+    evening:[`같이 논 저녁 ${e}번.`, "낚싯대 끝 깃털이 다 닳았다."],
+    hoodie: ["방문은 닫고 잤다.", `대신 문 앞 후드티 위에서 ${CATi()} 잤다.`],
+    all:    ["밤에도, 아침에도, 저녁에도 같이 있었다.", "조금 피곤했지만 다 해냈다."]
   }[k];
 }
 function ending(){
   const k = endingKey(); saveFound(k);
-  const open = s.finalOpen;
+  const open = s.finalOpen, { n, m, e } = tally();
   let pic;
   if (open){
-    pic = `${wallR("#363b63", 0, 300)}${floorBand(300, "#2a2d4c", "#22243d")}${win(20, 46, 90, 90, "night", { curtain:"#5c6290" })}
-      ${doorIn(ND.x, ND.y, ND.w, ND.h, 1, { beyond:"#141629" })}
-      <rect x="0" y="292" width="20" height="160" rx="4" fill="var(--wood-d)"/><rect x="16" y="382" width="250" height="64" rx="8" fill="var(--sheet)"/><rect x="16" y="430" width="250" height="40" fill="var(--wood)"/>
-      <ellipse cx="62" cy="372" rx="48" ry="17" fill="#fff" stroke="#d6d9ea" stroke-width="2"/>
+    PLATE = "bedR-dark";
+    pic = `${doorG(ND, 1, { beyond:"#141629" })}${bedFront(382)}
       <g transform="translate(62,352) scale(1.15) translate(0,168)">${headG({ face:"sleep" })}</g>
-      <path d="M86,378 Q175,360 264,388 V446 H86 Z" fill="${s.hoodie === 'wear' ? 'var(--hoodie)' : 'var(--blanket)'}"/>
-      ${k === "far" ? "" : catLoaf(146, 384, 1.05, { zz:true })}`;
+      ${blanketFront(86, 380)}
+      ${k === "far" ? "" : catLoaf(150, 384, 1.05, { zz:true })}
+      ${k === "hungry" ? `<g transform="translate(300,452) scale(1.3)">${bowl(0, 0, 0)}</g>` : ""}`;
   } else {
-    pic = `${catWorldBg()}${bigDresser({ sleeve: s.hoodie == null })}${bigDoor({ gap:"dark", hoodie: s.hoodie === "door" })}
-      ${k === "far" ? `<g transform="translate(40,470) scale(1.2)">${catLoaf(0, 0, 1, { zz:true })}</g>` : `<g transform="translate(222,420) scale(1.5)">${catLoaf(0, 0, 1, { zz:true })}</g>`}`;
+    PLATE = "cat-dark";
+    pic = `${bigDresser({ sleeve: s.hoodie == null })}${bigDoor({ gap:"dark", hoodie: s.hoodie === "door" })}
+      ${k === "far" ? `<g transform="translate(40,470) scale(1.2)">${catLoaf(0, 0, 1, { zz:true })}</g>` : `<g transform="translate(222,420) scale(1.5)">${catLoaf(0, 0, 1, { zz:true })}</g>`}
+      ${k === "hungry" ? `<g transform="translate(112,454) scale(1.5)">${bowl(0, 0, 0)}</g>` : ""}`;
   }
   const strip = Array.from({ length:13 }, (_, i) => `<div>${stripIcon(s.log[i])}<span>${i === 0 ? "전" : i}</span></div>`).join('');
-  show(pic, { flat:true, label:"엔딩", below: `
-    <p class="ending-title">${ENDINGS[k].t}</p>
+  show(pic, { flat:true, label:"엔딩", bg: open ? "bedR-dark" : "cat-dark", below: `
+    <p class="ending-title">${ENDINGS[k].t()}</p>
     ${endingLines(k).map(t => `<p class="end-line">${t}</p>`).join('')}
     <div class="strip" aria-label="열이틀의 기록">${strip}</div>
-    <p class="quiet">처음 문을 닫던 밤과 마지막 밤. 같은 문이었다.</p>
+    <p class="quiet">같이 잔 밤 ${n} · 쓰다듬은 아침 ${m} · 같이 논 저녁 ${e}<br>지각 ${s.lates} · 야근 ${s.overtime} · 밥 거른 아침 ${s.hungry}</p>
     <button class="wide" id="again">처음부터</button>
     ${foundLine()}` });
   $('again').onclick = goTitle;
