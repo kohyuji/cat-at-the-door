@@ -1,0 +1,1200 @@
+{
+  "version": 5,
+  "updated": "2026-11-04",
+  "provider": "built-in image_gen.imagegen",
+  "design": {
+    "setting": "현대 도시의 일상; 회색·차콜·바랜 파랑·작은 적갈색 포인트",
+    "casual": "연회색 후드티·연청바지·적갈색 끈",
+    "formal": "기존 남색 정장·흰 셔츠",
+    "portraits": "사용자 승인 사람 얼굴 원본 유지, 후드티 의상 보정 원본 유지, 고양이만 새 단순 픽셀 초상화"
+  },
+  "canvas": {
+    "width": 640,
+    "height": 360,
+    "internalWidth": 640,
+    "internalHeight": 360,
+    "imageSmoothingEnabled": false,
+    "DPR": "caller supplies context transform; exact DPR2 replication verified",
+    "input": "640x360 logical coordinates"
+  },
+  "load": {
+    "r5Home": "assets/r5-home.png",
+    "r5Bedtime": "assets/r5-bedtime.png",
+    "r5BedLighting": "assets/r5-bed-lighting.png",
+    "r5Shop": "assets/r5-shop.png",
+    "r5Windows": "assets/r5-windows.png",
+    "r5Props": "assets/r5-props.png",
+    "r5Poses": "assets/r5-poses.png",
+    "r5Care": "assets/r5-care.png",
+    "r5Winter": "assets/r5-winter-scenes.png",
+    "r5CatPortrait": "assets/r5-cat-portrait.png"
+  },
+  "images": {
+    "r5Home": {
+      "file": "assets/r5-home.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1639457,
+      "sha256": "a1ab676955ed0901ce9575960bdf745c47f2293c6d020551dbc09a7a143cbde4",
+      "hasAlpha": false,
+      "alpha": {
+        "min": 255,
+        "max": 255,
+        "fullyTransparentPixels": 0
+      },
+      "grid": {
+        "columns": 2,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "index": 0,
+          "label": "bedroom closed",
+          "sourceRect": [
+            0,
+            0,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 1,
+          "label": "bedroom open",
+          "sourceRect": [
+            836,
+            0,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 2,
+          "label": "living closed",
+          "sourceRect": [
+            0,
+            471,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 3,
+          "label": "living open",
+          "sourceRect": [
+            836,
+            471,
+            836,
+            470
+          ]
+        }
+      ]
+    },
+    "r5Bedtime": {
+      "file": "assets/r5-bedtime.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1746753,
+      "sha256": "54af8cb5c7eda0efa59374715abefd2ba8ec38bcab390fc044b3dab15997226a",
+      "hasAlpha": false,
+      "alpha": {
+        "min": 255,
+        "max": 255,
+        "fullyTransparentPixels": 0
+      },
+      "grid": {
+        "columns": 2,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "index": 0,
+          "label": "awake closed lamp on",
+          "sourceRect": [
+            0,
+            0,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 1,
+          "label": "awake open lamp on",
+          "sourceRect": [
+            836,
+            0,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 2,
+          "label": "asleep closed lamp off",
+          "sourceRect": [
+            0,
+            471,
+            836,
+            470
+          ]
+        },
+        {
+          "index": 3,
+          "label": "asleep open lamp off",
+          "sourceRect": [
+            836,
+            471,
+            836,
+            470
+          ]
+        }
+      ]
+    },
+    "r5BedLighting": {
+      "file": "assets/r5-bed-lighting.png",
+      "width": 1671,
+      "height": 941,
+      "bytes": 1748524,
+      "sha256": "0ef487ddedf48bc480c09a5b3a96ffcb3d1d11a68da01ce3f58e21e5620ec1eb",
+      "hasAlpha": false,
+      "alpha": {
+        "min": 255,
+        "max": 255,
+        "fullyTransparentPixels": 0
+      },
+      "grid": {
+        "columns": 2,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "index": 0,
+          "label": "awake closed night lamp off",
+          "sourceRect": [
+            0,
+            0,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 1,
+          "label": "awake open night lamp off",
+          "sourceRect": [
+            836,
+            0,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 2,
+          "label": "awake closed morning",
+          "sourceRect": [
+            0,
+            471,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 3,
+          "label": "awake open morning",
+          "sourceRect": [
+            836,
+            471,
+            835,
+            470
+          ]
+        }
+      ]
+    },
+    "r5Shop": {
+      "file": "assets/r5-shop.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1668063,
+      "sha256": "d6bb979287bf23cc56c8180c9a28d123fcc773db528bd80247d76a534b7d097f",
+      "hasAlpha": false,
+      "alpha": {
+        "min": 255,
+        "max": 255,
+        "fullyTransparentPixels": 0
+      },
+      "grid": {
+        "columns": 1,
+        "rows": 1
+      },
+      "cells": [
+        {
+          "index": 0,
+          "label": "complete shop",
+          "sourceRect": [
+            0,
+            0,
+            1672,
+            941
+          ]
+        }
+      ]
+    },
+    "r5Windows": {
+      "file": "assets/r5-windows.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1454457,
+      "sha256": "46b1463f4d855b20bcd5b0a6083967171eb50676baf6bdc3a9206c1e043aec90",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 848802
+      },
+      "sourceRects": [
+        [
+          15,
+          190,
+          354,
+          257
+        ],
+        [
+          399,
+          191,
+          354,
+          256
+        ],
+        [
+          783,
+          191,
+          354,
+          256
+        ],
+        [
+          1168,
+          191,
+          353,
+          256
+        ],
+        [
+          37,
+          578,
+          311,
+          288
+        ],
+        [
+          421,
+          577,
+          311,
+          288
+        ],
+        [
+          805,
+          577,
+          311,
+          289
+        ],
+        [
+          1189,
+          577,
+          311,
+          289
+        ]
+      ],
+      "cells": [
+        "bedroom day",
+        "bedroom dusk",
+        "bedroom night",
+        "bedroom closed curtain",
+        "living day",
+        "living dusk",
+        "living storm or night",
+        "living closed curtain"
+      ]
+    },
+    "r5Props": {
+      "file": "assets/r5-props.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1304179,
+      "sha256": "aa6e5fc928b2ecd1e2d7a051175feabefb10ab8a3bd94175d8f9d42613b2cc6e",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "fullyTransparentPixels": 572436
+      },
+      "sourceRects": [
+        [
+          31,
+          51,
+          256,
+          244
+        ],
+        [
+          344,
+          51,
+          256,
+          244
+        ],
+        [
+          658,
+          50,
+          256,
+          245
+        ],
+        [
+          971,
+          53,
+          256,
+          242
+        ],
+        [
+          36,
+          397,
+          242,
+          176
+        ],
+        [
+          350,
+          397,
+          242,
+          176
+        ],
+        [
+          664,
+          397,
+          241,
+          176
+        ],
+        [
+          977,
+          397,
+          242,
+          176
+        ],
+        [
+          37,
+          701,
+          243,
+          182
+        ],
+        [
+          374,
+          658,
+          191,
+          252
+        ],
+        [
+          653,
+          653,
+          261,
+          254
+        ],
+        [
+          979,
+          678,
+          235,
+          211
+        ],
+        [
+          39,
+          967,
+          235,
+          247
+        ],
+        [
+          346,
+          1000,
+          246,
+          204
+        ],
+        [
+          671,
+          987,
+          225,
+          228
+        ],
+        [
+          1023,
+          985,
+          149,
+          230
+        ]
+      ],
+      "cells": [
+        "rack both",
+        "rack suit",
+        "rack hoodie",
+        "rack empty",
+        "bowl empty",
+        "bowl full",
+        "water low",
+        "water full",
+        "one pair shoes",
+        "dark packet",
+        "umbrella",
+        "folded hoodie",
+        "open bag",
+        "briefcase",
+        "clock face",
+        "phone"
+      ]
+    },
+    "r5Poses": {
+      "file": "assets/r5-poses.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 793237,
+      "sha256": "cf1b8a04bb1f44959f641e2e8abbd4c92e6f0037b8a57e70060635cd1b30756f",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "fullyTransparentPixels": 1056108
+      },
+      "sourceRects": [
+        [
+          90,
+          34,
+          147,
+          332
+        ],
+        [
+          406,
+          34,
+          128,
+          332
+        ],
+        [
+          706,
+          34,
+          145,
+          332
+        ],
+        [
+          1029,
+          34,
+          144,
+          333
+        ],
+        [
+          90,
+          447,
+          147,
+          342
+        ],
+        [
+          407,
+          447,
+          128,
+          342
+        ],
+        [
+          706,
+          451,
+          146,
+          338
+        ],
+        [
+          1029,
+          451,
+          145,
+          338
+        ],
+        [
+          52,
+          897,
+          212,
+          312
+        ],
+        [
+          366,
+          897,
+          212,
+          312
+        ],
+        [
+          713,
+          858,
+          139,
+          351
+        ],
+        [
+          1024,
+          858,
+          141,
+          351
+        ]
+      ],
+      "cells": [
+        "hoodie front",
+        "hoodie back",
+        "hoodie right",
+        "hoodie left",
+        "suit front",
+        "suit back",
+        "suit right",
+        "suit left",
+        "study A",
+        "study B",
+        "cafe A",
+        "cafe B"
+      ]
+    },
+    "r5Care": {
+      "file": "assets/r5-care.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 2116294,
+      "sha256": "d226e24d3018151742a774be31d52a66f364ad6466cb094bb53f462573bf138f",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 777682
+      },
+      "grid": {
+        "columns": 6,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256
+      },
+      "cells": [
+        {
+          "index": 0,
+          "outfit": "hoodie",
+          "action": "feed",
+          "frame": 0,
+          "sourceRect": [
+            0,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 250,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 1,
+          "outfit": "hoodie",
+          "action": "feed",
+          "frame": 1,
+          "sourceRect": [
+            256,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 250,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 2,
+          "outfit": "hoodie",
+          "action": "feed",
+          "frame": 2,
+          "sourceRect": [
+            512,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 251,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 3,
+          "outfit": "hoodie",
+          "action": "feed",
+          "frame": 3,
+          "sourceRect": [
+            768,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 251,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 4,
+          "outfit": "hoodie",
+          "action": "water",
+          "frame": 0,
+          "sourceRect": [
+            1024,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 251,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 5,
+          "outfit": "hoodie",
+          "action": "water",
+          "frame": 1,
+          "sourceRect": [
+            1280,
+            0,
+            256,
+            256
+          ],
+          "sourceGroundY": 251,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 6,
+          "outfit": "hoodie",
+          "action": "water",
+          "frame": 2,
+          "sourceRect": [
+            0,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 248,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 7,
+          "outfit": "hoodie",
+          "action": "water",
+          "frame": 3,
+          "sourceRect": [
+            256,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 248,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 8,
+          "outfit": "hoodie",
+          "action": "pet",
+          "frame": 0,
+          "sourceRect": [
+            512,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 244,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 9,
+          "outfit": "hoodie",
+          "action": "pet",
+          "frame": 1,
+          "sourceRect": [
+            768,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 245,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 10,
+          "outfit": "hoodie",
+          "action": "pet",
+          "frame": 2,
+          "sourceRect": [
+            1024,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 244,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 11,
+          "outfit": "hoodie",
+          "action": "pet",
+          "frame": 3,
+          "sourceRect": [
+            1280,
+            256,
+            256,
+            256
+          ],
+          "sourceGroundY": 245,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 12,
+          "outfit": "suit",
+          "action": "feed",
+          "frame": 0,
+          "sourceRect": [
+            0,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 247,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 13,
+          "outfit": "suit",
+          "action": "feed",
+          "frame": 1,
+          "sourceRect": [
+            256,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 247,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 14,
+          "outfit": "suit",
+          "action": "feed",
+          "frame": 2,
+          "sourceRect": [
+            512,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 247,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 15,
+          "outfit": "suit",
+          "action": "feed",
+          "frame": 3,
+          "sourceRect": [
+            768,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 247,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 16,
+          "outfit": "suit",
+          "action": "water",
+          "frame": 0,
+          "sourceRect": [
+            1024,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 248,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 17,
+          "outfit": "suit",
+          "action": "water",
+          "frame": 1,
+          "sourceRect": [
+            1280,
+            512,
+            256,
+            256
+          ],
+          "sourceGroundY": 248,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 18,
+          "outfit": "suit",
+          "action": "water",
+          "frame": 2,
+          "sourceRect": [
+            0,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 243,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 19,
+          "outfit": "suit",
+          "action": "water",
+          "frame": 3,
+          "sourceRect": [
+            256,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 243,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 20,
+          "outfit": "suit",
+          "action": "pet",
+          "frame": 0,
+          "sourceRect": [
+            512,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 239,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 21,
+          "outfit": "suit",
+          "action": "pet",
+          "frame": 1,
+          "sourceRect": [
+            768,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 239,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 22,
+          "outfit": "suit",
+          "action": "pet",
+          "frame": 2,
+          "sourceRect": [
+            1024,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 239,
+          "worldGroundY": 318.25
+        },
+        {
+          "index": 23,
+          "outfit": "suit",
+          "action": "pet",
+          "frame": 3,
+          "sourceRect": [
+            1280,
+            768,
+            256,
+            256
+          ],
+          "sourceGroundY": 239,
+          "worldGroundY": 318.25
+        }
+      ],
+      "anchor": {
+        "start": {
+          "x": 270,
+          "y": 255
+        },
+        "target": {
+          "x": 338,
+          "y": 310
+        },
+        "cellScale": 1.15,
+        "sourceHand": [
+          109,
+          195
+        ],
+        "xFormula": "start.x - 109*1.15",
+        "yFormula": "start.y - 195*1.15 + (250 - sourceGroundY)*1.15"
+      }
+    },
+    "r5Winter": {
+      "file": "assets/r5-winter-scenes.png",
+      "width": 1671,
+      "height": 941,
+      "bytes": 1911615,
+      "sha256": "4ccdbcf1849599a68667337f69d9458ec75883aafe33dda99efdd87cd8ca4515",
+      "hasAlpha": false,
+      "alpha": {
+        "min": 255,
+        "max": 255,
+        "fullyTransparentPixels": 0
+      },
+      "grid": {
+        "columns": 2,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "index": 0,
+          "label": "study day seated worker",
+          "sourceRect": [
+            0,
+            0,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 1,
+          "label": "study night seated worker",
+          "sourceRect": [
+            836,
+            0,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 2,
+          "label": "cafe dishes day worker",
+          "sourceRect": [
+            0,
+            471,
+            835,
+            470
+          ]
+        },
+        {
+          "index": 3,
+          "label": "cafe dishes night worker",
+          "sourceRect": [
+            836,
+            471,
+            835,
+            470
+          ]
+        }
+      ]
+    },
+    "r5CatPortrait": {
+      "file": "assets/r5-cat-portrait.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 527062,
+      "sha256": "faa992fe07cc7d6754728366880275663225c5cf8417328d068e06afda9f2793",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "fullyTransparentPixels": 1075553
+      },
+      "sourceRects": [
+        [
+          286,
+          222,
+          677,
+          936
+        ]
+      ]
+    }
+  },
+  "runtimeAlpha": {
+    "cutouts": [
+      "r5Windows",
+      "r5Props",
+      "r5Poses",
+      "r5Care",
+      "r5CatPortrait"
+    ],
+    "rule": "original PNG preserved; cached display texture alpha below128→0, otherwise255"
+  },
+  "layout": {
+    "bedroom": {
+      "phone": {
+        "x": 112,
+        "y": 207,
+        "w": 38,
+        "h": 38
+      },
+      "room": {
+        "x": 526,
+        "y": 78,
+        "w": 90,
+        "h": 194
+      },
+      "bed": {
+        "x": 24,
+        "y": 181,
+        "w": 228,
+        "h": 120
+      },
+      "clothes": {
+        "x": 430,
+        "y": 184,
+        "w": 92,
+        "h": 90
+      },
+      "bag": {
+        "x": 492,
+        "y": 289,
+        "w": 39,
+        "h": 35
+      },
+      "roller": {
+        "x": 439,
+        "y": 245,
+        "w": 40,
+        "h": 48
+      }
+    },
+    "bedtime": {
+      "phone": {
+        "x": 62,
+        "y": 222,
+        "w": 42,
+        "h": 42
+      },
+      "room": {
+        "x": 504,
+        "y": 59,
+        "w": 103,
+        "h": 209
+      }
+    },
+    "living": {
+      "room": {
+        "x": 526,
+        "y": 78,
+        "w": 90,
+        "h": 194
+      },
+      "food": {
+        "x": 531,
+        "y": 300,
+        "w": 46,
+        "h": 42
+      },
+      "water": {
+        "x": 469,
+        "y": 300,
+        "w": 45,
+        "h": 42
+      },
+      "litter": {
+        "x": 143,
+        "y": 277,
+        "w": 77,
+        "h": 59
+      }
+    },
+    "shop": {
+      "dry": {
+        "x": 208,
+        "y": 136,
+        "w": 60,
+        "h": 58,
+        "gx": 238,
+        "gy": 320,
+        "cx": 238,
+        "base": 185
+      },
+      "wet": {
+        "x": 304,
+        "y": 136,
+        "w": 60,
+        "h": 58,
+        "gx": 334,
+        "gy": 320,
+        "cx": 334,
+        "base": 185
+      },
+      "dark": {
+        "x": 402,
+        "y": 136,
+        "w": 60,
+        "h": 58,
+        "gx": 432,
+        "gy": 320,
+        "cx": 432,
+        "base": 185
+      },
+      "shoproller": {
+        "x": 496,
+        "y": 136,
+        "w": 60,
+        "h": 58,
+        "gx": 526,
+        "gy": 320,
+        "cx": 526,
+        "base": 185
+      },
+      "small": {
+        "x": 208,
+        "y": 201,
+        "w": 60,
+        "h": 46,
+        "gx": 238,
+        "gy": 320,
+        "cx": 238,
+        "base": 235
+      },
+      "shopexit": {
+        "x": 12,
+        "y": 82,
+        "w": 130,
+        "h": 182,
+        "gx": 80,
+        "gy": 320
+      }
+    },
+    "mini": {
+      "feed": {
+        "start": {
+          "x": 270,
+          "y": 255
+        },
+        "target": {
+          "x": 338,
+          "y": 310
+        }
+      },
+      "water": {
+        "start": {
+          "x": 270,
+          "y": 255
+        },
+        "target": {
+          "x": 338,
+          "y": 310
+        }
+      }
+    }
+  },
+  "preserved": {
+    "r4AssetManifest": "assets/r4-asset-manifest.json",
+    "originalPNGs": "all R4 asset files untouched",
+    "approvedPortraitFiles": [
+      "assets/r4-portraits-approved.png",
+      "assets/r4-portraits-approved-cords.png"
+    ],
+    "hashVerification": "both approved PNG SHA256 match R4 manifest"
+  },
+  "drafts": [
+    {
+      "file": "assets/r5-winter.png",
+      "purpose": "original empty winter scene before generated worker composition",
+      "loaded": false
+    }
+  ],
+  "prompts": "assets/r5-prompts.md",
+  "verification": {
+    "report": "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-verification.json",
+    "passedChecks": 63,
+    "renderedFrames": 46,
+    "evidence": [
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-final-scenes.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-final-bed-stages.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-final-care.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-final-portraits.png",
+      "C:\\Users\\omool\\.codex\\visualizations\\2026\\11\\04\\01a1a5c6-0960-7951-86d7-3a5b0657bd19\\r5\\r5-final-winter-home.png"
+    ],
+    "scope": "R5 graphics targeted offscreen render; no browser, gameplay, build or public deployment verification",
+    "remaining": "game owner integrates shop hitboxes and labels, then final input/CSS/build/public deployment verification"
+  }
+}
