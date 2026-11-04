@@ -7,6 +7,23 @@ var PixelArt = (function () {
   var images={}, peopleScale=.28, catScale=.205;
   var assetSources={r4People:'assets/r4-people-pixel.png',r4Cats:'assets/r4-cats-pixel.png',r4Props:'assets/r4-props-pixel.png',r4Actions:'assets/r4-actions-pixel.png',r4Seated:'assets/r4-seated-pixel.png',r4Portraits:'assets/r4-portraits-approved-cords.png',r4PortraitBase:'assets/r4-portraits-approved.png',r4Scenes:'assets/r4-scenes-urban.png',r4Outdoors:'assets/r4-outdoors-urban.png'};
   Object.assign(assetSources,{r5Home:'assets/r5-home.png',r5Bedtime:'assets/r5-bedtime.png',r5BedLighting:'assets/r5-bed-lighting.png',r5Shop:'assets/r5-shop.png',r5Windows:'assets/r5-windows.png',r5Props:'assets/r5-props.png',r5Poses:'assets/r5-poses.png',r5Care:'assets/r5-care.png',r5Winter:'assets/r5-winter-scenes.png',r5CatPortrait:'assets/r5-cat-portrait.png'});
+  Object.assign(assetSources,{r6Bed:'assets/r6-bed-v2.png',r6PeopleV2:'assets/r6-people-v2.png',r6CleanV2:'assets/r6-clean-v2.png',r6WetV2:'assets/r6-wet-v2.png',r6CareV2:'assets/r6-care-v2.png',r6TransitV2:'assets/r6-transit-v2.png',r6Devices:'assets/r6-devices.png',r6Bowls:'assets/r6-bowls.png'});
+  delete assetSources.r5Bedtime;delete assetSources.r5BedLighting;delete assetSources.r5Poses;delete assetSources.r5Care;
+  var nativeKeys={people:'r6PeopleV2',clean:'r6CleanV2',wet:'r6WetV2',care:'r6CareV2',transit:'r6TransitV2'},nativeColumns={people:8,clean:4,wet:4,care:4,transit:2};
+  // User chose the first correction's hair midtones and alpha. These native
+  // exports bypass texture()'s legacy alpha threshold and retain the RGBA.
+  var nativeBowls={"wet":[[10.409375,-2.4609375],[10.409375,-2.4609375],[8.9640625,-3.3984375],[10.4484375,-2.4609375],[10.409375,-2.4609375],[10.409375,-2.4609375],[8.9640625,-3.3984375],[10.4484375,-2.4609375]],"care":[[12.254882812499998,-4.7607421875],[12.108398437499998,-4.7607421875],[12.767578124999998,-4.7607421875],[12.328124999999998,-4.7607421875],[14.598632812499998,-2.9296875],[12.108398437499998,-3.6621093749999996],[14.598632812499998,-3.6621093749999996],[14.598632812499998,-3.2958984375],null,null,null,null,[12.254882812499998,-4.833984375],[12.108398437499998,-4.833984375],[12.840820312499998,-4.833984375],[12.401367187499998,-4.833984375],[14.598632812499998,-2.9296875],[14.598632812499998,-3.22265625],[14.598632812499998,-3.6621093749999996],[14.598632812499998,-3.5156249999999996],null,null,null,null]};
+  function nativeActor(c,kind,index,x,y,unit,flip){var im=images[nativeKeys[kind]],cols=nativeColumns[kind];if(!ready(im)||!cols)return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,index%cols*48,Math.floor(index/cols)*64,48,64,-24*unit,-62*unit,48*unit,64*unit);c.restore();return true;}
+  assetSources.r6DeviceStates='assets/r6-device-states.png';
+  // Generated cutouts retain their source PNG alpha. Frames share one source
+  // scale, rather than stretching each frame into a fixed-width character.
+  var r6Rects={bed:[[49,207,813,480],[958,207,813,480]],poses:[[35,60,206,266],[308,60,204,265],[580,60,205,266],[851,60,207,266],[56,417,167,282],[327,417,167,282],[600,417,166,282],[871,417,166,282],[42,756,208,304],[291,756,193,305],[585,756,208,304],[834,756,193,304],[42,1120,207,298],[293,1120,191,298],[586,1120,207,298],[836,1120,190,298]],devices:[[85,79,298,318],[565,57,206,345],[984,90,250,312],[1411,153,281,237],[89,542,287,281],[540,492,267,347],[964,490,293,349],[1425,542,262,286]],wet:[[30,37,401,369],[473,37,401,369],[917,37,401,369],[1360,37,394,369],[30,481,401,370],[474,481,400,370],[917,481,401,370],[1360,481,394,370]],transit:[[123,144,284,508],[692,136,256,516],[1218,135,265,517],[1754,148,273,504]]};
+  r6Rects.bowls=[[43,246,455,278],[587,246,455,278],[1130,245,454,279],[1674,246,456,278]];
+  r6Rects.deviceStates=[[131,116,284,466],[643,153,345,429],[1139,359,438,223],[1698,120,406,462]];
+  r6Rects.bed=[[47,201,818,486],[955,201,818,486]];
+  var r6Keys={bed:'r6Bed',poses:'r6Poses',devices:'r6Devices',wet:'r6WetCare',transit:'r6Transit',bowls:'r6Bowls'};
+  r6Keys.deviceStates='r6DeviceStates';
+  function r6Part(c,kind,index,x,y,width,flip){var a=r6Rects[kind]&&r6Rects[kind][index],im=texture(c,r6Keys[kind]);if(!a||!im)return false;return cut(c,im,a,x,y,width,width*a[3]/a[2],flip);}
   var r5Rects={
     windows:[[15,190,354,257],[399,191,354,256],[783,191,354,256],[1168,191,353,256],[37,578,311,288],[421,577,311,288],[805,577,311,289],[1189,577,311,289]],
     props:[[31,51,256,244],[344,51,256,244],[658,50,256,245],[971,53,256,242],[36,397,242,176],[350,397,242,176],[664,397,241,176],[977,397,242,176],[37,701,243,182],[374,658,191,252],[653,653,261,254],[979,678,235,211],[39,967,235,247],[346,1000,246,204],[671,987,225,228],[1023,985,149,230]],
@@ -15,7 +32,7 @@ var PixelArt = (function () {
   };
   var r5Keys={windows:'r5Windows',props:'r5Props',poses:'r5Poses',cat:'r5CatPortrait'},textureCache=new WeakMap();
   function surface(c,w,h){if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);if(c.canvas&&c.canvas.ownerDocument){var cv=c.canvas.ownerDocument.createElement('canvas');cv.width=w;cv.height=h;return cv;}try{return new c.canvas.constructor(w,h);}catch(e){return null;}}
-  function texture(c,key){var im=images[key];if(!ready(im))return null;if(!/^r5(?:Windows|Props|Poses|Care|CatPortrait)$/.test(key))return im;var tex=textureCache.get(im);if(tex)return tex;tex=surface(c,im.naturalWidth||im.width,im.naturalHeight||im.height);if(!tex)return im;
+  function texture(c,key){var im=images[key];if(!ready(im))return null;if(!/^(?:r5(?:Windows|Props|Poses|Care|CatPortrait)|r6(?:Bed|Poses|Devices|DeviceStates|WetCare|Transit|Bowls))$/.test(key))return im;var tex=textureCache.get(im);if(tex)return tex;tex=surface(c,im.naturalWidth||im.width,im.naturalHeight||im.height);if(!tex)return im;
     var tc=tex.getContext('2d');tc.imageSmoothingEnabled=false;tc.drawImage(im,0,0);var pixels=tc.getImageData(0,0,tex.width,tex.height),d=pixels.data;for(var i=3;i<d.length;i+=4)d[i]=d[i]<128?0:255;tc.putImageData(pixels,0,0);textureCache.set(im,tex);return tex;}
   function part(c,kind,index,x,y,width){var a=r5Rects[kind]&&r5Rects[kind][index],im=texture(c,r5Keys[kind]);if(!a||!im)return false;return cut(c,im,a,x,y,width,width*a[3]/a[2],false);}
   function scene(c,key,index,columns,rows,x,y,w,h){var im=texture(c,key);if(!im)return false;var iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,sw=Math.floor(iw/columns),sh=Math.floor(ih/rows),sx=Math.round(index%columns*iw/columns),sy=Math.round(Math.floor(index/columns)*ih/rows);c.save();c.imageSmoothingEnabled=false;c.drawImage(im,sx,sy,sw,sh,x||0,y||0,w||640,h||360);c.restore();return true;}
@@ -37,7 +54,14 @@ var PixelArt = (function () {
   function cut(c,im,a,x,y,w,h,flip){if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,a[0],a[1],a[2],a[3],Math.round(-w/2),Math.round(-h),Math.round(w),Math.round(h));c.restore();return true;}
   function generatedPerson(c,x,y,variant,dir,t,pose){
     var main=variant==='me'||variant==='hoodie'||variant==='suit';
-    if(main&&ready(images.r5Poses)&&/^(stand|front|back|standBack|walkBack|tired|study|cafe)$/.test(pose)){var pi=variant==='suit'?4:0;if(pose==='back'||pose==='standBack'||pose==='walkBack')pi+=1;else if(pose==='study')pi=8+Math.floor((t||0)*3)%2;else if(pose==='cafe')pi=10+Math.floor((t||0)*3)%2;else pi+=pose==='front'||dir===0?0:dir<0?3:2;var pa=r5Rects.poses[pi],ph=58;return part(c,'poses',pi,x,y,pa[2]*ph/pa[3]);}
+    if(main&&ready(images.r6PeopleV2)&&! /^(sit|kneel|care|sleep|bedSleep)$/.test(pose)){
+      var suit=variant==='suit',rf=Math.floor((t||0)*3)%2,moving=/^(walk|walkBack|umbrellaWalk)$/.test(pose),pi=(suit?8:0)+Math.floor((t||0)*10)%8,flip=dir<0;
+      if(pose==='sweep'||pose==='mop')return nativeActor(c,'clean',(pose==='mop'?4:0)+(suit?2:0)+rf,x,y,4/2.15,false);
+      if(!moving){if(pose==='sofaRest'){pi=(suit?28:20)+rf;flip=false;}else if(pose==='study'){pi=22+rf;flip=true;}else if(pose==='umbrella'){pi=30+rf;flip=dir<0;}else if(/^(back|standBack)$/.test(pose)){pi=suit?27:19;flip=false;}else if(pose==='front'||dir===0){pi=suit?24:16;flip=false;}else{pi=suit?26:18;flip=dir<0;}}
+      return nativeActor(c,'people',pi,x,y,4/2.15,flip);
+    }
+    if(/^transit[0-3]$/.test(pose))return nativeActor(c,'transit',Number(pose.slice(7)),x,y,4/2.15,false);
+    if(main&&ready(images.r5Poses)&&/^(stand|front|back|standBack|tired|cafe)$/.test(pose)){var pi=variant==='suit'?4:0;if(pose==='back'||pose==='standBack')pi+=1;else if(pose==='cafe')pi=10+Math.floor((t||0)*3)%2;else pi+=pose==='front'||dir===0?0:dir<0?3:2;var pa=r5Rects.poses[pi],ph=58;return part(c,'poses',pi,x,y,pa[2]*ph/pa[3]);}
     if(!ready(images.r4People))return false;
     if(pose==='sit'&&ready(images.r4Seated)){var si=variant==='suit'?Math.floor((t||0)*2)%4:variant==='customerA'?4:variant==='customerB'?5:variant==='customerC'?6:variant==='peer'?7:variant==='commuterA'?12:variant==='commuterB'?13:variant==='commuterC'?14:variant==='boss'||variant==='lead'?15:8+Math.floor((t||0)*1.2)%4,sa=seatedRects[si],left=si>=4&&si<8||si>=12;
       cut(c,images.r4Seated,sa,x,y,sa[2]*.178,sa[3]*.178,left?dir>0:dir<0);
@@ -46,7 +70,7 @@ var PixelArt = (function () {
       var ai=pose==='sit'?Math.floor((t||0)*2)%4:4+Math.floor((t||0)*3)%4,aa=actionRects[ai];
       return cut(c,images.r4Actions,aa,x,y,aa[2]*.168,aa[3]*.168,dir<0);
     }
-    var moving=pose==='walk'||pose==='umbrellaWalk',frame=moving?Math.floor((t||0)*10)%8:0,index;
+    var moving=pose==='walk'||pose==='walkBack'||pose==='umbrellaWalk',frame=moving?Math.floor((t||0)*10)%8:0,index;
     var npc={lead:24,boss:24,peer:25,customerA:26,customerB:27,customerC:28,commuterA:26,commuterB:27,commuterC:28};
     if(npc[variant]!==undefined){index=npc[variant];if(pose==='sit')index=variant==='customerB'||variant==='commuterB'?30:variant==='customerC'||variant==='commuterC'?31:29;}
     else if(pose==='sleep')index=20;
@@ -83,7 +107,7 @@ var PixelArt = (function () {
     var a=catRects[index],w=a[2]*catScale,h=a[3]*catScale;
     return cut(c,images.r4Cats,a,x,y,w,h,dir<0);
   }
-  function generatedItem(c,type,x,y,scale){var actions={hand:[8,17],handGrip:[9,15],handPoint:[10,17],handRest:[11,17],charger:[12,41],folder:[13,44],shoes:[14,34],umbrellaGrip:[15,10]},ap=actions[type];
+  function generatedItem(c,type,x,y,scale){var ds={feederEmpty:[0,33],fountainEmpty:[1,36],premiumToyBroken:[2,42],autoLitterFull:[3,62]}[type];if(ds&&r6Part(c,'deviceStates',ds[0],x,y,ds[1]*(scale||1)))return true;var bowl={waterEmpty:0,waterLow:1,water:2,bowlWet:3}[type];if(bowl!==undefined&&r6Part(c,'bowls',bowl,x,y,30*(scale||1)))return true;var device={autoLitter:[0,62],feeder:[1,33],fountain:[2,36],robot:[3,36],premiumToy:[4,42],broom:[5,38],mop:[6,38],wetCan:[7,24]}[type];if(device&&r6Part(c,'devices',device[0],x,y,device[1]*(scale||1)))return true;var actions={hand:[8,17],handGrip:[9,15],handPoint:[10,17],handRest:[11,17],charger:[12,41],folder:[13,44],shoes:[14,34],umbrellaGrip:[15,10]},ap=actions[type];
     var rp={rackBoth:[0,92],rackSuit:[1,92],rackHoodie:[2,92],rackEmpty:[3,92],bowlEmpty:[4,30],bowlFull:[5,30],waterLow:[6,30],water:[7,30],shoes:[8,36],darkProduct:[9,25],umbrella:[10,42],hoodieFolded:[11,34],bagOpen:[12,42],briefcase:[13,31],clockFace:[14,28],phone:[15,14]}[type];
     if(rp&&part(c,'props',rp[0],x,y,rp[1]*(scale||1)))return true;
     if(type==='roller'&&ready(images.r4Props)){var ra=propRects[15],rw=23*(scale||1);return cut(c,images.r4Props,ra,x,y+2*(scale||1),rw,rw*ra[3]/ra[2],false);}
@@ -362,6 +386,6 @@ var PixelArt = (function () {
     r(c,x+w-10,y+h*.55,3,4,C.woodDark);r(c,x+3,y+h-3,w-6,2,C.wallShade);
   }
   function fallback(c,kind,t){var spec={bedroom:['r5Home',0,2,2],living:['r5Home',2,2,2],shop:['r5Shop',0,1,1],street:['r4Outdoors',0,2,2],station:['r4Outdoors',1,2,2],train:['r4Outdoors',2,2,2],office:['r4Scenes',3,2,2]}[kind];if(spec&&scene(c,spec[0],spec[1],spec[2],spec[3],0,0,640,360))return true;r(c,0,0,640,360,C.wall);return false;}
-  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,part:part,scene:scene,surface:surface,r5Rects:r5Rects,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
+  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,part:part,r6Part:r6Part,nativeActor:nativeActor,nativeBowls:nativeBowls,scene:scene,surface:surface,r5Rects:r5Rects,r6Rects:r6Rects,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=PixelArt;
