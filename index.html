@@ -324,13 +324,11 @@ function bindScene(){
 }
 
 /* ================= 시범을 보이는 손 ================= */
-// 흰 장갑 손. (0,0)이 손가락 끝.
-const HAND = `<g>
-  <rect x="-10" y="13" width="21" height="19" rx="6" fill="#fff" stroke="#24273f" stroke-width="1.8"/>
-  <circle cx="5" cy="14" r="3.6" fill="#fff" stroke="#24273f" stroke-width="1.6"/><circle cx="9.5" cy="16" r="3.4" fill="#fff" stroke="#24273f" stroke-width="1.6"/>
-  <rect x="-15.5" y="16" width="8" height="12" rx="4" fill="#fff" stroke="#24273f" stroke-width="1.8" transform="rotate(-25 -11 22)"/>
-  <rect x="-4.2" y="0" width="8.4" height="22" rx="4.2" fill="#fff" stroke="#24273f" stroke-width="1.8"/>
-  <rect x="-2.6" y="17" width="5.2" height="7" fill="#fff"/></g>`;
+// 흰 장갑 손. (0,0)이 검지 끝. 검지는 왼쪽, 엄지는 옆으로, 나머지 세 손가락은 접힌 모양(가운데 손가락처럼 보이지 않게).
+const HAND = `<g transform="rotate(-14) scale(.9)">
+  <path d="M-4,4 A4,4 0 0 1 4,4 L4,14 A3.25,3.25 0 0 1 10.5,14 L10.5,15.5 A3.1,3.1 0 0 1 16.7,15.5 L16.7,17.5 A2.9,2.9 0 0 1 22.5,17.5 L22.5,25 Q22.5,33 15,33.5 L3,33.5 Q-3,33 -5,27 L-12.5,19.5 A3.4,3.4 0 0 1 -7.6,15.2 L-4,18.5 Z" fill="#fff" stroke="#24273f" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M4,14 v4.5 M10.5,15.5 v4 M16.7,17.5 v3.5" stroke="#24273f" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+  <rect x="1" y="33" width="19" height="6" rx="2" fill="#fff" stroke="#24273f" stroke-width="2"/></g>`;
 // type: tap | drag | rub | hold
 function handHint(type, x, y, x2, y2){
   if (type === "drag"){
