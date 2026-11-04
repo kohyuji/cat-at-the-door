@@ -1,206 +1,95 @@
-/* 생활과 돌봄의 상태. 화면이나 브라우저 없이 같은 규칙을 검사할 수 있다. */
+/* 순수 생활 모델. 장면·입력과 분리하여 저장과 정산을 같은 규칙으로 처리한다. */
 var Life=(function(){
  'use strict';
- var BEDTIME=1380,MORNING_START=440,DEPARTURE=490;
- var DURATIONS={dress:5,makeBed:3,packBag:5,pickBag:0,feed:10,water:5,pet:0,play:30,prepare:30,rest:30,hoodie:15,storeSuit:5,deskSpace:15,calmRain:30,weekendSpace:45,phonePlan:0,requestFiles:0,openReference:0,workReview:0,dishes:20,laundry:60,tidy:45};
- var BIG={play:1,prepare:1,rest:1,hoodie:1,deskSpace:1,calmRain:1,weekendSpace:1,laundry:1,dishes:1,tidy:1};
- var schedule=[
-  {day:0,task:'첫 출근 전날',required:[]},
-  {day:1,task:'첫 출근',required:[]},
-  {day:2,task:'날짜별 파일 정리',required:['file0911','file0914','file0915']},
-  {day:3,task:'비 오는 수요일',required:[]},
-  {day:4,task:'퇴근 전 부탁',required:[],deadline:true},
-  {day:5,task:'첫 금요일',required:[]},
-  {day:6,task:'주말',required:[],weekend:true},
-  {day:7,task:'일요일',required:[],weekend:true},
-  {day:8,task:'다시 월요일',required:[]},
-  {day:9,task:'이번 주 파일 정리',required:['file0921','file0922','file0923']},
-  {day:10,task:'수요일',required:[]},
-  {day:11,task:'회의 전날',required:[]},
-  {day:12,task:'첫 팀 회의',required:[],deadline:true}
- ];
- function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
- function num(n,f){return Number.isFinite(n)?n:f;}
- function name(n,f){return String(n||'').trim().slice(0,20)||f;}
+ var BEDTIME=1380,DEPARTURE=490;
+ var DURATIONS={afternoon:0,dress:5,makeBed:3,packBag:10,pickBag:0,feed:10,water:5,pet:5,play:30,prepare:10,rest:30,hoodie:15,storeSuit:5,calmRain:15,litter:10,laundry:60,dishes:15};
+ var schedule=Array.from({length:13},function(_,day){return{day:day,task:day===0?'첫 출근 전날':day===6||day===7?'쉬는 날':'고객 상담',required:[],weekend:day===6||day===7};});
+ var clamp=function(n,a,b){return Math.max(a,Math.min(b,n));};
+ var weekend=function(day){return day===6||day===7;};
+ function name(n,f){return String(n||'').trim().slice(0,8)||f;}
+ function josa(n,kind){var last=String(n).charCodeAt(String(n).length-1),batchim=last>=44032&&last<=55203&&(last-44032)%28!==0;var p={subject:batchim?'이가':'가',topic:batchim?'이는':'는',object:batchim?'이를':'를',with:batchim?'이와':'와',call:batchim?'아':'야'};return n+(p[kind]||'');}
  function needs(){return{fed:false,played:false,comfort:false};}
- function weekend(day){return day===6||day===7;}
- function nextWorkDay(day){do{day++;}while(weekend(day));return Math.min(12,day);}
- function valid(s){return !!(s&&s.needs&&s.flags&&s.roller&&Array.isArray(s.log));}
- function result(ok,message,cash,minutes,extra){var r={ok:ok,message:message,cost:{cash:cash||0,minutes:minutes||0},minutes:minutes||0};if(extra)Object.keys(extra).forEach(function(k){r[k]=extra[k];});return r;}
- function create(me,cat){return{
-  version:3,me:name(me,'김신입'),cat:name(cat,'보리'),day:0,phase:'evening',cash:58000,food:0,favoriteFood:0,water:false,energy:3,prep:0,trust:4,strain:0,routine:0,
-  hoodie:false,suitStored:false,needs:needs(),done:{},dailyDone:{},flags:{},log:[],work:[],careLog:[],neglectMeals:0,careDebt:0,workMissed:0,
-  eveningSlots:2,eveningUsed:0,eveningMin:0,eveningStartMin:1200,morningMin:0,dayMinutes:0,commuteMin:0,workMin:0,workActionsUsed:0,
-  roller:{owned:false,active:false,dirty:0,usedToday:false},fur:0,dressed:false,bedMade:false,bagPacked:false,bagPrepared:false,hasBag:false,packedForDay:null,
-  preparedDays:[],planDays:[],issueQueue:[],transactions:[],lastNight:null,nightIssue:null,lastArrivedDay:0,
-  project:{title:'첫 팀 회의',meetingDay:12,meetingTime:'09:30',materialsBy:'09:20',presented:false,finished:false,launched:false},support:false
- };}
- function clock(s){var minute;
-  if(s.phase==='morning')minute=MORNING_START+(s.morningMin||0);
-  else if(s.phase==='work')minute=540+(s.workMin||0)+(s.flags.lateMinutes||0)+(s.flags.borrowedLaptop?45:0);
-  else if(s.phase==='afterWork')minute=1080+(s.flags.workDelayMinutes||0);
-  else minute=num(s.eveningStartMin,weekend(s.day)?600:1200)+(s.eveningMin||0);
-  return{minutes:minute,text:String(Math.floor(minute/60)%24).padStart(2,'0')+':'+String(minute%60).padStart(2,'0'),remaining:Math.max(0,(s.phase==='morning'?DEPARTURE:BEDTIME)-minute),daytime:minute<1200,lateMinutes:s.phase==='morning'?Math.max(0,minute-DEPARTURE):Math.max(0,minute-BEDTIME),departureAt:'08:10',bedtime:'23:00'};
- }
- function timeBand(s){var used=num(s.eveningUsed,0),slots=num(s.eveningSlots,weekend(s.day)?4:2),label,period;
-  if(s.phase==='morning'){label='출근 전 아침';period='morning';slots=0;used=0;}
-  else if(s.phase==='work'){label='회사에서 보내는 낮';period='work';slots=0;used=0;}
-  else if(s.phase==='afterWork'){label=(s.flags.workDelayMinutes||0)>=30?'늦은 퇴근':'퇴근 시간';period='commute';slots=0;used=0;}
-  else if(weekend(s.day)){label=['주말 오전','주말 오후','해 질 무렵','주말 저녁','잘 시간'][Math.min(4,used)];period=['morning','afternoon','sunset','evening','night'][Math.min(4,used)];}
-  else{label=used>=slots?'잘 시간':used===0?(slots===1?'늦은 저녁':'저녁'):'늦은 저녁';period=used>=slots?'night':'evening';}
-  return{label:label,period:period,slots:slots,used:used,remaining:Math.max(0,slots-used),late:used>slots||clock(s).minutes>BEDTIME};
- }
+ function result(ok,message,extra){return Object.assign({ok:ok,message:message,cost:{cash:0,minutes:0},minutes:0},extra||{});}
+ function create(me,cat){return{version:4,me:name(me,'김신입'),cat:name(cat,'보리'),day:0,phase:'evening',minute:1200,cash:12000,food:0,favoriteFood:0,water:false,waterLevel:0,waterChangedDay:null,litterDirty:0,energy:3,strain:0,trust:4,routine:0,prep:0,hoodie:false,suitStored:true,needs:needs(),meals:{morning:false,evening:false},done:{},dailyDone:{},flags:{},log:[],careLog:[],transactions:[],work:[],consultations:[],currentConsultation:null,workMissed:0,careDebt:0,neglectMeals:0,fur:0,clothesFur:{suit:0,hoodie:0},dressed:false,bedMade:false,bagPacked:false,bagPrepared:false,hasBag:false,bagContents:[],packedForDay:null,preparedDays:[],planDays:[],issueQueue:[],roller:{owned:false,active:false,dirty:0,usedToday:false},doorOpen:true,curtainClosed:false,windowClosed:false,lastNight:null,nightIssue:null,lastArrivedDay:0,eveningStartMin:1200,eveningMin:0,morningMin:0,workMin:0,eveningUsed:0,eveningSlots:0,project:{presented:false,finished:false,launched:false},winterStep:0};}
+ function clock(s){var n=s.minute;return{minutes:n,text:formatTime(n),remaining:Math.max(0,(s.phase==='morning'?DEPARTURE:BEDTIME)-n),daytime:n<1080,lateMinutes:Math.max(0,n-(s.phase==='morning'?DEPARTURE:BEDTIME)),departureAt:'08:10',bedtime:'23:00'};}
+ function formatTime(n){return String(Math.floor(n/60)%24).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
+ function timeBand(s){var n=s.minute,period=n<720?'morning':n<1020?'afternoon':n<1140?'sunset':n<1320?'evening':'night';return{label:s.phase==='work'?'고객 상담':s.phase==='afterWork'?'퇴근길':s.phase==='morning'?'출근 전 아침':n<720?'주말 오전':n<1020?'오후':n<1140?'해 질 무렵':n<1320?'저녁':'잘 시간',period:period,used:s.eveningUsed||0,slots:0,remaining:Math.max(0,BEDTIME-n),late:n>BEDTIME};}
  function fatigue(s){return s.energy<=0||s.strain>=7?'exhausted':s.energy<=1||s.strain>=4?'tired':'normal';}
- function duration(s,type){if(type==='play'&&s.flags.catEager)return 20;return DURATIONS[type];}
- function preparedFor(s,day){return (s.preparedDays||[]).indexOf(day)!==-1;}
- function unresolved(s){return (s.issueQueue||[]).filter(function(i){return !i.resolved;});}
- function refreshCare(s){s.flags.careConcern=(s.careDebt||0)>=2;s.flags.catWithdrawn=(s.careDebt||0)>=3||s.trust<=2;}
- function missedMeal(s,when){s.neglectMeals=(s.neglectMeals||0)+1;s.careDebt=(s.careDebt||0)+1;s.careLog=s.careLog||[];s.careLog.push({day:s.day,when:when,fed:false});refreshCare(s);}
- function canSpend(s,type){if(s.phase!=='evening'||!BIG[type])return null;var band=timeBand(s);return band.remaining?null:result(false,'벌써 잘 시간이다. 밥과 물을 챙기고 오늘은 쉬자.',0,0,{reason:'notEnoughTime',remainingSlots:0,alternatives:['feed','water','sleep']});}
- function spend(s,type,minutes,cash){var before=clock(s).text;
-  if(cash){s.cash-=cash;s.transactions.push({day:s.day,type:type,cash:-cash});}
-  s.dayMinutes=(s.dayMinutes||0)+minutes;
-  if(s.phase==='evening'){
-   if(BIG[type]){s.eveningUsed=num(s.eveningUsed,0)+1;s.eveningMin=weekend(s.day)?[0,180,360,540,690][Math.min(4,s.eveningUsed)]:Math.round((1380-s.eveningStartMin-30)*s.eveningUsed/Math.max(1,s.eveningSlots));}
-   else s.eveningMin=(s.eveningMin||0)+minutes;
-  }else if(s.phase==='work')s.workMin=(s.workMin||0)+minutes;
-  else if(s.phase==='afterWork')s.commuteMin=(s.commuteMin||0)+minutes;
-  else s.morningMin=(s.morningMin||0)+minutes;
-  s.done[type]=true;return{before:before,after:clock(s).text};
- }
- function purchase(s,type,price,portions,favorite){if(s.cash<price)return result(false,'돈이 모자란다. 한 끼 포장도 살 수 있는지 확인해 보자.',0,0,{reason:'notEnoughCash',needed:price,alternatives:['buyFood','smallFood']});var first=!s.flags.initialShopDone,time=spend(s,type,0,price);s.food+=portions;if(favorite)s.favoriteFood+=portions;s.flags.initialShopDone=true;s.flags.foodLowAcknowledged=false;return result(true,first?'고양이용 사료와 그릇을 샀다. 집에 가서 조금 먹여 보자.':favorite?'닭고기 습식 사료를 샀다.':'먹이던 건사료를 샀다.',price,0,{clock:time,portions:portions,favorite:favorite,firstPurchase:first});}
- function ready(s){var problems=[];if(weekend(s.day))problems.push('weekend');if(s.phase!=='morning')problems.push('wrongPhase');if(!s.dressed)problems.push('notDressed');if(!s.hasBag&&!s.flags.borrowedLaptop)problems.push('noBag');return{ok:!problems.length,problems:problems,dressed:s.dressed,hasBag:s.hasBag,bagPacked:s.bagPacked,prepared:!!(s.hasBag&&s.bagPrepared),minutesUntilDeparture:clock(s).remaining,lateMinutes:Math.max(0,(s.morningMin||0)-50),alternatives:!s.hasBag?['packBag','pickBag','borrowLaptop']:[]};}
- function workTask(s){var task=schedule[clamp(s.day,0,12)],prepared=!!(s.hasBag&&s.bagPrepared&&preparedFor(s,s.day)),late=num(s.flags.lateMinutes,Math.max(0,(s.morningMin||0)-50));return{day:s.day,title:task.task,deadline:!!task.deadline,required:task.required.slice(),prepared:prepared,clueAvailable:true,sourceAvailable:true,lateMinutes:late,borrowedLaptop:!!s.flags.borrowedLaptop,missingFiles:false,missingPhotos:false,spentMinutes:s.workMin||0,availableMinutes:480,deadlineAt:s.day===12?'09:20':null,meetingAt:s.day===12?'09:30':null,extraSteps:[],carryover:unresolved(s).map(function(i){return Object.assign({},i);})};}
- function workBudget(s){return{total:1,remaining:1,spent:0,fatigue:fatigue(s),prepared:workTask(s).prepared,sourceAvailable:true,hints:[],availableMinutes:480,deadlineAt:s.day===12?'09:20':null,meetingAt:s.day===12?'09:30':null,canReview:true,canOpenReference:false};}
- function act(s,type,opts){opts=opts||{};if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});if(s.phase==='ending')return result(false,'이번 이야기는 끝났다.',0,0,{reason:'finished'});var time,targetDay,again;
-  if(['askFood','askSupport','buyRefill','peelRoller'].indexOf(type)!==-1)return result(false,'지금 할 수 없는 일이다.',0,0,{reason:'removedAction'});
-  if(type==='buyFood')return purchase(s,type,12000,8,false);
-  if(type==='buyFavorite')return purchase(s,type,15000,6,true);
-  if(type==='smallFood')return purchase(s,type,3000,1,true);
-  if(type==='buyRoller'){if(s.roller.owned)return result(false,'돌돌이는 이미 있다.',0,0,{reason:'alreadyOwned'});if(s.cash<4000)return result(false,'돌돌이를 살 돈이 모자란다.',0,0,{reason:'notEnoughCash'});time=spend(s,type,0,4000);s.roller.owned=true;return result(true,'돌돌이를 샀다. 옷걸이 옆에 두었다.',4000,0,{clock:time});}
-  if(type==='startRoller'){if(!s.roller.owned)return result(false,'돌돌이가 없다.',0,0,{reason:'noRoller'});if(s.fur<=0)return result(false,'옷에 털이 없다.',0,0,{reason:'noFur'});s.roller.active=true;s.roller.usedToday=true;return result(true,'옷에 돌돌이를 댔다.',0,0);}
-  if(type==='roll'||type==='rollerStroke'){if(!s.roller.active)return result(false,'돌돌이를 먼저 집자.',0,0,{reason:'rollerNotActive'});var removed=Math.min(s.fur,Math.max(0,Math.floor(num(opts.amount,1))));s.fur-=removed;s.roller.dirty+=removed;return result(true,s.fur?'털이 돌돌이에 붙었다.':'옷에 붙은 털을 뗐다.',0,0,{removed:removed,left:s.fur,sheetFull:false});}
-  if(type==='stopRoller'){s.roller.active=false;return result(true,'돌돌이를 옷걸이 옆에 두었다.',0,0);}
-  if(type==='acknowledgeFood'){s.flags.foodLowAcknowledged=true;return result(true,'남은 사료를 확인했다.',0,0,{food:s.food});}
-  if(type==='secureWindow'){if(s.flags.windowSecured)return result(false,'창문은 닫혀 있다.',0,0,{reason:'alreadyDone'});s.flags.windowSecured=true;return result(true,'창문을 잠그고 커튼을 닫았다.',0,0);}
+ function duration(s,type){return DURATIONS[type]||0;}
+ function spendTime(s,n){var morning=s.minute<1080;s.minute+=n;if(morning&&s.minute>=1080)s.needs.fed=!!s.meals.evening;if(s.phase==='morning')s.morningMin+=n;if(s.phase==='evening')s.eveningMin+=n;}
+ function money(s,id,amount,type,label){var old=s.transactions.find(function(t){return t.id===id;});if(old)return false;s.cash+=amount;s.transactions.push({id:id,day:s.day,cash:amount,type:type,label:label});return true;}
+ function furSync(s){s.fur=s.clothesFur[s.dressed?'suit':'hoodie'];}
+ function contact(s,n){var k=s.dressed?'suit':'hoodie';s.clothesFur[k]=Math.min(16,s.clothesFur[k]+n);furSync(s);}
+ var prices={buyFood:[12000,8,false,'건사료 8끼'],buyFavorite:[15000,6,true,'닭고기 습식 6끼'],smallFood:[3000,1,false,'건사료 한 끼'],buyRoller:[4000,0,false,'돌돌이']};
+ function act(s,type,opts){opts=opts||{};if(!s||s.version!==4)return result(false,'진행 상태를 확인할 수 없다.',{reason:'invalidState'});if(s.phase==='ending'&&!(s.flags.finalShop&&prices[type]))return result(false,'첫 근무 기간을 마쳤다.',{reason:'finished'});
+  if(prices[type]){var p=prices[type];if(type==='buyRoller'&&s.roller.owned)return result(false,'돌돌이는 이미 있다.',{reason:'alreadyOwned'});if(s.cash<p[0])return result(false,'생활비가 모자란다. 건사료 한 끼는 3,000원이다. 남은 사료부터 확인하자.',{reason:'notEnoughCash'});money(s,'purchase:'+s.transactions.length,-p[0],'purchase',p[3]);s.food+=p[1];if(p[2])s.favoriteFood+=p[1];if(type==='buyRoller')s.roller.owned=true;else s.flags.initialShopDone=true;return result(true,p[3]+'를 샀다.',{cost:{cash:p[0],minutes:0},portions:p[1]});}
+  if(type==='acknowledgeFood'){s.flags.foodLowAcknowledged=true;return result(true,'남은 사료를 확인했다.');}
+  if(type==='secureWindow'){s.windowClosed=true;s.curtainClosed=true;s.flags.windowSecured=true;return result(true,'창문을 잠그고 커튼을 닫았다.');}
+  if(type==='startRoller'){if(!s.roller.owned||!s.fur)return result(false,'옷에 뗄 털이 없다.',{reason:'noFur'});s.roller.active=true;if(!s.roller.usedToday)spendTime(s,3);s.roller.usedToday=true;return result(true,'돌돌이를 옷에 댔다.');}
+  if(type==='roll'||type==='rollerStroke'){if(!s.roller.active)return result(false,'돌돌이를 먼저 집자.');var k=s.dressed?'suit':'hoodie',removed=Math.min(s.fur,Math.max(0,Math.floor(opts.amount||1)));s.clothesFur[k]-=removed;s.roller.dirty+=removed;furSync(s);return result(true,'털이 접착면에 붙었다.',{removed:removed,left:s.fur});}
+  if(type==='stopRoller'){s.roller.active=false;return result(true,'돌돌이를 옷걸이 옆에 뒀다.');}
   if(type==='leaveHome'){
-   if(s.phase!=='morning'||weekend(s.day))return result(false,'지금은 출근할 때가 아니다.',0,0,{reason:'wrongPhase'});
-   if(!s.dressed)return result(false,'출근할 옷부터 입자.',0,0,{reason:'notDressed',alternatives:['dress']});
-   if(!s.hasBag&&!opts.borrowLaptop)return result(false,'노트북 가방을 두고 나가려 한다.',0,0,{reason:'noBag',alternatives:['pickBag','borrowLaptop'],borrowedDelay:60});
-   s.flags.borrowedLaptop=!s.hasBag&&!!opts.borrowLaptop;s.flags.missingFiles=false;s.flags.missingPhotos=false;s.flags.lateMinutes=Math.max(0,(s.morningMin||0)-50);
-   if(!s.flags.departureRecorded){s.careLog=s.careLog||[];if(!s.needs.fed)missedMeal(s,'morning');else s.careLog.push({day:s.day,when:'morning',fed:true});s.flags.morningCareMissed=!s.needs.fed||!s.water;s.flags.morningWaterMissed=!s.water;if(s.flags.morningCareMissed)s.trust=clamp(s.trust-.35,0,10);s.flags.departureRecorded=true;refreshCare(s);}
-   return result(true,s.flags.borrowedLaptop?'공용 노트북을 빌려야 해서 오늘은 퇴근이 늦어진다.':s.flags.morningCareMissed?'빈 그릇을 남겨 두고 집을 나왔다.':'문을 잠그고 집을 나섰다.',0,0,{lateMinutes:s.flags.lateMinutes,borrowLaptop:s.flags.borrowedLaptop,workTask:workTask(s)});
+   if(s.phase!=='morning'||weekend(s.day))return result(false,'오늘은 출근하지 않는다.',{reason:'wrongPhase'});
+   if(!s.dressed)return result(false,'상담에 입을 정장부터 입자.',{reason:'notDressed'});
+   if(!s.hasBag&&!opts.borrowLaptop)return result(false,'노트북 가방을 두고 나가려 한다.',{reason:'noBag'});
+   if(!s.flags.departureRecorded){s.flags.morningCareMissed=!s.needs.fed;s.flags.morningWaterMissed=s.waterLevel<=0;s.flags.borrowedLaptop=!s.hasBag;s.flags.lateMinutes=Math.max(0,s.minute-DEPARTURE);s.flags.departureRecorded=true;s.careLog.push({day:s.day,when:'morning',fed:s.needs.fed});if(!s.needs.fed)s.careDebt++;s.waterLevel=Math.max(0,s.waterLevel-1);s.water=s.waterLevel>0;s.litterDirty++;}
+   s.phase='work';s.minute=540+s.flags.lateMinutes+(s.flags.borrowedLaptop?45:0);return result(true,'회사 상담실로 향했다.');
   }
-  if(type==='feed'){
-   if(s.needs.fed)return result(false,'밥은 이미 주었다.',0,0,{reason:'alreadyDone'});
-   if(s.food<=0){s.flags.emptyBowl=true;return result(false,'사료가 없다. 휴대폰에서 사료를 주문하자.',0,0,{reason:'noFood',alternatives:['buyFood','smallFood'],mandatoryShop:true});}
-   var favorite=opts.kind==='favorite'||opts.favorite===true;if(favorite&&s.favoriteFood<=0)return result(false,'습식 사료가 없다.',0,0,{reason:'noFavoriteFood'});if(!favorite&&s.food-s.favoriteFood<=0)favorite=true;
-   time=spend(s,type,10,0);s.food--;if(favorite)s.favoriteFood--;s.needs.fed=true;s.flags.emptyBowl=false;s.flags.catEager=favorite;s.careDebt=Math.max(0,(s.careDebt||0)-1);refreshCare(s);
-   if(s.food<=2){s.flags.foodWarningSeen=true;s.flags.foodLowAcknowledged=false;}
-   return result(true,favorite?'보리가 봉지 냄새를 맡더니 그릇으로 달려왔다.':'보리가 그릇에 코를 대고 사료를 먹기 시작했다.',0,10,{clock:time,reaction:favorite?'eager':'eat',favorite:favorite,foodLow:s.food<=2});
-  }
-  if(type==='water'){if(s.water)return result(false,'물은 이미 갈았다.',0,0,{reason:'alreadyDone'});time=spend(s,type,5,0);s.water=true;return result(true,'보리가 새 물을 몇 모금 마셨다.',0,5,{clock:time});}
-  if(type==='openReference'||type==='workReview'||type==='requestFiles'){if(s.phase!=='work')return result(false,'회사에서 할 일이다.',0,0,{reason:'wrongPhase'});s.flags.referenceOpened=true;s.flags.missingFiles=false;s.flags.missingPhotos=false;return result(true,'필요한 파일을 열었다.',0,0,{budget:workBudget(s)});}
-  if(type==='pet'){if(s.done.pet)return result(false,'보리가 옆에 앉아 천천히 눈을 감았다.',0,0,{reason:'alreadyDone'});s.done.pet=true;s.needs.comfort=true;return result(true,'보리가 손에 볼을 비볐다.',0,0);}
-  if(type==='dress'||type==='makeBed'||type==='pickBag'){if(s.phase!=='morning')return result(false,'아침에 할 일이다.',0,0,{reason:'wrongPhase'});if(type==='dress'&&s.dressed||type==='makeBed'&&s.bedMade||type==='pickBag'&&s.hasBag)return result(false,'이미 준비했다.',0,0,{reason:'alreadyDone'});if(type==='pickBag'&&!s.bagPacked)return result(false,'가방에 물건부터 넣자.',0,0,{reason:'bagNotPacked'});}
-  else if(type==='packBag'){targetDay=s.phase==='morning'?s.day:nextWorkDay(s.day);if(s.bagPacked&&s.packedForDay===targetDay)return result(false,'가방은 챙겼다.',0,0,{reason:'alreadyDone'});}
-  else if(type==='prepare'){targetDay=num(opts.day,s.phase==='morning'?s.day:nextWorkDay(s.day));if(preparedFor(s,targetDay))return result(false,'가방은 미리 챙겨 두었다.',0,0,{reason:'alreadyPrepared'});}
-  else if(type==='hoodie'&&s.hoodie||type==='storeSuit'&&s.suitStored||type==='deskSpace'&&s.flags.deskSeat)return result(false,'이미 자리를 마련했다.',0,0,{reason:'alreadyDone'});
-  else if(s.done[type])return result(false,'오늘은 이미 했다.',0,0,{reason:'alreadyDone'});
-  if(!Object.prototype.hasOwnProperty.call(DURATIONS,type))return result(false,'지금 할 수 없는 일이다.',0,0,{reason:'unknownAction'});
-  if(type==='weekendSpace'&&!weekend(s.day))return result(false,'주말에 할 일이다.',0,0,{reason:'notWeekend'});
-  if(BIG[type]&&s.phase!=='evening')return result(false,'집에 돌아와서 하자.',0,0,{reason:'wrongPhase'});
-  var blocked=canSpend(s,type);if(blocked)return blocked;var minutes=duration(s,type);time=spend(s,type,minutes,0);var message='';
-  if(type==='dress'){s.dressed=true;message='출근할 옷을 입었다.';}
-  if(type==='makeBed'){s.bedMade=true;message='이불을 가볍게 폈다.';}
-  if(type==='packBag'){s.bagPacked=true;s.packedForDay=targetDay;s.bagPrepared=preparedFor(s,targetDay);message='노트북과 충전기를 가방에 넣었다.';}
-  if(type==='pickBag'){s.hasBag=true;message='노트북 가방을 들었다.';}
-  if(type==='play'){s.needs.played=true;message='보리가 장난감을 붙잡고 뒷발을 바쁘게 움직였다.';}
-  if(type==='prepare'){if(s.preparedDays.indexOf(targetDay)===-1)s.preparedDays.push(targetDay);s.prep=1;if(s.bagPacked&&s.packedForDay===targetDay)s.bagPrepared=true;message='내일 가져갈 물건을 미리 챙겼다.';}
-  if(type==='rest'){s.energy=clamp(s.energy+1,0,3);s.strain=clamp(s.strain-2,0,10);message='잠깐 눈을 감고 쉬었다. 어깨에 힘이 조금 풀렸다.';}
-  if(type==='hoodie'){s.hoodie=true;s.needs.comfort=true;s.flags.hoodiePlaced=true;message='보리가 후드티 냄새를 맡더니 그 위에 누웠다.';}
-  if(type==='storeSuit'){s.suitStored=true;s.flags.suitProtected=true;message='정장을 옷걸이에 걸었다.';}
-  if(type==='deskSpace'){s.flags.deskSeat=true;s.needs.comfort=true;message='보리가 옆 의자의 상자 안으로 들어갔다.';}
-  if(type==='calmRain'){s.needs.comfort=true;s.flags.rainComforted=true;message='곁에 앉아 있으니 보리가 소파 밖으로 나왔다.';}
-  if(type==='weekendSpace'){s.routine=clamp(s.routine+1,0,10);s.needs.comfort=true;s.flags.cozyBox=true;message='담요를 깐 상자에 보리가 앞발부터 들어갔다.';}
-  if(type==='phonePlan'){s.planDays.push(nextWorkDay(s.day));s.dailyDone.phonePlan=true;message='내일 일정을 확인했다.';}
-  if(type==='dishes')message='그릇을 씻고 말렸다.';
-  if(type==='laundry'){s.flags.laundryDone=true;message='빤 옷을 널었다. 보리가 흔들리는 소매 아래에 앉았다.';}
-  if(type==='tidy'){s.flags.tidyDone=true;message='바닥에 널린 물건을 치웠다.';}
-  return result(true,message,0,minutes,{clock:time,band:timeBand(s),fatigue:fatigue(s),prepared:s.bagPrepared});
+  if(['morning','evening'].indexOf(s.phase)===-1)return result(false,'집에 돌아와서 하자.',{reason:'wrongPhase'});
+  if(type==='afternoon'){if(!weekend(s.day)||s.minute>=1080)return result(false,'이미 저녁이다.',{reason:'wrongPhase'});s.minute=1080;s.needs.fed=!!s.meals.evening;return result(true,'해가 기울었다. 저녁 밥을 챙길 시간이다.');}
+  if(!(type in DURATIONS))return result(false,'지금 할 수 없는 일이다.',{reason:'unknownAction'});
+  if(type==='feed'&&s.needs.fed||type==='water'&&s.waterChangedDay===s.day||['pet','play','rest','laundry','dishes','calmRain'].indexOf(type)!==-1&&s.done[type])return result(false,'이미 마쳤다.',{reason:'alreadyDone'});
+  if(type==='feed'&&s.food<=0){s.flags.emptyBowl=true;return result(false,'사료 봉지가 비었다. 슈퍼에서 사료를 사 오자.',{reason:'noFood'});}
+  if(type==='litter'&&s.litterDirty<=0)return result(false,'모래가 깨끗하다.',{reason:'alreadyDone'});
+  if(type==='hoodie'&&s.hoodie||type==='storeSuit'&&s.suitStored&&!s.dressed||type==='dress'&&s.dressed||type==='makeBed'&&s.bedMade||type==='packBag'&&s.bagPacked||type==='pickBag'&&s.hasBag)return result(false,'이미 준비했다.',{reason:'alreadyDone'});
+  if(type==='dress'&&s.phase!=='morning'||type==='pickBag'&&s.phase!=='morning')return result(false,'아침에 할 일이다.',{reason:'wrongPhase'});
+  if(type==='pickBag'&&!s.bagPacked)return result(false,'가방에 노트북과 충전기부터 넣자.',{reason:'bagNotPacked'});
+  if((type==='packBag'||type==='prepare')&&weekend(s.day)&&s.bagPacked)return result(false,'가방 속 물건은 그대로 있다.',{reason:'alreadyDone'});
+  if(type==='hoodie'&&!s.flags.hoodieEvent)return result(false,'아직 후드티를 놓을 자리를 정하지 않았다.',{reason:'noEvent'});
+  var minutes=duration(s,type);if(s.phase==='evening'&&s.minute+minutes>1440&&!['feed','water','litter'].includes(type))return result(false,'자정을 넘기겠다. 오늘은 쉬자.',{reason:'notEnoughTime'});
+  var before=clock(s).text;spendTime(s,minutes);s.done[type]=true;
+  var pet=s.cat,message='';
+  if(type==='feed'){var favorite=opts.kind==='favorite'&&s.favoriteFood>0;if(s.food===s.favoriteFood)favorite=true;s.food--;if(favorite)s.favoriteFood--;s.needs.fed=true;s.meals[s.minute<1080?'morning':'evening']=true;s.flags.emptyBowl=false;s.careDebt=Math.max(0,s.careDebt-1);s.flags.catEager=favorite;s.flags.foodLowAcknowledged=false;message=josa(pet,'subject')+' 기다렸다는 듯이 허겁지겁 사료를 먹기 시작한다.';}
+  if(type==='water'){s.waterChangedDay=s.day;s.waterLevel=3;s.water=true;message=josa(pet,'subject')+' 새 물을 몇 모금 마신다.';}
+  if(type==='litter'){s.litterDirty=0;message='삽으로 뭉친 모래를 걷어 냈다. '+josa(pet,'subject')+' 깨끗한 모래를 앞발로 고른다.';}
+  if(type==='pet'){s.needs.comfort=true;contact(s,4);message=josa(pet,'subject')+' 손바닥에 볼을 비빈다. 후드티에 털이 붙었다.';}
+  if(type==='play'){s.needs.played=true;message=josa(pet,'subject')+' 인형을 붙잡고 뒷발로 찬 뒤 바닥에 길게 눕는다.';}
+  if(type==='rest'){s.energy=clamp(s.energy+1,0,3);s.strain=Math.max(0,s.strain-2);message='소파에 기대어 눈을 감았다. 어깨에서 힘이 풀린다.';}
+  if(type==='dress'){s.dressed=true;s.suitStored=false;furSync(s);message='행거에서 정장을 꺼내 입었다.';}
+  if(type==='storeSuit'){s.dressed=false;s.suitStored=true;furSync(s);message='정장은 행거에 걸고 후드티로 갈아입었다.';}
+  if(type==='makeBed'){s.bedMade=true;message='구겨진 이불을 폈다.';}
+  if(type==='packBag'||type==='prepare'){s.bagContents=['laptop','charger'];s.bagPacked=true;s.bagPrepared=true;s.prep=1;message='노트북과 충전기를 가방에 넣었다. 다음 날에도 그대로 쓸 수 있다.';}
+  if(type==='pickBag'){s.hasBag=true;message='챙겨 둔 가방을 들었다.';}
+  if(type==='hoodie'){s.hoodie=true;s.flags.hoodiePlaced=true;s.needs.comfort=true;message='햇볕 드는 소파 옆에 후드티를 폈다. '+josa(pet,'subject')+' 냄새를 맡고 눕는다.';}
+  if(type==='calmRain'){s.needs.comfort=true;s.flags.rainComforted=true;message='곁에 앉아 기다리자 '+josa(pet,'subject')+' 소파 뒤에서 나왔다.';}
+  if(type==='laundry'){s.clothesFur.hoodie=0;s.flags.laundryDone=true;s.flags.laundryHanging=true;furSync(s);message='후드티를 빨아 건조대에 널었다.';}
+  if(type==='dishes'){s.flags.dirtyDishes=0;message='싱크대의 그릇을 씻어 건조대에 세웠다.';}
+  return result(true,message,{minutes:minutes,cost:{cash:0,minutes:minutes},clock:{before:before,after:clock(s).text},foodLow:s.food<=1});
  }
- function sleep(s,open){
-  if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});
-  if(s.phase!=='evening')return result(false,'집에서 잠자리를 정하자.',0,0,{reason:s.phase==='ending'?'finished':'wrongPhase'});
-  open=!!open;var oldDay=s.day,c=clock(s),beforeEnergy=s.energy,beforeTrust=s.trust,storm=oldDay===3||!!s.flags.raining,safePlace=!!(s.hoodie||s.flags.cozyBox||s.needs.comfort),hunger=!s.needs.fed,thirst=!s.water,calling=!open&&!safePlace&&!s.needs.played,playing=open&&!s.needs.played&&!safePlace,comforted=s.needs.comfort||(s.flags.windowSecured&&(safePlace||s.needs.played)),late=Math.max(0,c.minutes-BEDTIME);
-  if(hunger)missedMeal(s,'evening');else{s.careLog=s.careLog||[];s.careLog.push({day:oldDay,when:'evening',fed:true});}
-  var penalty=(hunger?2:0)+(thirst?1:0)+(calling||playing?1:0)+(storm&&!comforted?1:0)+(late?1:0);
-  s.energy=clamp(s.energy+2-penalty,0,penalty?2:3);
-  var change=(hunger?-1:0)+(thirst?-.3:0)+(calling?-.2:0)+(s.needs.played?.4:0)+(s.needs.comfort?.2:0);
-  s.trust=Math.round(clamp(s.trust+change,0,10)*100)/100;
-  if(penalty||s.energy<=1)s.strain=clamp(s.strain+1,0,10);else if(s.done.rest)s.strain=Math.max(0,s.strain-1);
-  if(!hunger&&!thirst&&(safePlace||s.needs.played))s.routine=clamp(s.routine+1,0,10);
-  var wakes=[];if(hunger)wakes.push('hunger');if(thirst)wakes.push('thirst');if(calling)wakes.push('calling');if(playing)wakes.push('play');if(storm&&!comforted)wakes.push('rain');
-  var note={day:oldDay,open:open,fed:!hunger,played:s.needs.played,comfort:s.needs.comfort,water:!thirst,hoodie:s.hoodie,minutes:s.eveningMin,bedtime:c.text,lateMinutes:late,earlySleep:c.daytime,energyBefore:beforeEnergy,energyAfter:s.energy,trustBefore:beforeTrust,trustAfter:s.trust,storm:storm,comforted:!!comforted,windowSecured:!!s.flags.windowSecured,cash:s.cash,food:s.food,missedCare:hunger,wakeReasons:wakes};
-  s.log.push(note);s.lastNight=note;s.nightIssue={day:oldDay,reasons:wakes.slice(),hunger:hunger,thirst:thirst,calling:calling,playing:playing,rain:storm&&!comforted,needs:{fed:!hunger,played:s.needs.played,comfort:s.needs.comfort},water:!thirst,done:{},finished:false};
-  s.flags.nightHunger=hunger;s.flags.nightThirst=thirst;s.flags.nightCalling=calling;s.flags.nightPlay=playing;s.flags.emptyBowl=hunger;s.flags.catEager=false;s.flags.windowSecured=false;s.flags.rainComforted=false;s.flags.raining=false;s.roller.active=false;s.roller.usedToday=false;
-  s.fur=s.suitStored?(open?3:0):open?12:s.flags.catInCloset?6:0;s.flags.catInCloset=false;refreshCare(s);
-  if(oldDay>=12||(s.careDebt||0)>=5){s.phase='ending';return result(true,'이번 밤이 끝났다.',0,0,{ending:ending(s),night:note});}
-  s.day++;s.phase='morning';s.morningMin=0;s.dayMinutes=0;s.commuteMin=0;s.workMin=0;s.workActionsUsed=0;s.dailyDone={};s.done={};s.needs=needs();s.water=false;
-  s.flags.referenceOpened=false;s.dressed=false;s.bedMade=false;s.hasBag=false;s.bagPacked=s.packedForDay===s.day;s.bagPrepared=s.bagPacked&&preparedFor(s,s.day);
-  s.flags.workDelayMinutes=0;s.flags.borrowedLaptop=false;s.flags.missingFiles=false;s.flags.missingPhotos=false;s.flags.departureRecorded=false;s.flags.lateMinutes=0;
-  return result(true,wakes.length?'밤중에 잠에서 깼다.':'아침 알람이 울렸다.',0,0,{night:note,weekend:weekend(s.day),earlySleep:c.daytime,fatigue:fatigue(s)});
+ function ready(s){return{ok:s.phase==='morning'&&s.dressed&&s.hasBag,hasBag:s.hasBag,bagPacked:s.bagPacked,prepared:s.bagPrepared};}
+ function beginConsultation(s,customer){if(s.phase!=='work')return result(false,'지금은 상담 시간이 아니다.');if(s.currentConsultation)return result(true,'진행 중인 상담이다.',{consultation:s.currentConsultation});var old=s.consultations.find(function(c){return c.day===s.day&&c.id===customer.id;});if(old)return result(false,'마친 상담이다.',{reason:'alreadyDone'});s.currentConsultation={day:s.day,id:customer.id,name:customer.name,step:0,answers:[],correct:customer.correct.slice(),completed:false,concerns:customer.concerns,optional:!!customer.optional};return result(true,'상담을 시작했다.',{consultation:s.currentConsultation});}
+ function answerConsultation(s,index){var c=s.currentConsultation;if(!c||s.phase!=='work')return result(false,'진행 중인 상담이 없다.');if(c.step>=c.correct.length)return result(false,'상담을 이미 마쳤다.');c.answers.push(index);c.step++;if(c.step<c.correct.length)return result(true,'고객의 다음 이야기를 듣는다.',{consultation:c});
+  c.completed=true;c.reasons=[];var match=c.answers.every(function(a,i){return a===c.correct[i];});if(!match)c.reasons.push('고객이 말한 필요와 다른 보장·부담을 제안했다.');if(s.clothesFur.suit>=6)c.reasons.push('정장에 붙은 털을 보고 고객이 대면 상담을 망설였다.');if(fatigue(s)==='exhausted')c.reasons.push('잠이 부족해 설명을 놓쳤고 고객이 다시 확인을 요청했다.');if(s.flags.lateMinutes>20)c.reasons.push('늦은 시작으로 약속한 상담 시간을 지키지 못했다.');c.contract=c.reasons.length===0;c.income=12000+(c.contract?12000:0);if(c.contract)c.reasons.push('고객의 필요와 예산을 확인하고 맞는 보장을 설명했다.');s.consultations.push(c);s.currentConsultation=null;s.minute=c.optional?1140:(s.consultations.filter(function(x){return x.day===s.day;}).length===1?720:1020);return result(true,c.contract?'고객이 계약서에 서명했다.':'고객이 계약을 보류했다.',{consultation:c});
  }
- function actAtNight(s,type,opts){
-  if(!valid(s)||s.phase!=='morning'||!s.nightIssue||s.nightIssue.finished||s.nightIssue.day!==s.day-1)return result(false,'지금은 밤중이 아니다.',0,0,{reason:'wrongPhase'});
-  if(type!=='feed'&&type!=='water')return result(false,'밥이나 물을 챙긴 뒤 다시 눕자.',0,0,{reason:'wrongAction'});
-  var morning={needs:s.needs,water:s.water,done:s.done,morningMin:s.morningMin,dayMinutes:s.dayMinutes},night=s.nightIssue;
-  s.needs=night.needs;s.water=night.water;s.done=night.done;
-  var r=act(s,type,opts);
-  night.needs=s.needs;night.water=s.water;night.done=s.done;
-  s.needs=morning.needs;s.water=morning.water;s.done=morning.done;s.morningMin=morning.morningMin;s.dayMinutes=morning.dayMinutes;
-  if(r.ok){var before=s.lastNight.nightCareMinutes||0;s.lastNight.nightCareMinutes=before+r.minutes;s.lastNight.nightCare=s.lastNight.nightCare||[];s.lastNight.nightCare.push({type:type,minutes:r.minutes});r.clock={before:'02:40',after:'02:55'};r.atNight=true;if(type==='feed')night.hunger=false;else night.thirst=false;}
-  return r;
+ function finishWork(s,opts){opts=opts||{};var old=s.work.find(function(w){return w.day===s.day;});if(old)return result(true,old.reason,{alreadyDone:true,work:old});if(s.phase!=='work'||weekend(s.day))return result(false,'출근한 날에만 정산할 수 있다.',{reason:'wrongPhase'});
+  var rows=s.consultations.filter(function(c){return c.day===s.day&&c.completed;}),required=rows.filter(function(c){return !c.optional;}),missing=Math.max(0,2-required.length),extra=rows.some(function(c){return c.optional;})?60:0;
+  var income=rows.reduce(function(n,c){return n+c.income;},0),contracts=rows.filter(function(c){return c.contract;}).length,delay=extra+(s.flags.borrowedLaptop?45:0)+Math.min(60,s.flags.lateMinutes||0)+(missing?30:0);
+  var reasons=rows.map(function(c){return c.name+': '+c.reasons.join(' ');});if(missing)reasons.push('마치지 않은 상담 '+missing+'건에는 상담 수당과 계약 수당이 붙지 않았다.');
+  if(s.currentConsultation){reasons.push(s.currentConsultation.name+' 상담은 중단 상태로 남겼다.');s.currentConsultation=null;}
+  money(s,'wage:'+s.day,income,'income','상담 수당·계약 수당');var report={day:s.day,completed:missing===0,consultations:rows.length,contracts:contracts,missing:missing,income:income,balance:s.cash,reasons:reasons,reason:reasons.join('\n'),extraMinutes:delay,borrowedLaptop:!!s.flags.borrowedLaptop,status:missing?'partial':contracts?'good':'steady',fatigue:fatigue(s),paid:true};s.work.push(report);s.workMissed+=missing;s.energy=Math.max(0,s.energy-1);s.strain=clamp(s.strain+1,0,10);s.flags.workDelayMinutes=delay;s.flags.overtime=extra>0;s.phase='afterWork';s.minute=1080+delay;s.workMin=540+delay;if(s.day===12){s.project.presented=missing===0;s.project.finished=true;}return result(true,'오늘 수입 '+income.toLocaleString()+'원이 입금됐다.',{work:report});
  }
- function finishNight(s){if(!valid(s)||s.phase!=='morning')return false;if(s.nightIssue)s.nightIssue.finished=true;s.needs=needs();s.water=false;s.done={};s.morningMin=0;s.dayMinutes=0;return true;}
- function addIssue(s,key,label){if(!s.issueQueue.some(function(i){return i.id===s.day+':'+key;}))s.issueQueue.push({id:s.day+':'+key,key:key,fromDay:s.day,label:label||'마치지 못한 일',reason:'unfinished',resolved:false});}
- function finishWork(s,opts){
-  opts=opts||{};if(!valid(s))return result(false,'진행 상태를 확인할 수 없다.',0,0,{reason:'invalidState'});
-  var previous=s.work.find(function(w){return w.day===s.day;});if(previous)return result(true,previous.reason,0,0,{alreadyDone:true,work:previous});
-  if(s.day<1||s.day>12||s.phase==='ending')return result(false,'오늘은 업무를 기록할 수 없다.',0,0,{reason:'wrongDay'});
-  if(weekend(s.day))return result(false,'주말에는 출근하지 않는다.',0,0,{reason:'weekend'});
-  if(s.phase!=='morning'&&s.phase!=='work')return result(false,'출근한 뒤 업무를 마치자.',0,0,{reason:'wrongPhase'});
-  var task=workTask(s),condition=fatigue(s),completed=opts.completed!==false,missing=Array.isArray(opts.missing)?opts.missing.slice():[];
-  if(!completed&&!missing.length)missing=schedule[s.day].required.length?schedule[s.day].required.slice():['unfinished'];
-  var overtime=opts.overtime===true||opts.choice==='today',defer=opts.defer===true||opts.choice==='tomorrow';
-  var deferred=s.flags.deferredWorkDay===s.day&&!task.prepared;
-  var carry=unresolved(s),delay=!completed||missing.length?90:overtime?60:task.borrowedLaptop?60:task.lateMinutes>0?45:carry.length?60:deferred?45:condition==='exhausted'&&!task.prepared?45:0;
-  if(s.flags.deferredWorkDay===s.day)s.flags.deferredWorkDay=null;
-  if(defer)s.flags.deferredWorkDay=nextWorkDay(s.day);
-  var resolved=[];if(completed&&!missing.length)carry.forEach(function(i){i.resolved=true;i.resolvedDay=s.day;resolved.push(i.id);});
-  missing.forEach(function(k){addIssue(s,k,opts.labels&&opts.labels[k]);});
-  if(!completed||missing.length)s.workMissed=(s.workMissed||0)+1;
-  var onTime=s.day!==12||(!task.borrowedLaptop&&task.lateMinutes<20),status=!completed?'missed':missing.length?'partial':!onTime?'late':delay?'strained':task.prepared?'good':'steady';
-  var reason=!completed||missing.length?'마치지 못한 일을 다시 확인하느라 퇴근이 늦어졌다.':delay?'밀린 일과 준비를 마치고 나니 밖이 어두워졌다.':'오늘 할 일을 마치고 퇴근했다.';
-  var report={day:s.day,task:schedule[s.day].task,deadline:!!schedule[s.day].deadline,status:status,prepared:task.prepared,energy:s.energy,fatigue:condition,reason:reason,completed:completed,onTime:onTime,missing:missing,resolved:resolved,carryover:unresolved(s).map(function(i){return i.id;}),lateMinutes:task.lateMinutes,borrowedLaptop:task.borrowedLaptop,extraMinutes:delay,reviewsUsed:0};
-  s.work.push(report);s.workMin=540+delay;s.energy=Math.max(0,s.energy-1);s.strain=clamp(s.strain+1+(delay>=45?1:0),0,10);s.flags.workDelayMinutes=delay;s.flags.overtime=delay>=30;
-  if(preparedFor(s,s.day))s.preparedDays=s.preparedDays.filter(function(d){return d!==s.day;});
-  if(s.day===12){s.project.presented=completed&&!missing.length&&onTime&&(s.workMissed||0)<3;s.project.finished=s.project.presented;s.project.launched=s.project.presented;}
-  s.phase='afterWork';return result(true,reason,0,0,{work:report,issues:unresolved(s),project:s.project,eveningSlots:delay>=30?1:2});
+ function arriveHome(s){if(s.phase==='evening'&&s.lastArrivedDay===s.day||s.phase==='ending')return false;var isWeekend=weekend(s.day);s.phase='evening';s.minute=isWeekend?600:s.minute+40;s.eveningStartMin=s.minute;s.eveningMin=0;s.eveningUsed=0;s.done={};s.needs.fed=false;s.hasBag=false;s.lastArrivedDay=s.day;if(!isWeekend){s.flags.lastLivingCost=Math.min(s.cash,14000);money(s,'living:'+s.day,-s.flags.lastLivingCost,'living','교통·식비·주거비 적립');s.dressed=false;s.suitStored=true;furSync(s);s.flags.dirtyDishes=(s.flags.dirtyDishes||0)+1;}return true;}
+ function sleep(s,open){if(s.phase!=='evening')return result(false,'집에서 잠자리를 정하자.',{reason:'wrongPhase'});var day=s.day,storm=day===3&&!s.windowClosed,wakes=[];if(!s.needs.fed){wakes.push('hunger');s.careDebt++;s.neglectMeals++;}if(s.waterLevel<=0)wakes.push('thirst');if(!s.needs.played)wakes.push('play');if(!open&&!s.hoodie&&!s.needs.comfort)wakes.push('calling');if(storm&&!s.needs.comfort)wakes.push('rain');if(s.litterDirty>=3)wakes.push('litter');var late=Math.max(0,s.minute-BEDTIME),penalty=Math.min(3,wakes.length+(late>0?1:0));s.energy=penalty?clamp(2-penalty,0,2):3;s.strain=clamp(s.strain+(penalty?1:-1),0,10);if(s.needs.played)s.routine++;if(open){s.clothesFur.hoodie=Math.min(16,s.clothesFur.hoodie+4);if(!s.suitStored)s.clothesFur.suit=Math.min(16,s.clothesFur.suit+8);}s.doorOpen=!!open;furSync(s);var note={day:day,open:!!open,fed:s.needs.fed,water:s.waterLevel>0,played:s.needs.played,comfort:s.needs.comfort,wakeReasons:wakes,bedtime:formatTime(Math.max(1320,s.minute)),lateMinutes:late,energyAfter:s.energy,hoodie:s.hoodie,storm:storm,cash:s.cash,food:s.food};s.log.push(note);s.lastNight=note;s.nightIssue={day:day,reasons:wakes.slice(),hunger:wakes.includes('hunger'),thirst:wakes.includes('thirst'),needs:Object.assign({},s.needs),water:s.water,done:{},finished:false};s.flags.nightPlay=wakes.includes('play');s.flags.nightHunger=wakes.includes('hunger');s.flags.nightCalling=wakes.includes('calling');s.flags.catWithdrawn=s.careDebt>=4;s.flags.careConcern=s.careDebt>=2;
+  if(day>=12){s.phase='ending';return result(true,'첫 근무 기간을 마쳤다.',{night:note,ending:ending(s)});}s.day++;s.phase='morning';s.minute=440;s.morningMin=0;s.eveningMin=0;s.workMin=0;s.needs=needs();s.meals={morning:false,evening:false};s.done={};s.dailyDone={};s.dressed=false;s.hasBag=false;s.bedMade=false;s.waterLevel=Math.max(0,s.waterLevel-1);s.water=s.waterLevel>0;s.litterDirty++;s.roller.usedToday=false;s.flags.departureRecorded=false;s.flags.borrowedLaptop=false;s.flags.lateMinutes=0;s.flags.workDelayMinutes=0;return result(true,'아침이 밝았다.',{night:note,weekend:weekend(s.day)});
  }
- function arriveHome(s){if(!valid(s)||s.phase==='ending'||s.phase==='evening'&&s.lastArrivedDay===s.day)return;
-  s.phase='evening';s.eveningStartMin=weekend(s.day)?600:(s.flags.workDelayMinutes||0)>=30?1260:1200;s.eveningMin=0;s.eveningUsed=0;s.eveningSlots=weekend(s.day)?4:(s.flags.workDelayMinutes||0)>=30?1:2;
-  s.needs=needs();s.water=false;s.done={};s.lastArrivedDay=s.day;s.hasBag=false;s.bagPacked=false;s.bagPrepared=false;s.packedForDay=null;s.roller.active=false;
- }
- function objective(s){if(!s.flags.initialShopDone)return{key:'firstFood',text:'고양이에게 줄 사료',actions:['buyFood','buyFavorite'],mandatory:true};if(s.phase==='morning')return{key:'morning',text:'출근 전',actions:['dress','packBag','feed','water','leaveHome']};if(s.phase==='work')return{key:'work',text:schedule[s.day].task,actions:['work'],task:workTask(s)};if(s.phase==='afterWork')return{key:'home',text:'집으로',actions:['commuteHome']};return{key:'home',text:timeBand(s).label,actions:['feed','water','play','prepare','rest','sleep']};}
- function ending(s){
-  var pet=s&&s.cat||'보리',presented=!!(s&&s.project&&s.project.presented),meeting=presented?'금요일 회의에서 맡은 일을 설명했다. 팀장은 고개를 끄덕이고 다음 안건을 넘겼다.':'금요일 회의에서 내가 빠뜨린 일을 동료가 대신 설명했다. 회의 뒤에는 팀장과 다음 주 일정을 다시 잡았다.';
-  if((s.careDebt||0)>=5)return{key:'neglected',title:'아침 일정을 바꿨다',presented:presented,lines:[pet+'는 빈 그릇 옆에 앉아 있었다. 불러도 장난감을 꺼내도 움직이지 않았다.','회사에 전화를 걸어 오전에 늦겠다고 말했다. 사료와 물부터 챙기고, '+pet+'의 상태를 살폈다.','밥을 채우는 일부터 다시 시작해야 했다. 혼자 감당하기 어려운 날에는 미리 돌봄을 부탁할 사람도 찾아보기로 했다.']};
-  if(s.strain>=8||s.energy<=0)return{key:'worn',title:'금요일 밤',presented:presented,lines:[meeting,'집에 와서 소파에 앉자 그대로 눈이 감겼다. '+pet+'가 무릎을 건드려도 한참 뒤에야 손을 뻗었다.','내일 할 일을 적으려다 휴대폰을 내려놓았다. 이번 주말에는 내 잠과 '+pet+'의 밥부터 챙기기로 했다.']};
-  if(s.flags.catWithdrawn||s.trust<=2.5)return{key:'distance',title:'금요일 밤',presented:presented,lines:[meeting,'문을 열었지만 '+pet+'는 달려오지 않았다. 소파 아래에서 나를 바라보다 고개를 돌렸다.','새 밥과 물을 놓고 바닥에 앉았다. 금방 예전처럼 돌아오리라 기대하지 않고, 오늘은 그 자리에서 기다렸다.']};
-  if(presented&&s.routine>=4&&s.trust>=5&&s.strain<=6)return{key:'settled',title:'금요일 밤',presented:true,lines:[meeting,'집에 돌아오자 '+pet+'가 현관 앞까지 나왔다. 밥을 먹고 나서는 장난감을 물고 내 발 앞에 내려놓았다.',s.lastNight&&!s.lastNight.open?'놀이를 마친 '+pet+'는 거실의 자기 자리로 갔다. 나는 방문을 닫고 알람을 껐다. 내일은 늦잠을 자도 된다.':'불을 끄고 누우니 '+pet+'가 이불 끝에 몸을 붙였다. 알람은 꺼 두었다. 내일은 서두르지 않아도 된다.']};
-  return{key:'finding',title:'금요일 밤',presented:presented,lines:[meeting,pet+'가 장난감 옆에서 졸고 있었다. 손을 내밀자 코를 대고 냄새를 맡았다.','첫 출근 전에는 하루 종일 함께 있었다. 이제는 짧아진 저녁 안에서 서로의 생활을 다시 익히고 있다.','내일은 출근하지 않는다. 아침 밥을 주고 나면, 오늘 미뤄 둔 놀이부터 하기로 했다.']};
- }
- return{create:create,act:act,actAtNight:actAtNight,finishNight:finishNight,sleep:sleep,finishWork:finishWork,arriveHome:arriveHome,ending:ending,ready:ready,clock:clock,timeBand:timeBand,fatigue:fatigue,duration:duration,objective:objective,workTask:workTask,workBudget:workBudget,schedule:schedule,DURATIONS:DURATIONS,EVENING_LIMIT:180,SHEET_CAPACITY:Number.MAX_SAFE_INTEGER};
+ function actAtNight(s,type,opts){var n=s.nightIssue;if(s.phase!=='morning'||!n||n.finished||!['feed','water','litter'].includes(type))return result(false,'지금은 밤중이 아니다.');var hold={phase:s.phase,minute:s.minute,needs:s.needs,done:s.done,morningMin:s.morningMin,waterChangedDay:s.waterChangedDay,meals:s.meals};s.phase='evening';s.minute=160;s.needs=n.needs;s.done=n.done;s.meals={morning:!n.hunger,evening:!n.hunger};if(type==='water')s.waterChangedDay=null;var r=act(s,type,opts);n.needs=s.needs;n.done=s.done;if(r.ok){if(type==='feed')n.hunger=false;else if(type==='water')n.thirst=false;s.lastNight.nightCare=s.lastNight.nightCare||[];s.lastNight.nightCare.push({type:type,minutes:r.minutes});}Object.assign(s,hold);return r;}
+ function finishNight(s){if(s.nightIssue)s.nightIssue.finished=true;return true;}
+ var winter=[{month:'12월',income:84000,living:54000,food:12000,portions:8,meals:6,label:'슈퍼 계산대 단기 근무 3일'},{month:'1월',income:96000,living:72000,food:24000,portions:16,meals:12,label:'물류 포장 단기 근무 4일'},{month:'2월',income:112000,living:78000,food:24000,portions:16,meals:14,label:'행사 안내 단기 근무 4일'}];
+ function winterShift(s,index){var p=winter[index];if(!p||s.winterStep!==index)return result(false,'이미 지나온 겨울이다.');money(s,'winter:'+index+':income',p.income,'income',p.label);money(s,'winter:'+index+':food',-p.food,'purchase','겨울 사료 장보기');money(s,'winter:'+index+':living',-p.living,'living','해당 단기 근무 기간 식비·주거비');s.food+=p.portions-p.meals;s.winterStep++;return result(true,p.month+' · '+p.label+' 입금 '+p.income.toLocaleString()+'원 / 장보기 '+p.food.toLocaleString()+'원 / 생활비 '+p.living.toLocaleString()+'원 / 잔액 '+s.cash.toLocaleString()+'원',{shift:p});}
+ function summary(s){return{income:s.transactions.filter(function(t){return t.type==='income';}).reduce(function(n,t){return n+t.cash;},0),earned:s.work.reduce(function(n,w){return n+w.income;},0),spent:-s.transactions.filter(function(t){return t.cash<0;}).reduce(function(n,t){return n+t.cash;},0),contracts:s.work.reduce(function(n,w){return n+w.contracts;},0),consultations:s.work.reduce(function(n,w){return n+w.consultations;},0),balance:s.cash};}
+ function ending(s){var q=summary(s),key=fatigue(s)==='exhausted'?'worn':s.careDebt>=4?'distance':s.routine>=7?'settled':'finding';return{key:key,title:'첫 근무 기간 결산',summary:q,lines:['상담 '+q.consultations+'건, 계약 '+q.contracts+'건. 근무 수입 '+q.earned.toLocaleString()+'원은 매일 계좌에 들어왔다.','처음 사료를 샀던 슈퍼에 다시 들렀다. 오늘은 다음 주에 먹을 사료를 고른다.',josa(s.cat,'subject')+(s.lastNight&&s.lastNight.played?' 장난감을 내려놓고 길게 하품한다.':' 쥐 인형을 발 앞에 내려놓는다. 오늘 저녁에 남긴 일이 보인다.'),s.doorOpen?'방문을 열어 두었다. 이불 끝에 작은 온기가 닿는다.':'방문을 닫았다. 아침에는 문 앞의 인형부터 집어 들 것이다.']};}
+ function workTask(s){return{title:'고객 상담',required:['상담 1','상담 2'],borrowedLaptop:!!s.flags.borrowedLaptop,lateMinutes:s.flags.lateMinutes||0,prepared:s.bagPacked};}
+ function objective(s){return{key:s.phase,text:timeBand(s).label,actions:s.phase==='work'?['consultation']:['feed','water','play','litter','rest','sleep']};}
+ return{create:create,act:act,ready:ready,sleep:sleep,finishNight:finishNight,actAtNight:actAtNight,finishWork:finishWork,arriveHome:arriveHome,beginConsultation:beginConsultation,answerConsultation:answerConsultation,winterShift:winterShift,winter:winter,summary:summary,ending:ending,clock:clock,formatTime:formatTime,timeBand:timeBand,fatigue:fatigue,duration:duration,objective:objective,workTask:workTask,workBudget:function(){return{remaining:2};},schedule:schedule,DURATIONS:DURATIONS,josa:josa,prices:prices};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=Life;

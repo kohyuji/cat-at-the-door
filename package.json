@@ -6,6 +6,10 @@
     "start": "node tools/serve.cjs",
     "build": "node tools/build-web.cjs",
     "review": "node tools/build-review.cjs",
-    "deploy": "node tools/deploy-pages.cjs"
+    "deploy": "node tools/deploy-pages.cjs",
+    "render": "node tools/render-canvas.cjs"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "0.1.100"
   }
 }

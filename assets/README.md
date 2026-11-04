@@ -6,7 +6,7 @@
 | --- | --- |
 | `rooms-pixel.png` | 침실과 부엌 겸 거실 배경 |
 | `places-pixel.png` | 거리, 지하철 승강장, 회사 배경 |
-| `fonts/DOSGothic.woff2` | 현재 게임의 도스 고딕 글꼴 |
+| `fonts/NeoDunggeunmoPro-Regular.woff2` | 사용자 제공 Neo둥근모 Pro 글꼴 |
 | `fonts/LICENSE-DOSGothic.txt` | 도스 고딕의 MIT 사용 허가문 |
 | `fonts/DungGeunMo.woff` | 이전 보관 문서에 쓰는 둥근모꼴 |
 
@@ -15,3 +15,7 @@
 잠든 인물은 배경의 침대와 베개에 맞춰 그립니다. 침대가 통째로 들어 있는 예전 자세 이미지를 겹치거나 늘려 쓰지 않습니다. 이전 자세 이미지와 제작 프롬프트는 [이전 자료](../archive/r2/assets/)에 보관했습니다.
 
 도스 고딕은 [제작자 저장소](https://github.com/hurss/fonts)의 원본을 웹용 WOFF2로 압축한 것입니다. [MIT 사용 허가문](fonts/LICENSE-DOSGothic.txt)을 배포 파일과 단일 실행 파일에도 포함합니다.
+
+R4 생성 스프라이트·배경은 r4-asset-manifest.json과 r4-prompts.md를 따른다. 로더는 G.images에 이미지를 제공하고 PixelArt.setImages로 연결한다. tools/assets.cjs는 웹·단일 HTML 자산 목록을 공통 관리한다.
+
+현재 글꼴은 사용자 제공 Neo둥근모 Pro 원본을 그대로 사용한다. 글꼴 메타데이터의 SIL OFL 1.1 표기를 확인했고 [원 제작자 사용 조건](https://github.com/neodgm/neodgm/blob/main/LICENSE.txt)을 fonts/LICENSE-NeoDunggeunmo.txt에 포함한다. 이전 도스 고딕은 보관 자료다.

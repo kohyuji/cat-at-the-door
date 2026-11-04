@@ -117,16 +117,17 @@ async function main() {
   if (!fs.existsSync(path.join(dist, 'index.html'))) throw new Error('빌드 결과 dist/index.html이 없습니다.');
 
   if (!prepareOnly) {
-    git(['fetch', 'origin', '+refs/heads/main:refs/remotes/origin/main', '+refs/heads/codex-v5:refs/remotes/origin/codex-v5']);
+    git(['fetch', 'origin', '+refs/heads/codex-v5:refs/remotes/origin/codex-v5']);
   }
   const sourceSha = git(['rev-parse', 'HEAD']);
-  const mainSha = git(['rev-parse', 'refs/remotes/origin/main']);
   if (!prepareOnly && git(['rev-parse', 'refs/remotes/origin/codex-v5']) !== sourceSha) {
     throw new Error('로컬 커밋과 원격 codex-v5가 다릅니다. 소스를 먼저 푸시해 주세요.');
   }
 
   let previousSha = '';
-  if (!prepareOnly) {
+  if (prepareOnly) {
+    previousSha = git(['rev-parse', 'refs/remotes/origin/gh-pages']);
+  } else {
     const remoteHead = git(['ls-remote', '--heads', 'origin', 'refs/heads/gh-pages']);
     if (remoteHead) {
       git(['fetch', 'origin', '+refs/heads/gh-pages:refs/remotes/origin/gh-pages']);
@@ -152,28 +153,29 @@ async function main() {
   };
   const stagedGit = args => git(args, { cwd: site, env: indexEnv });
   try {
-    stagedGit(['read-tree', mainSha]);
+    if (!previousSha) throw new Error('기존 gh-pages가 없어 다른 사이트 보존을 검증할 수 없습니다.');
+    stagedGit(['read-tree', previousSha]);
     stagedGit(['checkout-index', '--all', '--force']);
     const preview = path.join(site, sourceBranch);
-    if (fs.existsSync(preview)) throw new Error('main에 codex-v5 경로가 이미 있어 기존 파일을 덮어쓰지 않았습니다.');
+    if (!inside(site, preview) || path.basename(preview) !== 'codex-v5') throw new Error('자기 배포 경로를 확인할 수 없습니다.');
+    fs.rmSync(preview, { recursive: true, force: true });
     fs.cpSync(dist, preview, { recursive: true });
-    const build = { publisher: 'cat-at-the-door', source_branch: sourceBranch, source_commit: sourceSha, main_commit: mainSha, built_at: new Date().toISOString() };
+    const build = { publisher: 'cat-at-the-door', source_branch: sourceBranch, source_commit: sourceSha, base_pages_commit: previousSha, built_at: new Date().toISOString() };
     fs.writeFileSync(path.join(preview, '__build.json'), `${JSON.stringify(build, null, 2)}\n`);
-    if (!fs.existsSync(path.join(site, '.nojekyll'))) fs.writeFileSync(path.join(site, '.nojekyll'), '');
     stagedGit(['add', '--all', '--force', '--', '.']);
     const tree = stagedGit(['write-tree']);
-    const changed = git(['-c', 'core.quotepath=false', 'diff-tree', '-r', '--name-only', mainSha, tree]).split(/\r?\n/).filter(Boolean);
-    if (changed.some(file => file !== '.nojekyll' && !file.startsWith('codex-v5/'))) {
-      throw new Error('main 원본 파일이 달라져 배포를 중단합니다.');
+    const changed = git(['-c', 'core.quotepath=false', 'diff-tree', '-r', '--name-only', previousSha, tree]).split(/\r?\n/).filter(Boolean);
+    if (changed.some(file => !file.startsWith('codex-v5/'))) {
+      throw new Error('다른 공개 사이트 또는 루트 파일이 달라져 배포를 중단합니다.');
     }
     if (prepareOnly) {
-      console.log(JSON.stringify({ status: '로컬 배포 묶음 검증 완료', source_commit: sourceSha, main_commit: mainSha, tree, preview_files: changed.length, url: liveUrl }, null, 2));
+      console.log(JSON.stringify({ status: '로컬 배포 묶음 검증 완료', source_commit: sourceSha, base_pages_commit: previousSha, tree, preview_files: changed.length, url: liveUrl }, null, 2));
       return;
     }
-    const commit = git(['commit-tree', tree, '-p', previousSha || mainSha, '-m', `Publish codex-v5 ${sourceSha.slice(0, 7)}`]);
+    const commit = git(['commit-tree', tree, '-p', previousSha, '-m', `Publish codex-v5 ${sourceSha.slice(0, 7)}`]);
     git(['push', 'origin', `${commit}:refs/heads/gh-pages`]);
     await configurePages();
-    console.log(JSON.stringify({ status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, main_commit: mainSha }, null, 2));
+    console.log(JSON.stringify({ status: 'GitHub Pages 배포 요청 완료', url: liveUrl, source_commit: sourceSha, deployment_commit: commit, base_pages_commit: previousSha }, null, 2));
   } finally {
     try { removeStaging(stagingBase, staging); }
     catch { console.warn(`임시 파일 자동 정리를 마치지 못했습니다. 배포 결과에는 영향이 없습니다: ${staging}`); }
