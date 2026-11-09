@@ -183,8 +183,8 @@ var Home = (function () {
     View.wallClock(c, P.clock.x, P.clock.y, 13, s ? s.minute : 1200, H.pro ? 0 : s.phase === 'morning' ? Life.T.leaveBy : Life.T.bedtime);
     if (!H.pro) {
       View.floorDirt(c, s.floor, gone());
-      if (s.pantry.coffee > 0 && !s.coffee) View.cup(c, P.coffee.x, P.coffee.y, .55);
-      if (s.pantry.lunch > 0) View.lunchbox(c, P.lunch.x, P.lunch.y, .55);
+      if (s.pantry.coffee > 0 && !s.coffee) View.cup(c, P.coffee.x, P.coffee.y, 1.15);
+      if (s.pantry.lunch > 0) View.lunchbox(c, P.lunch.x, P.lunch.y, .9);
       if (s.owned.feeder) View.feeder(c, P.feeder.x, P.feeder.y, .9);
       if (s.owned.tower) View.catTower(c, P.tower.x, P.tower.y, .95);
       if (!(H.clean && H.clean.kind === 'mop')) View.mop(c, P.mop.x, P.mop.y, 1);
@@ -699,9 +699,9 @@ var Home = (function () {
       if (s.pantry.coffee > 0 && !s.coffee) {
         var cc = [cMin(Life.T.coffee), cBolt(1)];
         if (s.phase !== 'morning' && s.minute >= Life.T.workEnd) cc.push({ icon: 'zzz', text: '−1', cls: 'bad' });
-        list.push({ id: 'coffee', x: P.coffee.x - 12, y: P.coffee.y - 26, w: 24, h: 28, chips: cc, tap: drinkCoffee });
+        list.push({ id: 'coffee', x: P.coffee.x - 18, y: P.coffee.y - 40, w: 36, h: 44, chips: cc, tap: drinkCoffee });
       }
-      if (s.pantry.lunch > 0 && s.energy < Life.MAX) list.push({ id: 'lunch', x: P.lunch.x - 13, y: P.lunch.y - 24, w: 26, h: 26, chips: [cMin(Life.T.lunch), cBolt(1)], tap: eatLunch });
+      if (s.pantry.lunch > 0 && s.energy < Life.MAX) list.push({ id: 'lunch', x: P.lunch.x - 20, y: P.lunch.y - 32, w: 40, h: 36, chips: [cMin(Life.T.lunch), cBolt(1)], tap: eatLunch });
       var playWhy = Life.doBlock(s, 'play');
       list.push({ id: 'toy', x: P.toy.x - 18, y: P.toy.y - 24, w: 36, h: 28, chips: playWhy ? null : [cMin(Life.T.play), cHeart(1)],
         tap: function () { return playWhy ? blockedLine('play', playWhy) : (G.hand = { shake: true, x: P.toy.x, y: P.toy.y - 30, period: 2, t0: G.t }, null); }, drag: playWhy ? null : toyDrag() });
