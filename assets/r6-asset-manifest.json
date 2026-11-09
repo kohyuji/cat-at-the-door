@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "updated": "2026-11-09",
+  "source": {
+    "branch": "codex-v5",
+    "commit": "7422b62"
+  },
+  "note": "R4 그림(r4-asset-manifest.json) 위에 더해 싣는 codex-v5(R5·R6) 그림. 원본 RGBA를 그대로 쓰고, 조각은 알파 128 기준으로 경계만 또렷하게 했다.",
+  "load": {
+    "r6People": "assets/r6-people-v2.png",
+    "r6Clean": "assets/r6-clean-v2.png",
+    "r6Care": "assets/r6-care-v2.png",
+    "r6Wet": "assets/r6-wet-v2.png",
+    "r6Transit": "assets/r6-transit-v2.png",
+    "r6Extras": "assets/r6-extras.png"
+  },
+  "images": {
+    "r6People": {
+      "file": "assets/r6-people-v2.png",
+      "width": 384,
+      "height": 256,
+      "bytes": 49624,
+      "sha256": "3496bd10f60a0088300da8a3babb910eeebadb1ef7e3c9318ce008c0d721725b",
+      "from": "codex-v5 assets/r6-people-v2.png 그대로",
+      "contents": "48×64 칸 8열 4줄. 0~7 후드티 걷기, 8~15 정장 걷기, 16 앞, 18 옆, 19 뒤, 20~21 앉기, 22~23 공부, 24 정장 앞, 26 정장 옆, 27 정장 뒤, 28~29 정장 앉기, 30~31 우산 든 팔"
+    },
+    "r6Clean": {
+      "file": "assets/r6-clean-v2.png",
+      "width": 192,
+      "height": 128,
+      "bytes": 13694,
+      "sha256": "013d3c1a17aeb6271586f2797bed63b34721eb9bd6debf4c5e0cbccb8c8d3fb6",
+      "from": "codex-v5 assets/r6-clean-v2.png 그대로",
+      "contents": "48×64 칸 4열 2줄. 0~3 빗자루, 4~7 물걸레"
+    },
+    "r6Care": {
+      "file": "assets/r6-care-v2.png",
+      "width": 192,
+      "height": 384,
+      "bytes": 47779,
+      "sha256": "a8dd1276c58fd64fdfca831431f6936daa335f9c43c12daef97cddac10797fa9",
+      "from": "codex-v5 assets/r6-care-v2.png 그대로",
+      "contents": "48×64 칸 4열 6줄. 사료 붓기, 물 붓기, 무릎 꿇기"
+    },
+    "r6Wet": {
+      "file": "assets/r6-wet-v2.png",
+      "width": 192,
+      "height": 128,
+      "bytes": 14989,
+      "sha256": "1fe710ab520f9293ae43d2b63bd37b97f2c02bd09bd0790e3fb13aa77b2e9517",
+      "from": "codex-v5 assets/r6-wet-v2.png 그대로",
+      "contents": "48×64 칸 4열 2줄. 습식 캔 따기"
+    },
+    "r6Transit": {
+      "file": "assets/r6-transit-v2.png",
+      "width": 96,
+      "height": 128,
+      "bytes": 4295,
+      "sha256": "663124ea0b4805ba007348271aa53f5190211cfd1c24083143c820dba659d566",
+      "from": "codex-v5 assets/r6-transit-v2.png 그대로",
+      "contents": "48×64 칸 2열 2줄. 지하철에 앉은 승객 넷"
+    },
+    "r6Extras": {
+      "file": "assets/r6-extras.png",
+      "width": 1800,
+      "height": 1912,
+      "bytes": 1631699,
+      "sha256": "04244486e8cf4361363c6db1631820ffba79f1f1c6482cba37a4db49ba356a67",
+      "from": "tools/build-extras.py가 codex-v5의 r5-home, r5-props, r5-cat-portrait, r6-bed-v2, r6-devices에서 잘라 묶음",
+      "contents": "방문(닫힘·열림), 침대(빈·깬·잠든), 우산, 번개탄, 단순한 고양이 얼굴, 빗자루, 물걸레. 좌표는 src/pixel-render.js EXTRA"
+    }
+  }
+}

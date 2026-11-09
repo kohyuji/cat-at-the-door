@@ -32,7 +32,8 @@ var Game = (function () {
     var s = G.s, pro = G.pro && G.pro.active;
     if (!s || pro) return { show: G.hudShow, wallet: G.pro ? G.pro.wallet : 0, energy: 0, hearts: 0, food: { dry: 0, wet: 0 }, minute: 0 };
     var d = Life.day(s), morning = s.phase === 'morning';
-    return { show: G.hudShow, date: d.date + ' ' + d.wd, minute: s.minute, due: morning ? Life.T.leaveBy : 0, late: morning && s.minute > Life.T.leaveBy,
+    var due = morning ? Life.T.leaveBy : Life.homeTime(s) ? Life.T.bedtime : 0;
+    return { show: G.hudShow, date: d.date + ' ' + d.wd, minute: s.minute, due: due, late: !!due && s.minute > due,
       wallet: s.wallet, food: s.food, energy: s.energy, hearts: s.hearts };
   }
   function hudAll(on) { G.hudShow = { date: on, clock: on, wallet: on, food: on, energy: on, hearts: on }; }
@@ -80,9 +81,9 @@ var Game = (function () {
     G.fade = 1;
     await UI.black(Story.opening);
     // 이불 속, 진동
-    H.pro = true; H.inBed = true; H.mode = 'pro'; H.skyOverride = 'winter';
+    H.pro = true; H.inBed = true; H.awake = true; H.mode = 'pro'; H.skyOverride = 'winter';
     Home.enter('bedroom', { mode: 'pro', heroX: 220, catRoom: 'none' });
-    G.cat.visible = false; H.lock = true;
+    G.cat.visible = false; G.cat.room = 'none'; H.lock = true;
     await Engine.fade(0, .9);
     await Engine.sleep(.8);
     var rej = Story.phone.rejection(name);
@@ -90,7 +91,7 @@ var Game = (function () {
     await say([me('떨어졌구나. 하하....'), me('그래, 내가 그럼 그렇지.')]);
     H.lock = false;
     await Engine.fade(1, .7);
-    H.inBed = false;
+    H.inBed = false; H.awake = false;
     await rainyStreet();
     await proShelf();
     await proHome();
@@ -99,7 +100,7 @@ var Game = (function () {
   async function rainyStreet() {
     var st = { umbrella: 0, tilted: false, cat: { x: 520, visible: false, pose: 'fear', dir: -1 }, go: false };
     G.hero.x = 40; G.hero.dir = 1; G.hero.tx = null;
-    var umb = function () { return { x: G.hero.x + 12, y: 200 }; };
+    var umb = function () { return { x: G.hero.x + 16, y: 190 }; };
     Work.street({
       winter: true,
       draw: function (c) {
@@ -110,10 +111,10 @@ var Game = (function () {
           if (!st.tilted) for (var i = 0; i < 5; i++) { var yy = (t * 220 + i * 37) % 60; View.r(c, k.x - 18 + i * 9, 290 + yy, 1, 6, '#9fc3e8'); }
         }
         View.shadow(c, h.x, 343, 20);
-        View.person(c, G, h.x, 342, 'hoodie', h.walking ? h.dir : 1, t, h.walking ? 'walk' : 'stand', 2.35);
-        // 우산은 손에 든 채로 머리 위에. 기울이면 고양이 쪽으로 넘어간다
-        var a = h.walking ? -.06 + Math.sin(t * 9) * .03 : -.06 + st.umbrella * 1.0;
-        c.save(); c.translate(h.x + 12, 292); c.rotate(a); View.item(c, 'umbrella', 0, 0, 2.1); c.restore();
+        View.person(c, G, h.x, 342, 'hoodie', 1, t, h.walking ? 'umbrellaWalk' : 'umbrella', 2.35);
+        // 우산은 손에 든 채로 머리 위에. 기울이면 고양이 쪽으로 넘어간다 (주인공과 같은 픽셀 크기)
+        var a = h.walking ? 0 : st.umbrella * 1.0;
+        PixelArt.umbrella(c, h.x + (h.walking ? 6 : 16), h.walking ? 262 : 258, a, View.HERO_PX);
         if (st.tilted) for (var j = 0; j < 4; j++) { var y2 = (t * 220 + j * 41) % 70; View.r(c, h.x - 24 + j * 10, 200 + y2, 1, 6, '#9fc3e8'); }
       },
       hot: function () {
@@ -150,7 +151,8 @@ var Game = (function () {
     G.hand = null; st.cat.pose = 'sit';
     await Engine.sleep(.6);
     UI.sfx('meow');
-    await say([{ who: 'cat', text: '야옹~' }]);
+    // 우산 아래에서 고양이가 처음 하는 말 (단순한 고양이 얼굴과 함께)
+    await say([{ who: 'cat', text: '너도 참 기구한 신세로구나.' }]);
     st.cat.dir = -1; st.cat.pose = 'walk';
     await new Promise(function (resolve) {
       var from = st.cat.x, to = G.hero.x + 26, t0 = G.t;
@@ -226,7 +228,7 @@ var Game = (function () {
     await Home.wait(['hung']);
     G.guide = null;
     await say([me('이제 자야 할 시간이다. 너무 고된 하루였어.')]);
-    H.bedOK = true; G.guide = { x: 117, y: 188, dir: 'down' };
+    H.bedOK = true; G.guide = { x: 122, y: 212, dir: 'down' };
     await Home.wait(['bed']);
     G.guide = null; H.bedOK = false;
     // 첫날 밤은 같이 잔다
@@ -286,7 +288,7 @@ var Game = (function () {
     var s = G.s;
     G.hudShow = { date: true, clock: false, wallet: true, food: true, energy: false, hearts: false };
     H.mode = 'evening'; H.inBed = false; H.closeUp = null; H.curtain = 0;
-    Home.enter('bedroom', { mode: 'evening', heroX: 300, catRoom: 'bedroom', catX: 140, catY: 336 });
+    Home.enter('bedroom', { mode: 'evening', heroX: 300, catRoom: 'bedroom', catX: 420, catY: 336 });
     await Engine.fade(0, .5);
     if (!s.seen.packed) {
       await say(Story.DAY_INTRO[0]);
@@ -297,26 +299,41 @@ var Game = (function () {
       clearInterval(stopHand); G.hand = null; H.packing = false; s.seen.packed = true;
       UI.sfx('good');
     }
+    // 냉장고에 붙여 둔 돌봄 메모: 고양이와 나의 하루 규칙을 종이 한 장으로
+    if (!s.seen.careMemo) {
+      await say([me('참, 냉장고에 붙여 둔 ' + Life.josa(s.cat, 'of') + ' 메모도 다시 봐 두자.')]);
+      await guideTo(function () { return H.room === 'living' ? { x: P.memo.x + 20, y: P.memo.y - 2, dir: 'down' } : { x: 585, y: 40, dir: 'down' }; },
+        function () { return H.closeUp && H.closeUp.kind === 'memo'; });
+      await Engine.until(function () { return !H.closeUp; });
+    }
     checkpoint();
     await evening();
   }
-  // 저녁 (평일 저녁과 주말 낮을 같이 쓴다). 잠들면 끝난다.
+  // 조건이 맞을 때까지 화살표로 가리킨다 (방을 옮기면 화살표도 따라간다)
+  function guideTo(where, done) {
+    return new Promise(function (resolve) {
+      var chk = setInterval(function () {
+        if (done()) { clearInterval(chk); G.guide = null; resolve(); return; }
+        if (!UI.busy()) G.guide = where();
+      }, 120);
+    });
+  }
+  // 저녁 (평일 저녁과 주말 낮을 같이 쓴다). 침대에 누워 잠들면 끝난다.
   async function evening() {
     var s = G.s;
     H.mode = s.phase === 'weekend' ? 'weekend' : 'evening';
-    H.onSlot = function () {
-      if (s.slots <= 0) Engine.run(function () { return say([me(s.phase === 'weekend' ? '벌써 밤이네. 이제 자자.' : '이제 잘 시간이다.')]).then(guideBed); });
-    };
-    if (!s.seen.slots && s.phase === 'evening') {
-      s.seen.slots = true;
+    H.onLate = guideBed; H.onAct = null;
+    G.hudShow.clock = true;
+    if (!s.seen.eveClock && s.phase === 'evening') {
+      s.seen.eveClock = true;
       G.hudShow.energy = true; G.hudShow.hearts = true;
-      if (H.room !== 'living') { await Engine.fade(1, .25); Home.enter('living', { mode: 'evening', heroX: 520 }); G.cat.room = 'living'; G.cat.x = 470; await Engine.fade(0, .25); }
+      if (H.room !== 'living') { await Engine.fade(1, .25); Home.enter('living', { mode: 'evening', heroX: 300 }); G.cat.room = 'living'; G.cat.x = 470; await Engine.fade(0, .25); }
       G.guide = { x: P.clock.x, y: P.clock.y + 44, dir: 'up' };
-      await say([me('저녁에는 두 가지쯤 할 수 있겠다.')]);
+      await say([me('11시 전에는 자야 내일 아침이 덜 힘들겠지.'), me('그 전까지 뭘 할지는 내 마음이다.')]);
       G.guide = null; G.outlineAll = true;
       setTimeout(function () { G.outlineAll = false; }, 2600);
     }
-    if (s.slots <= 0) guideBed();
+    if (s.minute >= Life.T.bedtime) guideBed();
     while (true) {
       var r = await Home.wait(['bed', 'shop']);
       if (r === 'shop') { await weekendShop(); continue; }
@@ -326,12 +343,12 @@ var Game = (function () {
     }
   }
   function guideBed() {
-    if (H.room === 'bedroom') G.guide = { x: 117, y: 188, dir: 'down' };
-    else G.guide = { x: 585, y: 40, dir: 'down' };
+    var spot = function () { return H.room === 'bedroom' ? { x: 122, y: 212, dir: 'down' } : { x: 585, y: 40, dir: 'down' }; };
+    G.guide = spot();
     var chk = setInterval(function () {
-      if (!G.guide) { clearInterval(chk); return; }
       if (H.mode === 'night') { G.guide = null; clearInterval(chk); return; }
-      G.guide = H.room === 'bedroom' ? { x: 117, y: 188, dir: 'down' } : { x: 585, y: 40, dir: 'down' };
+      if (!G.guide) { clearInterval(chk); return; }
+      G.guide = spot();
     }, 300);
   }
   async function arriveHome() {
@@ -340,20 +357,24 @@ var Game = (function () {
     Home.enter('living', { mode: 'evening', heroX: 70, catRoom: 'living', catX: 150 });
     G.hero.dir = 1;
     G.cat.visible = !s.hidden;
+    G.hudShow.clock = true;
     await Engine.fade(0, .4);
     if (Life.day(s).storm) { UI.sfx('thunder'); G.flash = .9; }
     await Engine.walkTo(180);
-    if (!s.hidden) await say([narr(Story.catLine('waited', s.cat))]);
-    var alone = s.today.hearts.filter(function (h) { return h.key === 'alone'; })[0];
-    if (alone) await say([me(Story.catLine('alone', s.cat))]);
+    var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
+    if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
+    if (lonely && lonely.key === 'alone') await say([me(Story.catLine('alone', s.cat))]);
     if (s.hidden) { UI.sfx('thunder'); G.flash = .8; await say([narr(Story.catLine('storm', s.cat))]); }
     await Home.noticeNeeds();
   }
   // 밤: 침대에 누워 문을 고른다. 뒤로 가면 저녁으로 돌아간다.
   async function night() {
-    var s = G.s, prevMode = H.mode;
-    H.mode = 'night'; H.inBed = true; H.closeUp = null; G.hero.visible = false;
+    var s = G.s, prevMode = H.mode, first = s.day === 0;
+    H.mode = 'night'; H.inBed = true; H.awake = true; H.closeUp = null; G.hero.visible = false;
     if (H.room !== 'bedroom') { await Engine.fade(1, .25); }
+    // 첫날 밤은 문을 열어 두고 같이 잔다 (다음 날 아침 정장에 털이 묻는다)
+    if (first) Life.setDoor(s, true);
+    H.doorLocked = first;
     Home.enter('bedroom', { mode: 'night' });
     G.hero.visible = false;
     H.door = s.door === 'open' ? 1 : 0;
@@ -367,9 +388,13 @@ var Game = (function () {
     catFollowDoor(s.door === 'open');
     H.onDoor = catFollowDoor;
     await Engine.fade(0, .35);
-    if (!s.seen.doorHint) {
+    if (first && !s.seen.firstNight) {
+      s.seen.firstNight = true;
+      await say([me('문 열어 두자. ' + Life.josa(s.cat, 'subject') + ' 혼자 거실에서 자면 쓸쓸하잖아.')]);
+    } else if (!s.seen.doorHint && !first) {
       s.seen.doorHint = true;
-      G.hand = { x: H.handle.x, y: H.handle.y, tx: H.handle.x - 50, ty: H.handle.y, period: 2.2, t0: G.t, door: true };
+      var dx = H.door > .5 ? -50 : 50;
+      G.hand = { x: H.handle.x, y: H.handle.y, tx: H.handle.x + dx, ty: H.handle.y, period: 2.2, t0: G.t, door: true };
     }
     var btn = $('actionButton'), back = $('backButton');
     btn.textContent = '이대로 잠들기'; btn.hidden = false; back.hidden = false;
@@ -377,13 +402,14 @@ var Game = (function () {
       btn.onclick = function () { if (!UI.busy() && !G.drag) resolve('sleep'); };
       back.onclick = function () { if (!UI.busy() && !G.drag) resolve('back'); };
     });
-    btn.hidden = true; back.hidden = true; btn.onclick = null; back.onclick = null; G.hand = null; H.onDoor = null;
+    btn.hidden = true; back.hidden = true; btn.onclick = null; back.onclick = null; G.hand = null; H.onDoor = null; H.doorLocked = false;
     if (choice === 'back') {
-      H.mode = prevMode; H.inBed = false; H.catAct = null; G.hero.visible = true; G.hero.x = 230; G.hero.y = 334;
+      H.mode = prevMode; H.inBed = false; H.awake = false; H.catAct = null; G.hero.visible = true; G.hero.x = 250; G.hero.y = 334;
       if (k.room === 'living' || !k.visible) { k.room = 'living'; }
       Home.enter('bedroom', { mode: prevMode });
       return false;
     }
+    H.awake = false;
     UI.sfx('sleep');
     Life.toBed(s);
     var opt = {};
@@ -409,7 +435,7 @@ var Game = (function () {
         var t = G.t;
         View.bg(c, G, 'living');
         View.entranceDoor(c, View.L.living.entrance, 0);
-        View.roomDoor(c, G, door, pov.crack || 0, 'bedroom', [40, 60, 92, 230], true);
+        View.roomDoor(c, G, door, pov.crack || 0, 'bedroom');
         View.windowView(c, G, View.L.living.window, 'night', t, 0, false);
         View.nightTint(c, .62);
         if (pov.crack) View.lampGlow(c, door.x + 10, door.y + 120, 60, .3);
@@ -439,19 +465,23 @@ var Game = (function () {
     await Engine.sleep(pov.pick === 'wait' ? 1.4 : .6);
     return pov.pick;
   }
+  function wakeLines(s, note) {
+    var lines = [], w = G.wake;
+    if (note) lines.push(narr(note));
+    if (w && w.key) lines.push(narr(Story.HEART[w.key] + '.' + (s.phase === 'morning' ? ' 치우느라 ' + Life.T.accident + '분이 걸렸다.' : '')));
+    (Story.DAY_INTRO[s.day] || []).forEach(function (l) { lines.push({ who: l.who, text: l.text }); });
+    return lines;
+  }
   async function morning() {
     var s = G.s, note = Story.morningNote(G.wake ? G.wake.note : null, s.cat);
-    G.wake = null;
     H.mode = 'morning'; H.inBed = false; H.closeUp = null; H.curtain = 0; H.catAct = null; H.searching = false; H.searched = {};
     G.hudShow = { date: true, clock: true, wallet: true, food: true, energy: true, hearts: true };
-    Home.enter('bedroom', { mode: 'morning', heroX: 230 });
+    Home.enter('bedroom', { mode: 'morning', heroX: 250 });
     placeCatMorning();
     await Engine.fade(0, .5);
-    var lines = [];
-    if (note) lines.push(narr(note));
-    var acc = s.today.hearts.filter(function (h) { return h.key === 'accident'; })[0];
-    if (acc) lines.push(narr(Story.HEART.accident + '. 치우느라 15분이 걸렸다.'));
-    (Story.DAY_INTRO[s.day] || []).forEach(function (l) { lines.push({ who: l.who, text: l.text }); });
+    var lines = wakeLines(s, note);
+    G.wake = null;
+    if (Life.tired(s) && !s.seen.tiredMorning) { s.seen.tiredMorning = true; lines.push(me('몸이 무겁다... 피곤하면 뭘 해도 오래 걸리는데.')); }
     if (lines.length) await say(lines);
     if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
@@ -473,22 +503,19 @@ var Game = (function () {
   }
   async function weekend() {
     var s = G.s, note = Story.morningNote(G.wake ? G.wake.note : null, s.cat);
-    G.wake = null;
     H.mode = 'weekend'; H.inBed = false; H.closeUp = null; H.curtain = 0; H.catAct = null;
     G.hudShow = { date: true, clock: true, wallet: true, food: true, energy: true, hearts: true };
-    Home.enter('bedroom', { mode: 'weekend', heroX: 230 });
+    Home.enter('bedroom', { mode: 'weekend', heroX: 250 });
     placeCatMorning();
     await Engine.fade(0, .5);
-    var lines = [];
-    if (note) lines.push(narr(note));
-    var acc = s.today.hearts.filter(function (h) { return h.key === 'accident'; })[0];
-    if (acc) lines.push(narr(Story.HEART.accident + '.'));
-    (Story.DAY_INTRO[s.day] || []).forEach(function (l) { lines.push({ who: l.who, text: l.text }); });
+    var lines = wakeLines(s, note);
+    G.wake = null;
+    if (s.floor.fur + s.floor.dust >= 4 && !s.seen.cleanDay) { s.seen.cleanDay = true; lines.push(me('바닥에 털이랑 먼지가 꽤 쌓였네. 오늘은 청소부터 할까.')); }
     if (lines.length) await say(lines);
     await evening();
   }
   async function weekendShop() {
-    var s = G.s, r = Life.slot(s, 'shop');
+    var s = G.s, r = Life.act(s, 'shop');
     if (!r.ok) return;
     await Engine.fade(1, .35);
     Work.street({ hot: null, walk: null });
@@ -501,7 +528,6 @@ var Game = (function () {
     Home.enter('living', { mode: 'weekend', heroX: 80 });
     G.cat.room = 'living';
     await Engine.fade(0, .35);
-    if (H.onSlot) H.onSlot('shop');
   }
   async function evaluation() {
     var s = G.s;

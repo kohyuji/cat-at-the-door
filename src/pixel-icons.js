@@ -312,6 +312,14 @@ var PixelIcons = (function () {
       '.kk.',
       'kyyk',
       '.kk.'],
+    mail: [
+      'kkkkkkkkkk',
+      'kwxwwwwxwk',
+      'kwwxwwxwwk',
+      'kwwwxxwwwk',
+      'kwwwwwwwwk',
+      'kwwwwwwwwk',
+      'kkkkkkkkkk'],
     note: [
       '...kkk',
       '...kpk',

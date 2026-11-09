@@ -310,14 +310,19 @@ var UI = (function () {
     var d = Life.DAYS[t.day], h = '';
     h += '<h3>' + esc(d.date + ' (' + d.wd + ')') + '</h3><div class="sub">' + esc(s.me) + ' · ' + esc(s.cat) + '</div>';
     var earned = t.earned.map(function (e) {
-      return e.key === 'allowance' ? line('활동비', wonSigned(e.amount), 'plus') : line(Story.PRODUCT[e.need] + (e.pet ? ' + ' + Story.PRODUCT.pet : ''), wonSigned(e.amount), 'plus', clientName(e.id));
+      return e.key === 'allowance' ? line('활동비', wonSigned(e.amount), 'plus') : line(Story.PRODUCT[e.need] + (e.pet ? ' + ' + Story.PRODUCT.pet : ''), wonSigned(e.amount), 'plus', clientName(e.id) + (e.bonus ? ' · 성과급 ×' + Life.BONUS : ''));
     }).join('') + t.lost.map(function (l) { return line(clientName(l.id), '0원', 'minus', Story.LOST[l.why]); }).join('');
     h += sec('coin', '번 돈', earned);
     h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
     h += sec('heart', Life.josa(s.cat, 'of') + ' 마음', t.hearts.map(function (x) { return line(Story.HEART[x.key], sign(x.delta), x.delta > 0 ? 'plus' : 'minus'); }).join('') +
       '<div class="r-stickers">' + (function () { var o = ''; for (var i = 0; i < Life.MAX; i++) o += img(i < s.hearts ? 'heart' : 'heartEmpty', 1); return o; }()) + '</div>');
     var en = '', next = t.energyNext == null ? s.energy : t.energyNext; for (var k = 0; k < Life.MAX; k++) en += img('bolt', 1, k < next ? '' : 'off');
-    h += sec('bolt', '내일 아침 체력', '<div class="r-stickers">' + en + '</div>');
+    var sl = t.sleep, slept = '';
+    if (sl) {
+      slept = line(Life.clock(sl.bed) + ' 잠듦', sign(sl.gain), sl.gain >= 3 ? 'plus' : 'minus',
+        sl.lost.map(function (k) { return { late: '늦게 잠', woke: '새벽에 깸', coffee: '저녁 커피' }[k]; }).join(' · '));
+    }
+    h += sec('bolt', '내일 아침 체력', slept + '<div class="r-stickers">' + en + '</div>');
     var st = t.stickers.map(function () { return img('sticker', 1); }).join('');
     h += sec('sticker', '실적', '<div class="r-line"><span class="r-stickers">' + st + '</span><b>' + esc((t.total == null ? s.contracts : t.total) + ' / ' + Life.GOAL + '건') + '</b></div>');
     h += '<div class="r-sec r-total"><span>' + img('coin', 1) + ' 지갑</span><span>' + esc(Life.won(s.wallet)) + '</span></div>';
@@ -362,7 +367,12 @@ var UI = (function () {
 
   function init() {
     drawSound();
-    $('dialogue').addEventListener('click', function () { if (advance()) sfx('tap'); });
+    // 대화는 대화창이 아니라 화면 어디를 눌러도 넘어간다 (버튼과 휴대폰, 메뉴는 빼고)
+    document.addEventListener('pointerdown', function (e) {
+      if ($('dialogue').hidden || (e.button !== undefined && e.button > 0)) return;
+      if (e.target && e.target.closest && e.target.closest('button, input, #phone, #menu, #receipt, #naming, #blackScreen, #gameOver')) return;
+      if (advance()) sfx('tap');
+    });
     $('blackScreen').addEventListener('click', function () { advance(); });
     $('phone').addEventListener('click', phoneClick);
     $('iosHomebar').addEventListener('click', function (e) { e.stopPropagation(); phoneClose(); });

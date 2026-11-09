@@ -5,7 +5,57 @@ var PixelArt = (function () {
   // R4: generated PNGs stay untouched. Tight source rectangles avoid neighbouring
   // poses; a shared source-pixel scale keeps heads and paws the same size.
   var images={}, peopleScale=.28, catScale=.205;
-  var assetSources={r4People:'assets/r4-people-pixel.png',r4Cats:'assets/r4-cats-pixel.png',r4Props:'assets/r4-props-pixel.png',r4Actions:'assets/r4-actions-pixel.png',r4Seated:'assets/r4-seated-pixel.png',r4Portraits:'assets/r4-portraits-approved-cords.png',r4PortraitBase:'assets/r4-portraits-approved.png',r4Scenes:'assets/r4-scenes-urban.png',r4Outdoors:'assets/r4-outdoors-urban.png'};
+  var assetSources={r4People:'assets/r4-people-pixel.png',r4Cats:'assets/r4-cats-pixel.png',r4Props:'assets/r4-props-pixel.png',r4Actions:'assets/r4-actions-pixel.png',r4Seated:'assets/r4-seated-pixel.png',r4Portraits:'assets/r4-portraits-approved-cords.png',r4PortraitBase:'assets/r4-portraits-approved.png',r4Scenes:'assets/r4-scenes-urban.png',r4Outdoors:'assets/r4-outdoors-urban.png',
+    // codex-v5(R5·R6)에서 가져온 그림: 주인공 움직임, 청소, 돌봄, 지하철 사람들과 tools/build-extras.py로 자른 조각들
+    r6People:'assets/r6-people-v2.png',r6Clean:'assets/r6-clean-v2.png',r6Care:'assets/r6-care-v2.png',r6Wet:'assets/r6-wet-v2.png',r6Transit:'assets/r6-transit-v2.png',r6Extras:'assets/r6-extras.png'};
+  // r6-extras.png 안의 조각 자리 (tools/build-extras.py 결과)
+  var EXTRA={"bedDoorClosed":[0,0,118,253],"livDoorClosed":[120,0,118,253],"bedDoorOpen":[240,0,145,290],"livDoorOpen":[387,0,145,290],"bedEmpty":[534,0,304,160],"bedAwake":[840,0,818,486],"bedAsleep":[0,488,818,486],"umbrella":[820,488,261,254],"charcoal":[1083,488,191,252],"catPortrait":[0,976,677,936],"broom":[679,976,267,347],"mop":[948,976,293,349]};
+  // 48×64 칸 그림. 발끝(24,62)을 기준점으로 그린다.
+  var NATIVE={people:['r6People',8],clean:['r6Clean',4],care:['r6Care',4],wet:['r6Wet',4],transit:['r6Transit',2]};
+  function native(c,kind,index,x,y,unit,flip){var n=NATIVE[kind],im=n&&images[n[0]];if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,index%n[1]*48,Math.floor(index/n[1])*64,48,64,-24*unit,-62*unit,48*unit,64*unit);c.restore();return true;}
+  // 조각 하나를 바닥 가운데 기준으로 너비 w에 맞춰 그린다
+  function extra(c,key,x,y,w,flip){var a=EXTRA[key],im=images.r6Extras;if(!a||!ready(im))return false;return cut(c,im,a,x,y,w,w*a[3]/a[2],flip);}
+  function extraRect(c,key,x,y,w,h){var a=EXTRA[key],im=images.r6Extras;if(!a||!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(im,a[0],a[1],a[2],a[3],Math.round(x),Math.round(y),Math.round(w),Math.round(h));c.restore();return true;}
+  // 우산: 주인공 그림과 같은 픽셀 크기(u)로 그린다. (0,0)은 손잡이를 쥔 손.
+  // 기울일 때도 화면을 돌리지 않고 한 칸 단위로 다시 찍어서(가장 가까운 칸) 픽셀 격자가 주인공과 같게 남는다.
+  var umbMap=null,umbCache={};
+  function umbrellaMap(){
+    if(umbMap)return umbMap;
+    var m={},W=31,cx=15,dark='#3b2b30',coral='#e2775e',light='#f2a083',rib='#b9533f';
+    function px(xx,yy,col){m[(xx-cx)+','+yy]=col;}
+    // 손잡이(J)와 대
+    for(var k=-16;k<0;k++)px(cx,k,'#7d7f86');px(cx,0,dark);px(cx,1,dark);px(cx-1,2,dark);px(cx-2,2,dark);px(cx-3,1,dark);
+    px(cx-1,1,'#c4664f');px(cx-2,1,'#c4664f');
+    // 천: 위가 둥근 반원
+    var top=-29,h=12;
+    for(var yy=0;yy<=h;yy++){var half=Math.round(Math.sqrt(Math.max(0,1-Math.pow((h-yy)/h,2)))*15);for(var xx=cx-half;xx<=cx+half;xx++){var edge=xx===cx-half||xx===cx+half||yy===0;px(xx,top+yy,edge?dark:(yy<4?light:coral));}}
+    // 아래 물결 테두리
+    for(var xx2=0;xx2<W;xx2++){var wave=(xx2%5===0||xx2%5===4)?1:0;px(xx2,top+h+1-wave,dark);if(!wave)px(xx2,top+h,coral);}
+    // 살
+    [[cx,0],[cx-8,-1],[cx+8,1]].forEach(function(r){for(var yy3=2;yy3<=h;yy3++){var xx3=Math.round(r[0]+(r[1]*(yy3-2))/3);if(r[1]===0)xx3=cx;px(xx3,top+yy3,rib);}});
+    px(cx,top-1,dark);px(cx,top-2,dark);
+    return umbMap=m;
+  }
+  var UMB_R=36;
+  function umbrellaSprite(angle){
+    var key=Math.round(angle*40);
+    if(umbCache[key])return umbCache[key];
+    if(typeof document==='undefined')return null;
+    var m=umbrellaMap(),a=key/40,co=Math.cos(a),si=Math.sin(a),S=UMB_R*2,cv=document.createElement('canvas');
+    cv.width=S;cv.height=S;var g=cv.getContext('2d');
+    for(var Y=-UMB_R;Y<UMB_R;Y++)for(var X=-UMB_R;X<UMB_R;X++){
+      var sx=co*(X+.5)+si*(Y+.5),sy=-si*(X+.5)+co*(Y+.5),col=m[Math.floor(sx)+','+Math.floor(sy)];
+      if(col){g.fillStyle=col;g.fillRect(X+UMB_R,Y+UMB_R,1,1);}
+    }
+    return umbCache[key]=cv;
+  }
+  function umbrella(c,x,y,angle,u){
+    var sp=umbrellaSprite(angle||0);
+    if(sp){c.save();c.imageSmoothingEnabled=false;c.drawImage(sp,Math.round(x)-UMB_R*u,Math.round(y)-UMB_R*u,UMB_R*2*u,UMB_R*2*u);c.restore();return;}
+    var m=umbrellaMap();c.save();c.translate(Math.round(x),Math.round(y));c.rotate(angle||0);c.scale(u,u);
+    for(var k in m){var p=k.split(',');c.fillStyle=m[k];c.fillRect(+p[0],+p[1],1,1);}
+    c.restore();
+  }
   var peopleRects=[[54,30,105,206],[246,30,98,206],[438,30,98,206],[630,30,103,194],[822,30,104,206],[1014,30,99,206],[1205,30,98,206],[1399,30,102,205],[54,286,105,205],[246,286,98,205],[438,286,98,205],[630,286,103,193],[822,286,104,205],[1014,286,98,205],[1206,286,97,205],[1399,286,102,202],[54,536,93,206],[218,564,136,167],[413,560,134,171],[583,569,131,159],[751,632,218,90],[1013,599,113,123],[1188,539,124,199],[1388,544,106,194],[45,796,104,209],[236,801,99,204],[426,794,99,211],[615,801,103,204],[814,791,94,214],[994,829,113,175],[1182,830,131,174],[1370,829,119,175]];
   var catRects=[[40,105,139,120],[232,106,140,119],[424,108,140,117],[614,108,141,117],[806,109,141,117],[994,105,144,121],[1185,109,145,117],[1375,110,147,115],[40,360,139,129],[224,391,142,101],[420,365,139,118],[611,331,128,120],[807,322,130,107],[989,341,136,131],[1180,371,140,121],[1374,392,140,99],[40,605,125,129],[231,605,126,129],[420,660,132,75],[609,657,131,78],[792,613,136,122],[987,662,135,73],[1188,614,138,121],[1380,607,136,127],[23,876,158,99],[228,874,141,110],[412,862,139,129],[599,864,139,127],[800,861,109,130],[992,884,125,109],[1180,852,114,139],[1374,908,123,83]];
   var propRects=[[35,69,148,187],[216,108,153,145],[401,121,160,124],[590,108,163,137],[783,121,163,125],[1001,59,94,199],[1150,128,170,121],[1354,68,147,189],[18,369,174,142],[208,369,176,142],[427,316,106,199],[584,304,169,204],[777,361,164,150],[961,304,173,214],[1152,351,181,168],[1366,344,129,175],[17,564,182,196],[251,556,83,204],[423,577,111,176],[571,589,190,155],[786,586,149,158],[984,585,134,163],[1143,588,184,163],[1350,607,162,138],[18,826,173,151],[215,850,144,117],[384,822,171,161],[570,826,189,157],[786,800,160,202],[991,793,109,204],[1143,843,175,129],[1338,838,181,137]];
@@ -15,7 +65,7 @@ var PixelArt = (function () {
   var props={foodBag:[0,27],wetFood:[1,26],bowlEmpty:[2,30],bowlFull:[3,30],water:[4,30],waterBottle:[5,21],toy:[6,23],litterBag:[7,28],litterTray:[8,51],litterDirty:[9,51],scoop:[10,18],suit:[11,31],hoodieFolded:[12,34],hoodie:[13,34],briefcase:[14,31],roller:[15,23],umbrella:[16,60],umbrellaFolded:[17,17],phone:[18,18],laptop:[19,55],notebook:[20,31],sheet:[21,24],document:[21,24],laundryBasket:[22,46],plateDirty:[23,34],plate:[24,34],sponge:[25,19],crate:[26,39],cozyBox:[27,51],chair:[28,29],coatRack:[29,29],pillow:[30,43],blanketFolded:[31,48]};
   function setImages(next){if(next)images=next;return images;}
   function ready(im){return !!(im&&im.complete!==false&&(im.naturalWidth||im.width));}
-  function portrait(c,variant,x,y,w,h){var im=ready(images.r4PortraitBase)?images.r4PortraitBase:images.r4Portraits;if(!ready(im))return false;var map={me:0,hoodie:0,suit:1,lead:2,boss:2,peer:3,customerA:4,commuterA:4,customerB:5,commuterB:5,customerC:6,commuterC:6,cat:7},i=map[variant]===undefined?0:map[variant],iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,sw=iw/4,sh=ih/2;
+  function portrait(c,variant,x,y,w,h){if(variant==='cat'&&ready(images.r6Extras)){var ca=EXTRA.catPortrait,cw=Math.min(w*.92,h*ca[2]/ca[3]);return extra(c,'catPortrait',x+w/2,y+h,cw);}var im=ready(images.r4PortraitBase)?images.r4PortraitBase:images.r4Portraits;if(!ready(im))return false;var map={me:0,hoodie:0,suit:1,lead:2,boss:2,peer:3,customerA:4,commuterA:4,customerB:5,commuterB:5,customerC:6,commuterC:6,cat:7},i=map[variant]===undefined?0:map[variant],iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,sw=iw/4,sh=ih/2;
     var dw=Math.round(Math.min(w,h*sw/sh)),dh=Math.round(dw*sh/sw),dx=Math.round(x+(w-dw)/2),dy=Math.round(y+h-dh);c.save();c.imageSmoothingEnabled=false;c.drawImage(im,(i%4)*sw,Math.floor(i/4)*sh,sw,sh,dx,dy,dw,dh);
     // Keep the user's exact approved face pixels. Only the hoodie below the chin
     // comes from the generated colour correction; the other seven cells use base.
@@ -387,6 +437,6 @@ var PixelArt = (function () {
       box(c,331,299,112,8,C.paper,C.greyDark);item(c,'document',390,296);
     }
   }
-  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
+  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,native:native,extra:extra,extraRect:extraRect,umbrella:umbrella,EXTRA:EXTRA,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=PixelArt;

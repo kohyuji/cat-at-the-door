@@ -7,7 +7,7 @@ var G = {
   cat: { x: 420, y: 334, dir: -1, pose: 'sit', tx: null, ty: null, visible: true, speed: 110, scale: 1.75, act: null, until: 0, room: 'living' },
   fx: [], flash: 0, fade: 0, hot: [], hover: null, drag: null, press: null, guide: null, hand: null, acting: 0,
   hudShow: { date: false, clock: false, wallet: false, food: false, energy: false, hearts: false },
-  outlineAll: false
+  outlineAll: false, pointerType: 'mouse'
 };
 var Engine = (function () {
   'use strict';
@@ -76,6 +76,7 @@ var Engine = (function () {
   var touchHide = 0;
   function down(e) {
     if (e.button !== undefined && e.button > 0) return;
+    G.pointerType = e.pointerType || 'mouse';
     if (blocked()) return;
     var p = toLogical(e), spot = hit(p);
     if (e.pointerType !== 'mouse') { G.hover = spot; chipsFor(spot); clearTimeout(touchHide); }
@@ -94,6 +95,7 @@ var Engine = (function () {
   }
   function move(e) {
     var p = toLogical(e);
+    if (e.pointerType) G.pointerType = e.pointerType;
     if (G.drag) {
       var d = G.drag, dx = p.x - d.x, dy = p.y - d.y;
       d.moved += Math.sqrt(dx * dx + dy * dy); d.x = p.x; d.y = p.y;
@@ -112,7 +114,7 @@ var Engine = (function () {
     var p = toLogical(e);
     if (G.drag) {
       var d = G.drag; G.drag = null;
-      if (d.moved < 7 && d.spot.tap) run(d.spot.tap);
+      if (d.moved < 7 && d.spot.tap) { if (d.spot.drag.cancel) d.spot.drag.cancel(d); run(d.spot.tap); }
       else if (d.spot.drag.end) { var r = d.spot.drag.end(d); if (r && r.then) run(function () { return r; }); }
     } else if (G.press) {
       var s = G.press.spot; G.press = null;

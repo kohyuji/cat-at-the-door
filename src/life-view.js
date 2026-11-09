@@ -99,10 +99,32 @@ var View = (function () {
     return cv;
   }
   var PEOPLE_INDEX = { customerA: 26, customerB: 27, customerC: 28, lead: 24, peer: 25 };
+  // 주인공은 codex-v5의 R6 그림(48×64 칸)으로 그린다. 한 픽셀이 화면 4점 (codex-v5와 같고, 지점 사람들과 키가 맞는다).
+  var HERO_PX = 4;
+  function heroPose(c, G, x, y, variant, dir, t, pose, scale) {
+    if (!img(G, 'r6People')) return false;
+    var suit = variant === 'suit', u = HERO_PX * (scale || 2.35) / 2.35, rf = Math.floor((t || 0) * 3) % 2, f4 = Math.floor((t || 0) * 5) % 4, flip = dir < 0, N = PixelArt.native;
+    if (pose === 'walk' || pose === 'umbrellaWalk') return N(c, 'people', (suit ? 8 : 0) + Math.floor((t || 0) * 10) % 8, x, y, u, flip);
+    if (pose === 'sweep' || pose === 'mop') return N(c, 'clean', (pose === 'mop' ? 4 : 0) + (suit ? 2 : 0) + rf, x, y, u, flip);
+    if (pose === 'pourFood') return N(c, 'care', (suit ? 12 : 0) + f4, x, y, u, flip);
+    if (pose === 'pourWater') return N(c, 'care', (suit ? 12 : 0) + 4 + f4, x, y, u, flip);
+    if (pose === 'kneel' || pose === 'care' || pose === 'scoop') return N(c, 'care', (suit ? 12 : 0) + 8 + f4 % 2, x, y, u, flip);
+    if (pose === 'wetFood') return N(c, 'wet', (suit ? 4 : 0) + f4, x, y, u, flip);
+    if (pose === 'sit') return N(c, 'people', (suit ? 28 : 20) + rf, x, y, u, flip);
+    if (pose === 'study') return N(c, 'people', (suit ? 28 : 22) + rf, x, y, u, flip);
+    if (pose === 'umbrella') return N(c, 'people', suit ? 26 : 30 + rf, x, y, u, flip);
+    if (pose === 'back') return N(c, 'people', suit ? 27 : 19, x, y, u, false);
+    if (pose === 'front' || pose === 'tired' || dir === 0) return N(c, 'people', suit ? 24 : 16, x, y, u, false);
+    if (pose === 'stand' || pose === 'carry' || !pose) return N(c, 'people', suit ? 26 : 18, x, y, u, flip);
+    return false;
+  }
+  // 지하철 승객 (R6 앉은 그림 네 명)
+  function commuter(c, G, x, y, i, flip) { PixelArt.native(c, 'transit', i % 4, x, y, HERO_PX, !!flip); }
   var SEATED_INDEX = { customerA: 4, customerB: 5, customerC: 6, peer: 7, lead: 15 };
   // 사람: 서기, 걷기, 쪼그리기 등. scale은 r4 기본 크기의 배수.
   function person(c, G, x, y, variant, dir, t, pose, scale, hue) {
     scale = scale || 2.15;
+    if ((variant === 'me' || variant === 'hoodie' || variant === 'suit') && heroPose(c, G, x, y, variant, dir, t, pose, scale)) return;
     var A = PixelArt.atlas, im;
     if ((variant === 'customerA' || variant === 'customerB' || variant === 'customerC') && hue !== undefined && hue !== null && (im = img(G, 'r4People'))) {
       var a = A.people[pose === 'sit' ? (variant === 'customerB' ? 30 : variant === 'customerC' ? 31 : 29) : PEOPLE_INDEX[variant]];
@@ -126,6 +148,8 @@ var View = (function () {
   }
   function portrait(c, G, variant, x, y, w, h, hue) {
     var map = { me: 0, hoodie: 0, suit: 1, lead: 2, peer: 3, customerA: 4, customerB: 5, customerC: 6, cat: 7 };
+    // 고양이는 codex-v5의 단순한 초상화
+    if (variant === 'cat' && PixelArt.portrait(c, 'cat', x, y, w, h)) return true;
     var base = img(G, 'r4PortraitBase') || img(G, 'r4Portraits');
     if (!base) return false;
     var i = map[variant] === undefined ? 0 : map[variant], cw = (base.naturalWidth || base.width) / 4, ch = (base.naturalHeight || base.height) / 2;
@@ -188,9 +212,13 @@ var View = (function () {
       if (level < .1) { r(c, x - 9, y - 9, 18, 2, '#e2e7ef'); }
     }
   }
+  // 화장실: 모래 높이가 남은 날수만큼 보이고(4칸), 똥은 따로 그린다
   function litterBox(c, x, y, poop, sand, t) {
-    item(c, poop > 0 || sand <= 0 ? 'litterDirty' : 'litterTray', x, y, 1.05);
-    if (sand <= 0) { r(c, x - 22, y - 18, 44, 6, '#7b7f87'); }
+    item(c, 'litterTray', x, y, 1.05);
+    var lv = Math.max(0, Math.min(4, sand)), sandTop = y - 10 - lv * 2;
+    r(c, x - 20, y - 12, 40, 4, lv <= 0 ? '#8d8a84' : '#e7d7b4');
+    if (lv > 0) r(c, x - 20, sandTop, 40, lv * 2 + 2, lv <= 1 ? '#d8c8a2' : '#efe1bf');
+    if (lv <= 1) for (var k = 0; k < 4; k++) r(c, x - 16 + k * 10, y - 12, 4, 2, '#9b9384');
     if (poop >= 2) { // 냄새 줄
       for (var i = 0; i < 3; i++) {
         var ph = (t * 1.2 + i * .33) % 1, xx = x - 10 + i * 10 + Math.sin((t + i) * 4) * 2;
@@ -214,42 +242,23 @@ var View = (function () {
       for (var i = 0; i < Math.min(spots.length, fur * 3); i++) icon(c, 'fur', x + spots[i][0], y + spots[i][1], 1);
     }
   }
-  function bed(c, G, sleeping, catOn, t, made) {
-    var b = L.bedroom.bed, x = b.x, y = b.y;
-    // 머리판, 매트리스, 베개, 이불, 앞 프레임 순서로 한 침대만 그린다
-    box(c, x + 16, y, b.w - 32, 58, '#b98a5f', '#5b4636', 3); r(c, x + 24, y + 8, b.w - 48, 42, '#c99b6c'); r(c, x + 24, y + 8, b.w - 48, 4, '#ddb487');
-    poly(c, [[x + 10, y + 54], [x + b.w - 10, y + 54], [x + b.w, y + 98], [x, y + 98]], '#f2ece0');
-    item(c, 'pillow', L.bedroom.pillow.x, L.bedroom.pillow.y + 6, 1.6);
-    if (sleeping) person(c, G, L.bedroom.pillow.x, L.bedroom.pillow.y + 18, 'hoodie', 1, t, 'bedSleep', 1.5);
-    var top = sleeping ? y + 70 : made ? y + 74 : y + 72;
-    poly(c, [[x + 6, top], [x + b.w - 6, top], [x + b.w + 2, y + 100], [x - 2, y + 100]], '#5f86ad');
-    for (var i = 0; i < 7; i++) { var fx = x + 14 + i * 24; poly(c, [[fx, top + 1], [fx + 3, top + 1], [fx + 4 + (fx - x - b.w / 2) * .06, y + 99], [fx + 1 + (fx - x - b.w / 2) * .06, y + 99]], '#88a9c9'); }
-    r(c, x + 2, top + 13, b.w - 4, 2, '#88a9c9'); r(c, x, top + 23, b.w, 2, '#88a9c9');
-    r(c, x + 4, top, b.w - 8, 3, '#9cbad6');
-    box(c, x - 4, y + 98, b.w + 8, 16, '#a97c55', '#5b4636', 3); r(c, x + 2, y + 101, b.w - 4, 3, '#c49a6e');
-    r(c, x + 2, y + 114, 7, 9, '#5b4636'); r(c, x + b.w - 9, y + 114, 7, 9, '#5b4636');
-    if (catOn) cat(c, G, x + 132, top + 10, -1, t, 'sleep', 1.4);
+  // 침대: 비어 있을 때와 누워 있을 때 모두 codex-v5 그림. awake면 눈을 뜨고 휴대폰을 보는 모습.
+  var BED = { x: 22, w: 200, bottom: 324 };
+  function bed(c, G, sleeping, catOn, t, made, awake) {
+    var cx = BED.x + BED.w / 2;
+    if (sleeping) PixelArt.extra(c, awake ? 'bedAwake' : 'bedAsleep', cx, BED.bottom, BED.w);
+    else PixelArt.extra(c, 'bedEmpty', cx, BED.bottom, BED.w);
+    if (catOn) cat(c, G, BED.x + 150, BED.bottom - 52, -1, t, 'sleep', 1.4);
   }
-  // 방문: 경첩은 왼쪽, 손잡이는 오른쪽. 열수록 문짝이 경첩 쪽으로 접힌다 (끄는 방향 = 문이 움직이는 방향)
-  function roomDoor(c, G, d, open, beyond, crop, night) {
-    var x = d.x, y = d.y, w = d.w, h = d.h;
-    box(c, x - 4, y - 4, w + 8, h + 6, '#efe9df', '#6f6258', 3);
-    r(c, x, y, w, h, '#4a4440');
-    sceneInto(c, G, beyond, crop, x + 2, y + 2, w - 4, h - 2);
-    if (night) { c.fillStyle = 'rgba(20,26,52,.55)'; c.fillRect(x + 2, y + 2, w - 4, h - 2); }
-    var a = Math.max(0, Math.min(1, open)), lw = Math.max(10, Math.round(w * (1 - a * .84))), sag = Math.round(a * 14);
-    // 문짝
-    poly(c, [[x, y], [x + lw, y + sag], [x + lw, y + h - sag * .6], [x, y + h]], '#6f6258');
-    poly(c, [[x + 2, y + 2], [x + lw - 2, y + sag + 2], [x + lw - 2, y + h - sag * .6 - 1], [x + 2, y + h - 1]], '#f4efe6');
-    if (lw > 34) {
-      var px = x + 10, pw = lw - 20;
-      box(c, px, y + 18 + sag * .5, pw, h * .34, '#ece5d8', '#cfc4b3', 2);
-      box(c, px, y + h * .54, pw, h * .34 - sag * .4, '#ece5d8', '#cfc4b3', 2);
-    }
-    var hx = x + lw - 9, hy = y + h * .52;
-    r(c, hx - 1, hy - 5, 5, 12, '#6f6258'); r(c, hx - 9, hy - 1, 12, 4, '#6f6258'); r(c, hx - 8, hy, 10, 2, '#d8d0c4');
-    r(c, x, y + h - 2, w, 3, '#6f6258');
-    return { hx: hx, hy: hy, lw: lw };
+  // 방문: codex-v5 그림. 손잡이는 왼쪽, 경첩은 오른쪽이라 오른쪽으로 끌면 열린다.
+  // beyond가 'bedroom'이면 거실에서 침실로 가는 문, 아니면 침실에서 거실로 가는 문이다.
+  function roomDoor(c, G, d, open, beyond) {
+    var liv = beyond === 'bedroom', k = (d.h + 8) / 253, fw = 118 * k, x0 = d.x + d.w / 2 - fw / 2, y0 = d.y + d.h + 4 - 253 * k;
+    var isOpen = open > .5, key = (liv ? 'liv' : 'bed') + (isOpen ? 'DoorOpen' : 'DoorClosed');
+    if (isOpen) PixelArt.extraRect(c, key, x0 - 6 * k, y0 - 12 * k, 145 * k, 290 * k);
+    else PixelArt.extraRect(c, key, x0, y0, fw, 253 * k);
+    var hx = isOpen ? x0 + 96 * k : x0 + 36 * k, hy = isOpen ? y0 + 148 * k : y0 + 138 * k;
+    return { hx: hx, hy: hy, lw: fw };
   }
   function entranceDoor(c, d, opening) {
     var x = d.x, y = d.y, w = d.w, h = d.h;
@@ -366,7 +375,25 @@ var View = (function () {
     if (big) text(c, '목표 8건', x + 24, gy - 8, 11, '#c0392b');
     if (glow) { c.strokeStyle = 'rgba(255,138,61,' + (.5 + .5 * Math.sin(glow * 6)) + ')'; c.lineWidth = 3; c.strokeRect(x - 3, y - 3, w + 6, h + 6); }
   }
-  function charcoal(c, x, y, scale) { icon(c, 'charcoal', x, y - 16 * scale, 2 * scale); }
+  function charcoal(c, x, y, scale) { PixelArt.extra(c, 'charcoal', x, y, 40 * (scale || 1)); }
+  function broom(c, x, y, scale) { PixelArt.extra(c, 'broom', x, y, 34 * (scale || 1)); }
+  function mop(c, x, y, scale) { PixelArt.extra(c, 'mop', x, y, 38 * (scale || 1)); }
+  // 바닥에 쌓인 고양이 털과 먼지 (거실 바닥 앞쪽)
+  // 털 뭉치는 한 단계에 세 개, 먼지 얼룩은 두 개. gone에 든 것은 방금 쓸거나 닦은 자리.
+  function dirtSpots(floor, kind) {
+    var out = [];
+    if (!floor) return out;
+    if (kind !== 'dust') for (var i = 0; i < floor.fur * 3; i++) out.push({ key: 'f' + i, kind: 'fur', x: 150 + (i * 97) % 380, y: 300 + (i * 23) % 50 });
+    if (kind !== 'fur') for (var j = 0; j < floor.dust * 2; j++) out.push({ key: 'd' + j, kind: 'dust', x: 170 + (j * 71) % 340, y: 306 + (j * 31) % 44 });
+    return out;
+  }
+  function floorDirt(c, floor, gone) {
+    dirtSpots(floor).forEach(function (p) {
+      if (gone && gone[p.key]) return;
+      if (p.kind === 'fur') { r(c, p.x, p.y, 5, 2, '#e8d2ad'); r(c, p.x + 1, p.y - 1, 3, 1, '#f3e2c4'); r(c, p.x + 4, p.y + 1, 2, 1, '#c9ae86'); }
+      else { c.fillStyle = 'rgba(96,88,80,.28)'; c.beginPath(); c.ellipse(p.x, p.y, 9, 3, 0, 0, Math.PI * 2); c.fill(); }
+    });
+  }
   function cup(c, x, y, scale) { icon(c, 'coffee', x, y - 12 * scale, 2 * scale); }
   function lunchbox(c, x, y, scale) { icon(c, 'lunch', x, y - 12 * scale, 2 * scale); }
   function sandBag(c, x, y, scale) { item(c, 'litterBag', x, y, scale || 1); }
@@ -421,6 +448,7 @@ var View = (function () {
     wallClock: wallClock, slotClock: slotClock, bowl: bowl, waterBowl: waterBowl, litterBox: litterBox, foodBag: foodBag, bag: bag, hangerSuit: hangerSuit,
     bed: bed, roomDoor: roomDoor, entranceDoor: entranceDoor, windowView: windowView, toy: toy, card: card, brochure: brochure, bubble: bubble,
     priceTag: priceTag, catTower: catTower, feeder: feeder, chart: chart, charcoal: charcoal, cup: cup, lunchbox: lunchbox, sandBag: sandBag,
+    broom: broom, mop: mop, floorDirt: floorDirt, dirtSpots: dirtSpots, commuter: commuter, BED: BED, HERO_PX: HERO_PX,
     arrow: arrow, ghostHand: ghostHand, outline: outline, fx: fx, tint: tint, nightTint: nightTint, lampGlow: lampGlow
   };
 }());
