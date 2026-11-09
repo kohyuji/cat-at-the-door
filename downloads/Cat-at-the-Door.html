@@ -471,7 +471,7 @@ var Life = (function () {
   'use strict';
 
   var VERSION = 2;
-  var GOAL = 8;            // 수습 평가 목표 계약 건수
+  var GOAL = 12;           // 수습 평가 목표 계약 건수 (평일마다 고객 두 분, 저녁 단체 하나)
   var ALLOWANCE = 2000;    // 출근한 날 활동비
   var BONUS = 1.5;         // 목표를 채운 뒤의 계약 수당 배율 (성과급)
   var MAX = 5;             // 체력, 하트 칸 수
@@ -488,8 +488,8 @@ var Life = (function () {
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
   var PRODUCTS = {
-    dental: { pay: 6000 }, pet: { pay: 5000 }, car: { pay: 5000 },
-    home: { pay: 4000 }, travel: { pay: 3000 }, group: { pay: 20000 }
+    dental: { pay: 4500 }, pet: { pay: 4000 }, car: { pay: 4000 },
+    home: { pay: 3000 }, travel: { pay: 2500 }, group: { pay: 15000 }
   };
 
   var SHOP = {
@@ -522,25 +522,31 @@ var Life = (function () {
   // 고객 15명. need는 원하는 상품, mark는 고객 메모에 적힌 특징.
   // 첫 고객(c1)은 털 알레르기가 있다: 첫날 아침 정장에 붙은 털 때문에 반드시 계약을 놓친다.
   // 첫날은 두 명: 늦어서 첫 고객을 놓쳐도 오후 고객과 상담을 배운다.
+  // 평일마다 오전 10시와 오후 2시에 한 분씩. 늦어서 오전 고객을 놓쳐도 오후 고객은 만난다.
   var CLIENTS = {
     c1: { day: 1, need: 'dental', mark: 'sneeze' },
     c16: { day: 1, need: 'home', mark: 'none' },
     c2: { day: 2, need: 'travel', mark: 'none' },
+    c17: { day: 2, need: 'home', mark: 'none' },
     c3: { day: 3, need: 'car', mark: 'none' },
     c4: { day: 3, need: 'dental', mark: 'sneeze' },
     c5: { day: 4, need: 'home', mark: 'none' },
+    c18: { day: 4, need: 'car', mark: 'sneeze' },
     c6: { day: 4, need: 'group', mark: 'none', evening: true },
     c7: { day: 5, need: 'home', mark: 'cat' },
     c8: { day: 5, need: 'travel', mark: 'clock' },
     c9: { day: 8, need: 'car', mark: 'none' },
+    c19: { day: 8, need: 'travel', mark: 'cat' },
     c10: { day: 9, need: 'dental', mark: 'clock' },
     c11: { day: 9, need: 'home', mark: 'none' },
     c12: { day: 10, need: 'travel', mark: 'sneeze' },
+    c20: { day: 10, need: 'car', mark: 'clock' },
     c13: { day: 11, need: 'dental', mark: 'cat' },
     c14: { day: 11, need: 'car', mark: 'none' },
-    c15: { day: 12, need: 'home', mark: 'none' }
+    c15: { day: 12, need: 'home', mark: 'none' },
+    c21: { day: 12, need: 'dental', mark: 'none' }
   };
-  var CLIENT_IDS = Object.keys(CLIENTS); // c1, c16(같은 날 오후), c2 ... 순서는 날짜 안에서만 의미가 있다
+  var CLIENT_IDS = Object.keys(CLIENTS); // 순서는 날짜 안에서만 의미가 있다 (오전, 오후)
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function cleanName(n, fallback) {
@@ -781,7 +787,8 @@ var Life = (function () {
   function firstClient(s) { return clientsOn(s.day)[0]; }
   // 상담 계획. 처음 보는 신입이라 기분은 1에서 시작하고, 계약서를 건넬 때 3 이상이어야 서명한다.
   // 메일을 읽고 가면 +1이라 실수 하나쯤은 버틴다. 안 읽고 가면 털, 하품, 머뭇거림 하나에 놓친다.
-  // 맞게 건네면 +1, 너무 오래 걸리면 −1. 엉뚱한 것을 건네면 고객은 그 자리에서 생각해 보겠다고 한다.
+  // 맞게 건네면 +1, 너무 오래 걸리면 −1. 엉뚱한 것을 건네면 −1이고 고객이 조금 더 분명하게 말해 준다.
+  // 두 번 엉뚱한 것을 건네면 고객은 그 자리에서 생각해 보겠다고 한다.
   function plan(s, id) {
     var c = CLIENTS[id], mood = 1, reasons = [], fur = s.fur > 0;
     var eff = s.energy;
@@ -809,7 +816,7 @@ var Life = (function () {
       prepared: !!s.prepared[id], tutorial: tutorial, evening: !!c.evening, leaves: false, fur: fur, smell: s.smell || 0
     };
   }
-  function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false }; }
+  function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false, clue: -1 }; }
   function wants(p, st) {
     var step = p.steps[st.step];
     return step === 'need' ? p.need : step;
@@ -817,7 +824,12 @@ var Life = (function () {
   function answer(p, st, item) {
     if (st.done) return { ok: false, done: true };
     var want = wants(p, st);
-    if (item !== want) { st.mood = 0; st.wrong++; st.done = true; st.signed = false; return { ok: false, done: true, signed: false, mood: 0, want: want }; }
+    if (item !== want) {
+      st.wrong++;
+      if (st.wrong >= 2) { st.mood = 0; st.done = true; st.signed = false; return { ok: false, done: true, signed: false, mood: 0, want: want }; }
+      st.mood = clamp(st.mood - 1, 0, 4); st.clue = st.step;
+      return { ok: false, done: false, clue: true, mood: st.mood, want: want };
+    }
     if (want === 'contract') { st.done = true; st.signed = st.mood >= 3; return { ok: true, done: true, signed: st.signed, mood: st.mood }; }
     st.mood = clamp(st.mood + 1, 0, 4); st.step++;
     return { ok: true, mood: st.mood, next: wants(p, st) };
@@ -852,6 +864,9 @@ var Life = (function () {
       // 털 묻은 정장으로 처음 계약을 놓친 날, 선배가 돌돌이 이야기를 해 준다
       var furry = p.reasons.some(function (x) { return x.key === 'sneeze' || x.key === 'fur'; });
       if (furry && !s.seen.furLost) { s.seen.furLost = true; event(s, 'furLost', { id: p.id }); }
+      // 냄새 때문에 처음 놓친 날에는 선배가 냄새 이야기를 해 준다
+      var smelly = p.reasons.some(function (x) { return x.key === 'smell' || x.key === 'stink'; });
+      if (smelly && !s.seen.smellLost) { s.seen.smellLost = true; event(s, 'smellLost', { id: p.id }); }
     }
     s.results.push(r);
     return r;
@@ -1127,7 +1142,7 @@ var Story = (function () {
     },
     offer: function (me) {
       return { from: '늘봄손해보험', time: '오후 4:10', preview: '[늘봄손해보험] ' + me + ' 님, 합격을 축하드립니다...',
-        body: '[늘봄손해보험] ' + me + ' 님, 수습 설계사 최종 합격을 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n수습 기간은 4월 24일(금)까지입니다. 이 기간에 계약 8건을 채우면 정식 설계사로 위촉됩니다.\n\n활동비는 출근한 날마다, 계약 수당은 계약할 때마다 바로 드립니다.' };
+        body: '[늘봄손해보험] ' + me + ' 님, 수습 설계사 최종 합격을 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n수습 기간은 4월 24일(금)까지입니다. 이 기간에 계약 ' + Life.GOAL + '건을 채우면 정식 설계사로 위촉됩니다.\n\n활동비는 출근한 날마다, 계약 수당은 계약할 때마다 바로 드립니다.' };
     },
     job: { from: '행복슈퍼 사장님', time: '오전 9:40', preview: '주말에 진열 좀 도와줄 사람 찾아요...',
       body: '주말에 진열 좀 도와줄 사람 찾아요. 토요일, 일요일 둘 다 돼요.\n\n오후 3시 전에 가게로 오면 네 시간, 5,000원 드릴게요. 상자를 나르는 일이라 좀 고돼요.\n\n가게 벽에 공고 붙여 놨어요.' },
@@ -1177,7 +1192,12 @@ var Story = (function () {
     c13: { name: '조민혁', look: 'customerC' },
     c14: { name: '신동욱', look: 'customerA', tint: 300 },
     c15: { name: '오세영', look: 'customerB', tint: 330 },
-    c16: { name: '송지아', look: 'customerB', tint: 100 }
+    c16: { name: '송지아', look: 'customerB', tint: 100 },
+    c17: { name: '장수빈', look: 'customerC', tint: 250 },
+    c18: { name: '홍재원', look: 'customerA', tint: 30 },
+    c19: { name: '유가은', look: 'customerB', tint: 300 },
+    c20: { name: '권도윤', look: 'customerA', tint: 160 },
+    c21: { name: '백승아', look: 'customerB', tint: 60 }
   };
 
   var ORDINAL = ['첫', '두', '세', '네'];
@@ -1272,7 +1292,7 @@ var Story = (function () {
 
   var DAY_INTRO = {
     0: [{ who: 'me', text: '드디어 내일 첫 출근이다.' }, { who: 'me', text: '노트북이랑 충전기부터 챙겨 두자.' }],
-    1: [{ who: 'me', text: '7시 40분. 지하철로 50분 걸리니까 8시 10분에는 나가야 9시 조회에 안 늦어.' }, { who: 'me', text: '늦으면 기다리던 고객님이 그냥 가 버린대. 서두르자.' }],
+    1: [{ who: 'me', text: '7시 40분. 지하철로 50분 걸리니까 8시 10분에는 나가야 9시 조회에 안 늦어.' }, { who: 'me', text: '늦으면 오전 고객님은 기다리다 그냥 가 버린대. 서두르자.' }],
     6: [{ who: 'me', text: '토요일이다. 오늘은 하루가 길어.' }],
     11: [{ who: 'me', text: '내일이 마감이다.' }],
     12: [{ who: 'me', text: '오늘이 수습 마지막 날이다.' }]
@@ -1280,19 +1300,36 @@ var Story = (function () {
 
   function assembly(s, late) {
     var lines = [], d = s.day, cl = Life.clientsOn(d), me = s.me;
-    if (late) lines.push({ who: 'lead', text: me + ' 씨, 고객님 벌써 와 계세요.' });
+    if (late) lines.push({ who: 'lead', text: me + ' 씨, 오전 고객님은 기다리다 가셨어요. 오후 고객님은 놓치지 마요.' });
     if (d === 1) {
       lines.push({ who: 'lead', text: '오늘부터 함께할 수습 설계사 ' + me + ' 씨예요.' });
       lines.push({ who: 'lead', text: '설계사는 고객님 이야기를 듣고, 그분께 꼭 맞는 보험을 권해 드리는 사람이에요.', board: true });
       lines.push({ who: 'lead', text: '치아, 자동차, 여행자, 화재. 고객님이 무엇을 걱정하시는지 들으면 어떤 안내서를 드릴지 보여요.', board: true });
-      lines.push({ who: 'lead', text: '수습은 4월 24일까지예요. 저 실적 그래프에서 목표선 8건을 넘기면 정식 설계사가 돼요.', chart: true });
-      lines.push({ who: 'lead', text: '조회에 늦으면 기다리던 첫 고객님은 그냥 가세요. 시간 꼭 지켜요.' });
-      lines.push({ who: 'lead', text: '오늘 고객은 두 분이에요. 처음 상담은 선배랑 같이 해요.' });
+      lines.push({ who: 'lead', text: '수습은 4월 24일까지예요. 저 실적 그래프에서 목표선 ' + Life.GOAL + '건을 넘기면 정식 설계사가 돼요.', chart: true });
+      lines.push({ who: 'lead', text: '고객님은 매일 오전 10시와 오후 2시에 한 분씩 오세요. 조회에 늦으면 오전 고객님은 그냥 가세요.' });
+      lines.push({ who: 'lead', text: '고객님들은 원하는 걸 바로 말씀 안 하세요. 사는 이야기 속에 답이 있어요. 처음 상담은 선배랑 같이 해요.' });
     } else if (Life.day(s).final) {
       lines.push({ who: 'lead', text: '오늘이 마감이에요. 상담 끝나고 실적 그래프 앞에서 봐요.' });
     } else if (!late) {
       lines.push({ who: 'lead', text: '좋은 아침이에요. ' + me + ' 씨 오늘 고객은 ' + (cl.length === 2 ? '두 분' : '한 분') + '이에요.' });
     }
+    // 옷에 화장실 냄새가 배어 온 날: 지점장님이 먼저 알아채고 선배가 귓속말로 알려 준다
+    if (s.smell > 1) {
+      lines.push({ who: 'lead', text: '...잠깐, 이거 무슨 냄새죠? ' + me + ' 씨 쪽에서 나는 것 같은데.', sniff: true });
+      lines.push({ who: 'peer', text: me + ' 씨, 옷에서 고양이 화장실 냄새가 많이 나요. 이대로 고객님 만나면 큰일이에요.' });
+    } else if (s.smell > 0) {
+      lines.push({ who: 'lead', text: '음? 어디서 화장실 냄새 같은 게 나는데... 다들 창문 좀 열어요.', sniff: true });
+      lines.push({ who: 'peer', text: '(작게) ' + me + ' 씨, 옷에서 냄새 조금 나요. 고양이 화장실 아침에 안 치웠죠?' });
+    }
+    return lines;
+  }
+  // 냄새 때문에 처음 계약을 놓친 뒤에 선배가 알려 준다
+  function seniorSmell(s, lend) {
+    var lines = [
+      { who: 'peer', text: '아까 고객님이 자꾸 몸을 뒤로 빼시던 거 봤죠? 옷에 밴 냄새 때문이에요.' },
+      { who: 'peer', text: '고양이 화장실은 출근 전에 꼭 치우고 나와요. 냄새는 돌돌이로도 안 빠져요.' }
+    ];
+    if (lend) lines.push({ who: 'peer', text: '오후 상담 전에 제 섬유 탈취제 좀 뿌려 줄게요. 다 빠지진 않아도 조금은 나을 거예요.', spray: true });
     return lines;
   }
   // 첫 고객을 털 때문에 놓친 뒤에 선배가 알려 준다
@@ -1310,13 +1347,71 @@ var Story = (function () {
   }
   var TUTORIAL = [
     { who: 'peer', text: '고객님 말씀을 잘 들어 보세요. 아래 안내서 중에 맞는 걸 눌러 잡고, 고객님 쪽으로 끌어다 드리면 돼요.' },
-    { who: 'peer', text: '그다음은 요금표, 마지막이 계약서예요. 엉뚱한 걸 한 번이라도 드리면 바로 생각해 보겠다고 하세요.' }
+    { who: 'peer', text: '그다음은 요금표, 마지막이 계약서예요. 엉뚱한 걸 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.' }
   ];
-  // 고객이 처음에 하는 말. 준비(고객 메모)를 안 했으면 말풍선에도 이 짧은 말만 뜬다.
+  // 고객이 처음에 하는 말. 원하는 상품을 바로 말하지 않고 사는 이야기를 한다.
+  // say: 처음 하는 말, bubble: 말풍선에 남는 짧은 말, clue: 엉뚱한 안내서를 받은 뒤 조금 더 분명하게 하는 말
+  var CLIENT_HINT = {
+    c1: { say: '요즘 아이스크림을 못 먹어요. 한 입만 베어 물어도 머리끝까지 찡해서요.', bubble: '아이스크림이 무서워요', clue: '어금니가 시큰거려요. 치료비가 얼마나 나올지 걱정이에요.' },
+    c16: { say: '이사 온 집이 꽤 낡았어요. 콘센트에서 가끔 탁탁 소리가 나요.', bubble: '콘센트에서 탁탁', clue: '혹시 불이라도 날까 봐 밤에 잠이 안 와요.' },
+    c2: { say: '딸이 사는 프랑스에 처음 가 봐요. 비행기만 열두 시간이래요.', bubble: '비행기 열두 시간', clue: '거기서 아프기라도 하면 병원비가 그렇게 비싸다던데요.' },
+    c17: { say: '겨울에 전기장판을 켜고 자요. 어제 보니 이불 한쪽이 누렇게 그을렸더라고요.', bubble: '이불이 그을렸어요', clue: '자다가 집에 불이라도 나면 어쩌나 싶어서요.' },
+    c3: { say: '회사가 멀리 이사 가서, 이제 매일 고속도로를 타야 해요.', bubble: '매일 고속도로', clue: '새로 뽑은 차로 다니는데 아직 운전이 서툴러서요.' },
+    c4: { say: '아들이 교정을 시작했는데, 저도 요즘 잇몸이 자꾸 부어요.', bubble: '잇몸이 부어요', clue: '둘이 치과 다니는 돈이 만만치 않아서요.' },
+    c5: { say: '가게 바로 위층에 살아요. 밤늦게까지 튀김 기름을 쓰거든요.', bubble: '밤늦게 튀김 기름', clue: '주방에서 불이 번질까 봐 늘 마음이 쓰여요.' },
+    c18: { say: '어제 주차장에서 옆 차 문을 살짝 긁었어요. 손이 아직도 떨려요.', bubble: '옆 차를 긁었어요', clue: '운전할 때마다 또 사고 날까 봐 조마조마해요.' },
+    c6: { say: '우리 식당 식구가 일곱이에요. 주방 일이라 다들 자주 데고 베여요.', bubble: '식당 식구 일곱', clue: '직원들 다 같이 들 수 있는 게 있으면 좋겠어요.' },
+    c7: { say: '고양이가 가스레인지 위로 자꾸 올라가요. 지난주엔 불 켜는 손잡이를 밟았어요.', bubble: '가스레인지 위 고양이', clue: '집 비운 사이에 불이라도 날까 봐요.' },
+    c8: { say: '다음 주에 동남아 공장으로 출장이 갑자기 잡혔어요. 점심시간에 잠깐 나왔어요.', bubble: '갑자기 해외 출장', clue: '현지에서 다치거나 아프면 어떡하나 해서요.' },
+    c9: { say: '아이 학원 데려다주느라 하루에 운전만 세 시간을 해요.', bubble: '하루 운전 세 시간', clue: '운전 시간이 길다 보니 사고가 제일 무서워요.' },
+    c19: { say: '신혼여행으로 하와이에 가요. 고양이는 친정에 맡기고요.', bubble: '하와이 신혼여행', clue: '여행 가서 다치면 보상이 되나 궁금해서요.' },
+    c10: { say: '어제 딱딱한 땅콩을 씹다가 이가 깨졌어요. 점심시간이라 빨리 가야 해요.', bubble: '땅콩을 씹다가', clue: '이 치료비가 얼마나 나올지 겁나서요.' },
+    c11: { say: '할머니가 혼자 사시는 시골집이 나무로 지어졌어요. 겨울엔 아궁이를 때세요.', bubble: '나무 집, 아궁이', clue: '불이 날까 봐 걱정이에요.' },
+    c12: { say: '계모임 친구들이랑 칠순 기념으로 일본에 가요. 다들 무릎이 시원찮아서...', bubble: '칠순 기념 일본', clue: '나이가 있으니 여행 가서 아플까 봐요.' },
+    c20: { say: '택배 일을 시작했어요. 하루 종일 길 위에 있어요. 오래는 못 있어요.', bubble: '하루 종일 길 위', clue: '차로 일하니까 사고 나면 큰일이에요.' },
+    c13: { say: '요즘 사탕을 달고 살았더니 밤마다 이가 욱신거려요.', bubble: '밤마다 욱신', clue: '치과 가야 하는데 돈이 걱정이에요.' },
+    c14: { say: '다음 달부터 아내랑 번갈아 차로 출퇴근해요. 저는 장롱 면허예요.', bubble: '장롱 면허', clue: '아직 운전이 서툴러서 사고가 날까 봐요.' },
+    c15: { say: '아이들이 촛불을 너무 좋아해요. 생일만 되면 온 집에 초를 켜요.', bubble: '온 집에 촛불', clue: '혹시 불이 날까 봐 걱정이에요.' },
+    c21: { say: '커피를 하루 다섯 잔씩 마셨더니, 찬물만 닿아도 이가 찌릿해요.', bubble: '찬물만 닿아도 찌릿', clue: '치과 치료비가 무서워서 미루고 있어요.' }
+  };
+  // 요금, 펫보험, 계약 차례에 하는 말 (고객마다 조금씩 다르게)
+  var STEP_LINES = {
+    price: [
+      { say: '그래서, 한 달에 얼마나 들어요?', bubble: '한 달에 얼마?' },
+      { say: '좋긴 한데... 매달 나가는 돈이 부담돼서요.', bubble: '매달 나가는 돈' },
+      { say: '비싸면 곤란해요. 월급이 빠듯하거든요.', bubble: '비싸면 곤란해요' },
+      { say: '보험료부터 들어 보고 정할게요.', bubble: '보험료부터' }
+    ],
+    contract: [
+      { say: '좋아요. 그걸로 할게요.', bubble: '그걸로 할게요' },
+      { say: '마음에 드네요. 어디에 이름을 쓰면 되죠?', bubble: '어디에 이름을?' },
+      { say: '그 정도면 괜찮네요. 진행해 주세요.', bubble: '진행해 주세요' },
+      { say: '더 고민할 것 없겠어요.', bubble: '고민할 것 없어요' }
+    ],
+    pet: [{ say: '어머, 소매에 고양이 털이네요? 우리 애도 아프면 병원비가 장난 아닌데...', bubble: '우리 애도...' }]
+  };
+  var STEP_CLUE = {
+    price: { say: '아뇨, 그것보다... 돈이 얼마나 드는지가 궁금해요.', bubble: '얼마예요?' },
+    contract: { say: '설명은 충분해요. 이제 서명할 종이를 주세요.', bubble: '서명할 종이' },
+    pet: { say: '우리 고양이 이야기예요. 고양이도 보험이 되나요?', bubble: '고양이도 보험?' }
+  };
+  function clientNo(id) { return +String(id).replace(/\D/g, '') || 0; }
+  // 고객 id와 지금 차례(need, price, pet, contract)로 할 말을 고른다. clue면 더 분명한 말.
+  function stepLine(id, step, need, clue) {
+    if (step === 'need') {
+      var h = CLIENT_HINT[id] || { say: HINT[need].say, bubble: HINT[need].bubble, clue: HINT[need].say };
+      return clue ? { say: h.clue, bubble: HINT[need].bubble } : { say: h.say, bubble: h.bubble };
+    }
+    if (clue) return STEP_CLUE[step];
+    var list = STEP_LINES[step];
+    return list[clientNo(id) % list.length];
+  }
+  // 엉뚱한 안내서를 처음 받았을 때 (상품마다 조금 다르게)
+  var WRONG = ['음... 제가 말씀드린 건 그게 아닌데요.', '아, 그건 저랑은 상관없는 것 같아요.', '그게 아니라요...'];
   var HINT = {
     dental: { say: '요즘 찬물만 마셔도 이가 시려서요. 치과 가기가 겁나요.', bubble: '이가 시려요' },
-    car: { say: '다음 주에 첫 차를 뽑아요. 운전이 아직 무서워서요.', bubble: '첫 차를 샀어요' },
-    travel: { say: '다음 달에 처음으로 해외여행을 가요. 가서 아프면 어쩌죠?', bubble: '해외여행 가요' },
+    car: { say: '운전이 아직 무서워서요. 사고 나면 어쩌죠?', bubble: '사고가 걱정돼요' },
+    travel: { say: '해외여행 가서 아프면 어쩌죠?', bubble: '여행 가서 아프면' },
     home: { say: '집이 오래돼서요. 겨울마다 불 날까 봐 걱정이에요.', bubble: '불 날까 걱정' },
     group: { say: '우리 식당 직원들 다 같이 들 수 있는 거 있을까요?', bubble: '직원 다 같이' }
   };
@@ -1325,6 +1420,7 @@ var Story = (function () {
     signed: '여기 서명할게요.',
     lost: '음... 생각해 볼게요.',
     wrong: '이건 제가 찾는 게 아닌데요.',
+    wrongAgain: '...제 이야기를 잘 안 들으신 것 같네요.',
     slow: '음...',
     greet: '안녕하세요.'
   };
@@ -1347,7 +1443,9 @@ var Story = (function () {
       tips.push('피곤하면 안내서 글씨가 눈에 안 들어와요. 일찍 자는 것도 일이에요.');
     } else {
       if (s.fur > 0 && !s.owned.roller) tips.push('소매에 아직 털 있어요. 돌돌이는 역 앞 슈퍼에 있어요.');
-      tips.push('엉뚱한 안내서를 한 번이라도 드리면 바로 생각해 보겠다고 하세요. 모르겠으면 고객님 말을 다시 떠올려 봐요.');
+      if (s.smell > 0 || (s.today && s.today.notes && s.today.notes.indexOf('smell') >= 0)) tips.push('내일은 고양이 화장실 꼭 치우고 나와요. 냄새는 고객님이 제일 먼저 알아요.');
+      tips.push('고객님은 원하는 걸 바로 말씀 안 하세요. 무엇이 걱정인지 들어 보면 맞는 안내서가 보여요. 메일을 읽고 오면 더 쉽고요.');
+      tips.push('엉뚱한 안내서를 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.');
       tips.push('고양이 키우는 고객님한테는 털이 오히려 반가운 얘깃거리예요.');
       tips.push('저녁에 늦게 자면 다음 날 상담 때 하품 나와요. 저도 그랬어요.');
     }
@@ -1357,7 +1455,7 @@ var Story = (function () {
   }
   function goalReached(s) {
     return [
-      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 수습 목표 8건 달성!' },
+      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 수습 목표 ' + Life.GOAL + '건 달성!' },
       { who: 'peer', text: '와, 벌써요? 축하해요!' },
       { who: 'lead', text: '정식 위촉은 확정이에요. 24일까지 남은 계약은 수당을 1.5배로 드릴게요.' }
     ];
@@ -1409,8 +1507,8 @@ var Story = (function () {
   // 아직 못 본 엔딩 칸에 보이는 귀띔
   var ENDING_HINT = {
     family: '천둥 치던 밤과 서랍 속 아침, 둘 다 지켜 준다면...',
-    both: '목표 8건, 그리고 마음 네 칸 이상',
-    soso: '목표 8건, 마음은 두세 칸',
+    both: '목표 ' + Life.GOAL + '건, 그리고 마음 네 칸 이상',
+    soso: '목표 ' + Life.GOAL + '건, 마음은 두세 칸',
     catStays: '실적은 모자라도 마음은 네 칸 이상',
     clumsy: '실적도 마음도 조금씩 모자라면',
     oneBody: '목표는 채웠지만 마음이 한 칸 이하',
@@ -1469,7 +1567,7 @@ var Story = (function () {
     opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
     HINT: HINT, MARK_NOTE: MARK_NOTE, officeTip: officeTip, goalReached: goalReached, careNote: careNote,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
-    assembly: assembly, senior: senior, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
+    assembly: assembly, senior: senior, seniorSmell: seniorSmell, stepLine: stepLine, CLIENT_HINT: CLIENT_HINT, WRONG: WRONG, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
     evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());
@@ -2852,9 +2950,9 @@ var View = (function () {
   // 실적 그래프 (지점 벽, 크게 볼 때 big)
   function chart(c, x, y, w, h, s, big, glow) {
     box(c, x, y, w, h, '#fffdf4', INK, big ? 3 : 2);
-    var names = ['나', '선배', '동기A', '동기B'], others = [11, 6, 7];
+    var names = ['나', '선배', '동기A', '동기B'], others = [17, 9, 11];
     var day = s ? s.day : 0, vals = [s ? s.contracts : 0].concat(others.map(function (v) { return Math.min(v, Math.round(v * Math.min(1, (day + 1) / 12))); }));
-    var top = y + (big ? 34 : 9), bottom = y + h - (big ? 26 : 8), max = 14, bw = (w - (big ? 60 : 16)) / 4;
+    var top = y + (big ? 34 : 9), bottom = y + h - (big ? 26 : 8), max = 20, bw = (w - (big ? 60 : 16)) / 4;
     if (big) text(c, '수습 실적', x + w / 2, y + 16, 16);
     var gy = bottom - (bottom - top) * Life.GOAL / max;
     for (var i = 0; i < 4; i++) {
@@ -2864,7 +2962,7 @@ var View = (function () {
       if (big) text(c, names[i], bx + bw * .31, bottom + 12, 12);
     }
     c.strokeStyle = '#e0574f'; c.lineWidth = big ? 2 : 1; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(x + 4, gy); c.lineTo(x + w - 4, gy); c.stroke(); c.setLineDash([]);
-    if (big) text(c, '목표 8건', x + 24, gy - 8, 11, '#c0392b');
+    if (big) text(c, '목표 ' + Life.GOAL + '건', x + 24, gy - 8, 11, '#c0392b');
     if (glow) { c.strokeStyle = 'rgba(255,138,61,' + (.5 + .5 * Math.sin(glow * 6)) + ')'; c.lineWidth = 3; c.strokeRect(x - 3, y - 3, w + 6, h + 6); }
   }
   function charcoal(c, x, y, scale) { PixelArt.extra(c, 'charcoal', x, y, 40 * (scale || 1)); }
@@ -3965,7 +4063,7 @@ var Home = (function () {
         if (!open) { View.icon(c, 'mail', cx, top + 100 + Math.sin(t * 4) * 2, 4); return; }
         View.icon(c, info.need === 'dental' ? 'tooth' : info.need, cx, top + 70, 3);
         View.text(c, Story.PRODUCT[info.need], cx, top + 112, 14, '#c0392b');
-        wrapText(c, '“' + Story.HINT[info.need].say + '”', cx, top + 140, colW - 30, 12, '#3b3540');
+        wrapText(c, '“' + Story.stepLine(id, 'need', info.need).say + '”', cx, top + 140, colW - 30, 12, '#3b3540');
         if (info.mark !== 'none') { View.icon(c, info.mark === 'cat' ? 'paw' : info.mark, cx - (colW - 40) / 2 + 8, top + 214, 1); wrapText(c, Story.MARK_NOTE[info.mark], cx + 10, top + 218, colW - 50, 11, '#7a3b30'); }
       });
     }
@@ -4773,6 +4871,10 @@ var Work = (function () {
           if (l.board && !Wk.board) { Wk.board = G.t; UI.sfx('page'); }
           if (!l.board) Wk.board = 0;
           if (l.chart) Wk.glow = G.t + 4;
+          if (l.sniff) { // 지점장님과 선배가 코를 킁킁, 냄새 나는 쪽(나)을 돌아본다
+            Wk.lead.dir = 1; Wk.peer.dir = 1; Wk.look.marks = [Wk.lead.x, Wk.peer.x];
+            Engine.puff({ x: G.hero.x, y: 210, icon: 'stink', px: 2, life: 1.8, rise: 26 });
+          }
         } };
       }));
     }).then(function () { Wk.look = {}; Wk.board = 0; });
@@ -4801,7 +4903,28 @@ var Work = (function () {
       }));
     }).then(function () { Wk.look = {}; s.seen.rollerTip = true; });
   }
-  // 목표 8건을 채운 순간
+  // 냄새 때문에 처음 놓친 날: 선배가 다가와 이유를 알려 주고, 오후 상담이 남았으면 섬유 탈취제를 뿌려 준다
+  function smellLesson(lend) {
+    var s = S();
+    office(); Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
+    G.hero.x = 470; G.hero.dir = -1;
+    return Engine.fade(0, .3).then(function () {
+      return new Promise(function (resolve) {
+        var from = Wk.peer.x, to = 410, t0 = G.t;
+        (function step() { var q = Math.min(1, (G.t - t0) / .9); Wk.peer.x = from + (to - from) * q; if (q < 1) setTimeout(step, 30); else resolve(); }());
+      });
+    }).then(function () {
+      Engine.puff({ x: G.hero.x, y: 200, icon: 'stink', px: 2, life: 1.6, rise: 24 });
+      return say(Story.seniorSmell(s, lend).map(function (l) {
+        return { who: l.who, text: l.text, on: l.spray ? function () {
+          UI.sfx('water');
+          for (var k = 0; k < 6; k++) Engine.puff({ x: G.hero.x - 18 + k * 7, y: 230 + (k % 3) * 14, icon: 'drop', px: 1, life: .9, rise: 10 });
+          s.smell = Math.max(0, (s.smell || 0) - 1);
+        } : null };
+      }));
+    });
+  }
+  // 목표를 채운 순간
   function goalParty() {
     var s = S();
     UI.sfx('sticker');
@@ -4835,6 +4958,7 @@ var Work = (function () {
   function drawConsult(c) {
     var k = Wk.consult, s = S(), t = G.t;
     View.bg(c, G, 'office');
+    officeClock(c, s.minute);
     if (k.p.evening || Wk.dark) View.nightTint(c, .45);
     c.fillStyle = 'rgba(30,26,34,.35)'; c.fillRect(0, 0, 640, 360);
     // 탁자와 두 사람 (옆모습)
@@ -4848,19 +4972,13 @@ var Work = (function () {
     // 앞 책상 (안내서 자리)
     View.box(c, 40, 270, 560, 96, '#c99b6c', '#5b4636', 3); View.r(c, 46, 274, 548, 5, '#ddb487');
     if (!k.gone && !k.st.done) {
-      // 말풍선: 지금 원하는 것
-      var want = Life.wants(k.p, k.st);
-      if (want === k.p.need && !k.p.prepared && Story.HINT[want]) {
-        View.bubble(c, 388, 38, 124, 76, 448);
-        View.text(c, Story.HINT[want].bubble, 450, 80, 14, k.blink ? 'rgba(47,42,51,.4)' : '#2f2a33');
-      } else {
-        View.bubble(c, 404, 38, 92, 76, 448);
-        View.icon(c, want, 450, 76, 3, { alpha: k.blink ? .4 : 1 });
-      }
+      // 말풍선: 고객님이 지금 하는 말 (무엇을 원하는지 그림으로 보여 주지 않는다)
+      var line = Story.stepLine(k.id, k.p.steps[k.st.step], k.p.need, k.st.clue === k.st.step);
+      var bb = speechBubble(c, line.bubble, k.blink, k.st.clue === k.st.step);
       if (k.p.timer) { // 남은 시간
-        var left = Math.max(0, k.left / k.p.timer);
-        View.disc(c, 488, 46, 11, '#2f2a33'); View.disc(c, 488, 46, 9, '#fffaf0');
-        c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(488, 46); c.arc(488, 46, 8, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
+        var left = Math.max(0, k.left / k.p.timer), tx = bb.x + bb.w - 4, ty = bb.y + 4;
+        View.disc(c, tx, ty, 11, '#2f2a33'); View.disc(c, tx, ty, 9, '#fffaf0');
+        c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(tx, ty); c.arc(tx, ty, 8, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
       }
     }
     if (!k.gone) PixelIcons.mood(c, 514, 140, k.st.mood, 11);
@@ -4883,6 +5001,23 @@ var Work = (function () {
     if (k.held) View.brochure(c, k.held.kind, k.held.x, k.held.y, 1.05, { lift: true, blur: k.p.blur || k.p.blink, t: t });
     // 체력 0: 하품하느라 눈앞이 깜빡인다
     if (k.p.blink) { var ph = (t % 3.6); if (ph < .35) { c.fillStyle = 'rgba(10,8,14,' + (ph < .17 ? ph / .17 : (.35 - ph) / .18) * .92 + ')'; c.fillRect(0, 0, 640, 360); } }
+  }
+  // 고객님 머리 위 말풍선. 짧은 말을 한두 줄로 감싸고, 아래쪽 끝(꼬리)은 고객님 쪽에 둔다.
+  function speechBubble(c, text, blink, clue) {
+    c.font = "13px 'NeoDunggeunmo', monospace";
+    var maxW = 150, lines = [], cur = '';
+    String(text).split(' ').forEach(function (word) {
+      var tryLine = cur ? cur + ' ' + word : word;
+      if (c.measureText(tryLine).width <= maxW || !cur) cur = tryLine; else { lines.push(cur); cur = word; }
+    });
+    if (cur) lines.push(cur);
+    var w = 0; lines.forEach(function (l) { w = Math.max(w, c.measureText(l).width); });
+    w = Math.max(92, Math.min(190, w + 30)); var h = Math.max(56, 26 + lines.length * 19);
+    var bx = 450 - w / 2, by = 114 - h;
+    View.bubble(c, bx, by, w, h, 448);
+    if (clue) View.box(c, bx + 6, by + 6, 6, 6, '#ffb05a', '#5b4636', 1); // 다시 말해 준 말
+    lines.forEach(function (l, i) { View.text(c, l, 450, by + h / 2 + 4 + (i - (lines.length - 1) / 2) * 19, 13, blink ? 'rgba(47,42,51,.4)' : '#2f2a33'); });
+    return { x: bx, y: by, w: w, h: h };
   }
   function hotConsult() {
     var k = Wk.consult; if (!k || k.st.done || k.gone || !k.ready) return [];
@@ -4931,7 +5066,7 @@ var Work = (function () {
     var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
     return Engine.fade(0, .35).then(function () {
       if (p.leaves) return say([me(Story.CAUSE[p.reasons[0].key] || Story.CAUSE.lateLeft)]).then(function () { return Life.finish(s, p, st); });
-      return say([client(id, Story.CONSULT.greet), client(id, (Story.HINT[p.need] || {}).say || Story.CONSULT.greet)]).then(function () {
+      return say([client(id, Story.CONSULT.greet), client(id, Story.stepLine(id, 'need', p.need).say)]).then(function () {
         // 시작할 때 생기는 일과 그 이유를 한 줄씩
         return p.reasons.reduce(function (pr, r) {
           return pr.then(function () {
@@ -4962,9 +5097,18 @@ var Work = (function () {
         var kind = k.drop; k.drop = null;
         var r = Life.answer(p, st, kind);
         k.left = p.timer;
+        if (!r.ok && !r.done) { // 처음 틀리면: 고개를 갸웃하고, 조금 더 분명하게 다시 말해 준다
+          UI.sfx('bad'); k.shake = true;
+          Engine.puff({ x: 470, y: 130, icon: 'bang', px: 2, life: 1.2 });
+          return Engine.sleep(.35).then(function () {
+            k.shake = false;
+            var step = p.steps[st.step];
+            return say([client(id, Story.WRONG[(parseInt(id.slice(1), 10) || 0) % Story.WRONG.length]), client(id, Story.stepLine(id, step, p.need, true).say)]);
+          }).then(function () { if (k.guide) cardHand(); return next(); });
+        }
         if (!r.ok) {
           UI.sfx('bad'); k.shake = true;
-          return Engine.sleep(.35).then(function () { k.shake = false; return say([client(id, Story.CONSULT.wrong), client(id, Story.CONSULT.lost)]); })
+          return Engine.sleep(.35).then(function () { k.shake = false; return say([client(id, Story.CONSULT.wrongAgain), client(id, Story.CONSULT.lost)]); })
             .then(function () { k.gone = true; return done(); });
         }
         UI.sfx('good'); k.heroFrame = 1;
@@ -4994,7 +5138,9 @@ var Work = (function () {
         return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
           results.push(res);
           var furLost = !res.signed && s.events.some(function (e) { return e.key === 'furLost' && e.day === s.day && e.id === res.id; });
-          if (furLost) return Engine.fade(1, .3).then(function () { return seniorLesson(res.why === 'sneeze', i < ids.length - 1); }).then(function () { return Engine.fade(1, .3); });
+          var smellLost = !res.signed && s.events.some(function (e) { return e.key === 'smellLost' && e.day === s.day && e.id === res.id; });
+          if (furLost || smellLost) return Engine.fade(1, .3).then(function () { return furLost ? seniorLesson(res.why === 'sneeze', i < ids.length - 1) : null; })
+            .then(function () { return smellLost ? smellLesson(i < ids.length - 1) : null; }).then(function () { return Engine.fade(1, .3); });
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(res.pet ? 2 : 1); })
             .then(function () { return res.goal ? goalParty() : null; });

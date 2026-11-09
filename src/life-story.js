@@ -13,7 +13,7 @@ var Story = (function () {
     },
     offer: function (me) {
       return { from: '늘봄손해보험', time: '오후 4:10', preview: '[늘봄손해보험] ' + me + ' 님, 합격을 축하드립니다...',
-        body: '[늘봄손해보험] ' + me + ' 님, 수습 설계사 최종 합격을 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n수습 기간은 4월 24일(금)까지입니다. 이 기간에 계약 8건을 채우면 정식 설계사로 위촉됩니다.\n\n활동비는 출근한 날마다, 계약 수당은 계약할 때마다 바로 드립니다.' };
+        body: '[늘봄손해보험] ' + me + ' 님, 수습 설계사 최종 합격을 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n수습 기간은 4월 24일(금)까지입니다. 이 기간에 계약 ' + Life.GOAL + '건을 채우면 정식 설계사로 위촉됩니다.\n\n활동비는 출근한 날마다, 계약 수당은 계약할 때마다 바로 드립니다.' };
     },
     job: { from: '행복슈퍼 사장님', time: '오전 9:40', preview: '주말에 진열 좀 도와줄 사람 찾아요...',
       body: '주말에 진열 좀 도와줄 사람 찾아요. 토요일, 일요일 둘 다 돼요.\n\n오후 3시 전에 가게로 오면 네 시간, 5,000원 드릴게요. 상자를 나르는 일이라 좀 고돼요.\n\n가게 벽에 공고 붙여 놨어요.' },
@@ -63,7 +63,12 @@ var Story = (function () {
     c13: { name: '조민혁', look: 'customerC' },
     c14: { name: '신동욱', look: 'customerA', tint: 300 },
     c15: { name: '오세영', look: 'customerB', tint: 330 },
-    c16: { name: '송지아', look: 'customerB', tint: 100 }
+    c16: { name: '송지아', look: 'customerB', tint: 100 },
+    c17: { name: '장수빈', look: 'customerC', tint: 250 },
+    c18: { name: '홍재원', look: 'customerA', tint: 30 },
+    c19: { name: '유가은', look: 'customerB', tint: 300 },
+    c20: { name: '권도윤', look: 'customerA', tint: 160 },
+    c21: { name: '백승아', look: 'customerB', tint: 60 }
   };
 
   var ORDINAL = ['첫', '두', '세', '네'];
@@ -158,7 +163,7 @@ var Story = (function () {
 
   var DAY_INTRO = {
     0: [{ who: 'me', text: '드디어 내일 첫 출근이다.' }, { who: 'me', text: '노트북이랑 충전기부터 챙겨 두자.' }],
-    1: [{ who: 'me', text: '7시 40분. 지하철로 50분 걸리니까 8시 10분에는 나가야 9시 조회에 안 늦어.' }, { who: 'me', text: '늦으면 기다리던 고객님이 그냥 가 버린대. 서두르자.' }],
+    1: [{ who: 'me', text: '7시 40분. 지하철로 50분 걸리니까 8시 10분에는 나가야 9시 조회에 안 늦어.' }, { who: 'me', text: '늦으면 오전 고객님은 기다리다 그냥 가 버린대. 서두르자.' }],
     6: [{ who: 'me', text: '토요일이다. 오늘은 하루가 길어.' }],
     11: [{ who: 'me', text: '내일이 마감이다.' }],
     12: [{ who: 'me', text: '오늘이 수습 마지막 날이다.' }]
@@ -166,19 +171,36 @@ var Story = (function () {
 
   function assembly(s, late) {
     var lines = [], d = s.day, cl = Life.clientsOn(d), me = s.me;
-    if (late) lines.push({ who: 'lead', text: me + ' 씨, 고객님 벌써 와 계세요.' });
+    if (late) lines.push({ who: 'lead', text: me + ' 씨, 오전 고객님은 기다리다 가셨어요. 오후 고객님은 놓치지 마요.' });
     if (d === 1) {
       lines.push({ who: 'lead', text: '오늘부터 함께할 수습 설계사 ' + me + ' 씨예요.' });
       lines.push({ who: 'lead', text: '설계사는 고객님 이야기를 듣고, 그분께 꼭 맞는 보험을 권해 드리는 사람이에요.', board: true });
       lines.push({ who: 'lead', text: '치아, 자동차, 여행자, 화재. 고객님이 무엇을 걱정하시는지 들으면 어떤 안내서를 드릴지 보여요.', board: true });
-      lines.push({ who: 'lead', text: '수습은 4월 24일까지예요. 저 실적 그래프에서 목표선 8건을 넘기면 정식 설계사가 돼요.', chart: true });
-      lines.push({ who: 'lead', text: '조회에 늦으면 기다리던 첫 고객님은 그냥 가세요. 시간 꼭 지켜요.' });
-      lines.push({ who: 'lead', text: '오늘 고객은 두 분이에요. 처음 상담은 선배랑 같이 해요.' });
+      lines.push({ who: 'lead', text: '수습은 4월 24일까지예요. 저 실적 그래프에서 목표선 ' + Life.GOAL + '건을 넘기면 정식 설계사가 돼요.', chart: true });
+      lines.push({ who: 'lead', text: '고객님은 매일 오전 10시와 오후 2시에 한 분씩 오세요. 조회에 늦으면 오전 고객님은 그냥 가세요.' });
+      lines.push({ who: 'lead', text: '고객님들은 원하는 걸 바로 말씀 안 하세요. 사는 이야기 속에 답이 있어요. 처음 상담은 선배랑 같이 해요.' });
     } else if (Life.day(s).final) {
       lines.push({ who: 'lead', text: '오늘이 마감이에요. 상담 끝나고 실적 그래프 앞에서 봐요.' });
     } else if (!late) {
       lines.push({ who: 'lead', text: '좋은 아침이에요. ' + me + ' 씨 오늘 고객은 ' + (cl.length === 2 ? '두 분' : '한 분') + '이에요.' });
     }
+    // 옷에 화장실 냄새가 배어 온 날: 지점장님이 먼저 알아채고 선배가 귓속말로 알려 준다
+    if (s.smell > 1) {
+      lines.push({ who: 'lead', text: '...잠깐, 이거 무슨 냄새죠? ' + me + ' 씨 쪽에서 나는 것 같은데.', sniff: true });
+      lines.push({ who: 'peer', text: me + ' 씨, 옷에서 고양이 화장실 냄새가 많이 나요. 이대로 고객님 만나면 큰일이에요.' });
+    } else if (s.smell > 0) {
+      lines.push({ who: 'lead', text: '음? 어디서 화장실 냄새 같은 게 나는데... 다들 창문 좀 열어요.', sniff: true });
+      lines.push({ who: 'peer', text: '(작게) ' + me + ' 씨, 옷에서 냄새 조금 나요. 고양이 화장실 아침에 안 치웠죠?' });
+    }
+    return lines;
+  }
+  // 냄새 때문에 처음 계약을 놓친 뒤에 선배가 알려 준다
+  function seniorSmell(s, lend) {
+    var lines = [
+      { who: 'peer', text: '아까 고객님이 자꾸 몸을 뒤로 빼시던 거 봤죠? 옷에 밴 냄새 때문이에요.' },
+      { who: 'peer', text: '고양이 화장실은 출근 전에 꼭 치우고 나와요. 냄새는 돌돌이로도 안 빠져요.' }
+    ];
+    if (lend) lines.push({ who: 'peer', text: '오후 상담 전에 제 섬유 탈취제 좀 뿌려 줄게요. 다 빠지진 않아도 조금은 나을 거예요.', spray: true });
     return lines;
   }
   // 첫 고객을 털 때문에 놓친 뒤에 선배가 알려 준다
@@ -196,13 +218,71 @@ var Story = (function () {
   }
   var TUTORIAL = [
     { who: 'peer', text: '고객님 말씀을 잘 들어 보세요. 아래 안내서 중에 맞는 걸 눌러 잡고, 고객님 쪽으로 끌어다 드리면 돼요.' },
-    { who: 'peer', text: '그다음은 요금표, 마지막이 계약서예요. 엉뚱한 걸 한 번이라도 드리면 바로 생각해 보겠다고 하세요.' }
+    { who: 'peer', text: '그다음은 요금표, 마지막이 계약서예요. 엉뚱한 걸 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.' }
   ];
-  // 고객이 처음에 하는 말. 준비(고객 메모)를 안 했으면 말풍선에도 이 짧은 말만 뜬다.
+  // 고객이 처음에 하는 말. 원하는 상품을 바로 말하지 않고 사는 이야기를 한다.
+  // say: 처음 하는 말, bubble: 말풍선에 남는 짧은 말, clue: 엉뚱한 안내서를 받은 뒤 조금 더 분명하게 하는 말
+  var CLIENT_HINT = {
+    c1: { say: '요즘 아이스크림을 못 먹어요. 한 입만 베어 물어도 머리끝까지 찡해서요.', bubble: '아이스크림이 무서워요', clue: '어금니가 시큰거려요. 치료비가 얼마나 나올지 걱정이에요.' },
+    c16: { say: '이사 온 집이 꽤 낡았어요. 콘센트에서 가끔 탁탁 소리가 나요.', bubble: '콘센트에서 탁탁', clue: '혹시 불이라도 날까 봐 밤에 잠이 안 와요.' },
+    c2: { say: '딸이 사는 프랑스에 처음 가 봐요. 비행기만 열두 시간이래요.', bubble: '비행기 열두 시간', clue: '거기서 아프기라도 하면 병원비가 그렇게 비싸다던데요.' },
+    c17: { say: '겨울에 전기장판을 켜고 자요. 어제 보니 이불 한쪽이 누렇게 그을렸더라고요.', bubble: '이불이 그을렸어요', clue: '자다가 집에 불이라도 나면 어쩌나 싶어서요.' },
+    c3: { say: '회사가 멀리 이사 가서, 이제 매일 고속도로를 타야 해요.', bubble: '매일 고속도로', clue: '새로 뽑은 차로 다니는데 아직 운전이 서툴러서요.' },
+    c4: { say: '아들이 교정을 시작했는데, 저도 요즘 잇몸이 자꾸 부어요.', bubble: '잇몸이 부어요', clue: '둘이 치과 다니는 돈이 만만치 않아서요.' },
+    c5: { say: '가게 바로 위층에 살아요. 밤늦게까지 튀김 기름을 쓰거든요.', bubble: '밤늦게 튀김 기름', clue: '주방에서 불이 번질까 봐 늘 마음이 쓰여요.' },
+    c18: { say: '어제 주차장에서 옆 차 문을 살짝 긁었어요. 손이 아직도 떨려요.', bubble: '옆 차를 긁었어요', clue: '운전할 때마다 또 사고 날까 봐 조마조마해요.' },
+    c6: { say: '우리 식당 식구가 일곱이에요. 주방 일이라 다들 자주 데고 베여요.', bubble: '식당 식구 일곱', clue: '직원들 다 같이 들 수 있는 게 있으면 좋겠어요.' },
+    c7: { say: '고양이가 가스레인지 위로 자꾸 올라가요. 지난주엔 불 켜는 손잡이를 밟았어요.', bubble: '가스레인지 위 고양이', clue: '집 비운 사이에 불이라도 날까 봐요.' },
+    c8: { say: '다음 주에 동남아 공장으로 출장이 갑자기 잡혔어요. 점심시간에 잠깐 나왔어요.', bubble: '갑자기 해외 출장', clue: '현지에서 다치거나 아프면 어떡하나 해서요.' },
+    c9: { say: '아이 학원 데려다주느라 하루에 운전만 세 시간을 해요.', bubble: '하루 운전 세 시간', clue: '운전 시간이 길다 보니 사고가 제일 무서워요.' },
+    c19: { say: '신혼여행으로 하와이에 가요. 고양이는 친정에 맡기고요.', bubble: '하와이 신혼여행', clue: '여행 가서 다치면 보상이 되나 궁금해서요.' },
+    c10: { say: '어제 딱딱한 땅콩을 씹다가 이가 깨졌어요. 점심시간이라 빨리 가야 해요.', bubble: '땅콩을 씹다가', clue: '이 치료비가 얼마나 나올지 겁나서요.' },
+    c11: { say: '할머니가 혼자 사시는 시골집이 나무로 지어졌어요. 겨울엔 아궁이를 때세요.', bubble: '나무 집, 아궁이', clue: '불이 날까 봐 걱정이에요.' },
+    c12: { say: '계모임 친구들이랑 칠순 기념으로 일본에 가요. 다들 무릎이 시원찮아서...', bubble: '칠순 기념 일본', clue: '나이가 있으니 여행 가서 아플까 봐요.' },
+    c20: { say: '택배 일을 시작했어요. 하루 종일 길 위에 있어요. 오래는 못 있어요.', bubble: '하루 종일 길 위', clue: '차로 일하니까 사고 나면 큰일이에요.' },
+    c13: { say: '요즘 사탕을 달고 살았더니 밤마다 이가 욱신거려요.', bubble: '밤마다 욱신', clue: '치과 가야 하는데 돈이 걱정이에요.' },
+    c14: { say: '다음 달부터 아내랑 번갈아 차로 출퇴근해요. 저는 장롱 면허예요.', bubble: '장롱 면허', clue: '아직 운전이 서툴러서 사고가 날까 봐요.' },
+    c15: { say: '아이들이 촛불을 너무 좋아해요. 생일만 되면 온 집에 초를 켜요.', bubble: '온 집에 촛불', clue: '혹시 불이 날까 봐 걱정이에요.' },
+    c21: { say: '커피를 하루 다섯 잔씩 마셨더니, 찬물만 닿아도 이가 찌릿해요.', bubble: '찬물만 닿아도 찌릿', clue: '치과 치료비가 무서워서 미루고 있어요.' }
+  };
+  // 요금, 펫보험, 계약 차례에 하는 말 (고객마다 조금씩 다르게)
+  var STEP_LINES = {
+    price: [
+      { say: '그래서, 한 달에 얼마나 들어요?', bubble: '한 달에 얼마?' },
+      { say: '좋긴 한데... 매달 나가는 돈이 부담돼서요.', bubble: '매달 나가는 돈' },
+      { say: '비싸면 곤란해요. 월급이 빠듯하거든요.', bubble: '비싸면 곤란해요' },
+      { say: '보험료부터 들어 보고 정할게요.', bubble: '보험료부터' }
+    ],
+    contract: [
+      { say: '좋아요. 그걸로 할게요.', bubble: '그걸로 할게요' },
+      { say: '마음에 드네요. 어디에 이름을 쓰면 되죠?', bubble: '어디에 이름을?' },
+      { say: '그 정도면 괜찮네요. 진행해 주세요.', bubble: '진행해 주세요' },
+      { say: '더 고민할 것 없겠어요.', bubble: '고민할 것 없어요' }
+    ],
+    pet: [{ say: '어머, 소매에 고양이 털이네요? 우리 애도 아프면 병원비가 장난 아닌데...', bubble: '우리 애도...' }]
+  };
+  var STEP_CLUE = {
+    price: { say: '아뇨, 그것보다... 돈이 얼마나 드는지가 궁금해요.', bubble: '얼마예요?' },
+    contract: { say: '설명은 충분해요. 이제 서명할 종이를 주세요.', bubble: '서명할 종이' },
+    pet: { say: '우리 고양이 이야기예요. 고양이도 보험이 되나요?', bubble: '고양이도 보험?' }
+  };
+  function clientNo(id) { return +String(id).replace(/\D/g, '') || 0; }
+  // 고객 id와 지금 차례(need, price, pet, contract)로 할 말을 고른다. clue면 더 분명한 말.
+  function stepLine(id, step, need, clue) {
+    if (step === 'need') {
+      var h = CLIENT_HINT[id] || { say: HINT[need].say, bubble: HINT[need].bubble, clue: HINT[need].say };
+      return clue ? { say: h.clue, bubble: HINT[need].bubble } : { say: h.say, bubble: h.bubble };
+    }
+    if (clue) return STEP_CLUE[step];
+    var list = STEP_LINES[step];
+    return list[clientNo(id) % list.length];
+  }
+  // 엉뚱한 안내서를 처음 받았을 때 (상품마다 조금 다르게)
+  var WRONG = ['음... 제가 말씀드린 건 그게 아닌데요.', '아, 그건 저랑은 상관없는 것 같아요.', '그게 아니라요...'];
   var HINT = {
     dental: { say: '요즘 찬물만 마셔도 이가 시려서요. 치과 가기가 겁나요.', bubble: '이가 시려요' },
-    car: { say: '다음 주에 첫 차를 뽑아요. 운전이 아직 무서워서요.', bubble: '첫 차를 샀어요' },
-    travel: { say: '다음 달에 처음으로 해외여행을 가요. 가서 아프면 어쩌죠?', bubble: '해외여행 가요' },
+    car: { say: '운전이 아직 무서워서요. 사고 나면 어쩌죠?', bubble: '사고가 걱정돼요' },
+    travel: { say: '해외여행 가서 아프면 어쩌죠?', bubble: '여행 가서 아프면' },
     home: { say: '집이 오래돼서요. 겨울마다 불 날까 봐 걱정이에요.', bubble: '불 날까 걱정' },
     group: { say: '우리 식당 직원들 다 같이 들 수 있는 거 있을까요?', bubble: '직원 다 같이' }
   };
@@ -211,6 +291,7 @@ var Story = (function () {
     signed: '여기 서명할게요.',
     lost: '음... 생각해 볼게요.',
     wrong: '이건 제가 찾는 게 아닌데요.',
+    wrongAgain: '...제 이야기를 잘 안 들으신 것 같네요.',
     slow: '음...',
     greet: '안녕하세요.'
   };
@@ -233,7 +314,9 @@ var Story = (function () {
       tips.push('피곤하면 안내서 글씨가 눈에 안 들어와요. 일찍 자는 것도 일이에요.');
     } else {
       if (s.fur > 0 && !s.owned.roller) tips.push('소매에 아직 털 있어요. 돌돌이는 역 앞 슈퍼에 있어요.');
-      tips.push('엉뚱한 안내서를 한 번이라도 드리면 바로 생각해 보겠다고 하세요. 모르겠으면 고객님 말을 다시 떠올려 봐요.');
+      if (s.smell > 0 || (s.today && s.today.notes && s.today.notes.indexOf('smell') >= 0)) tips.push('내일은 고양이 화장실 꼭 치우고 나와요. 냄새는 고객님이 제일 먼저 알아요.');
+      tips.push('고객님은 원하는 걸 바로 말씀 안 하세요. 무엇이 걱정인지 들어 보면 맞는 안내서가 보여요. 메일을 읽고 오면 더 쉽고요.');
+      tips.push('엉뚱한 안내서를 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.');
       tips.push('고양이 키우는 고객님한테는 털이 오히려 반가운 얘깃거리예요.');
       tips.push('저녁에 늦게 자면 다음 날 상담 때 하품 나와요. 저도 그랬어요.');
     }
@@ -243,7 +326,7 @@ var Story = (function () {
   }
   function goalReached(s) {
     return [
-      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 수습 목표 8건 달성!' },
+      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 수습 목표 ' + Life.GOAL + '건 달성!' },
       { who: 'peer', text: '와, 벌써요? 축하해요!' },
       { who: 'lead', text: '정식 위촉은 확정이에요. 24일까지 남은 계약은 수당을 1.5배로 드릴게요.' }
     ];
@@ -295,8 +378,8 @@ var Story = (function () {
   // 아직 못 본 엔딩 칸에 보이는 귀띔
   var ENDING_HINT = {
     family: '천둥 치던 밤과 서랍 속 아침, 둘 다 지켜 준다면...',
-    both: '목표 8건, 그리고 마음 네 칸 이상',
-    soso: '목표 8건, 마음은 두세 칸',
+    both: '목표 ' + Life.GOAL + '건, 그리고 마음 네 칸 이상',
+    soso: '목표 ' + Life.GOAL + '건, 마음은 두세 칸',
     catStays: '실적은 모자라도 마음은 네 칸 이상',
     clumsy: '실적도 마음도 조금씩 모자라면',
     oneBody: '목표는 채웠지만 마음이 한 칸 이하',
@@ -355,7 +438,7 @@ var Story = (function () {
     opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
     HINT: HINT, MARK_NOTE: MARK_NOTE, officeTip: officeTip, goalReached: goalReached, careNote: careNote,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
-    assembly: assembly, senior: senior, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
+    assembly: assembly, senior: senior, seniorSmell: seniorSmell, stepLine: stepLine, CLIENT_HINT: CLIENT_HINT, WRONG: WRONG, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
     evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());
