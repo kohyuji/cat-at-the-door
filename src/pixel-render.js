@@ -9,7 +9,7 @@ var PixelArt = (function () {
     // codex-v5(R5·R6)에서 가져온 그림: 주인공 움직임, 청소, 돌봄, 지하철 사람들과 tools/build-extras.py로 자른 조각들
     r6People:'assets/r6-people-v2.png',r6Clean:'assets/r6-clean-v2.png',r6Care:'assets/r6-care-v2.png',r6Wet:'assets/r6-wet-v2.png',r6Transit:'assets/r6-transit-v2.png',r6Extras:'assets/r6-extras.png'};
   // r6-extras.png 안의 조각 자리 (tools/build-extras.py 결과)
-  var EXTRA={"bedDoorClosed":[0,0,118,253],"livDoorClosed":[120,0,118,253],"bedDoorOpen":[240,0,145,290],"livDoorOpen":[387,0,145,290],"bedEmpty":[534,0,304,160],"bedAwake":[840,0,818,486],"bedAsleep":[0,488,818,486],"umbrella":[820,488,261,254],"charcoal":[1083,488,191,252],"catPortrait":[0,976,677,936],"broom":[679,976,267,347],"mop":[948,976,293,349]};
+  var EXTRA={"bedDoorClosed":[0,0,118,253],"livDoorClosed":[120,0,118,253],"bedDoorOpen":[240,0,145,290],"livDoorOpen":[387,0,145,290],"bedEmpty":[534,0,304,160],"bedAwake":[840,0,818,486],"bedAsleep":[0,488,818,486],"umbrella":[820,488,261,254],"charcoal":[1083,488,191,252],"catPortrait":[0,976,677,936],"broom":[679,976,267,347],"mop":[948,976,293,349],"robot":[1243,976,281,237],"autoToy":[0,1914,287,281],"autoToyWorn":[289,1914,438,223]};
   // 48×64 칸 그림. 발끝(24,62)을 기준점으로 그린다.
   var NATIVE={people:['r6People',8],clean:['r6Clean',4],care:['r6Care',4],wet:['r6Wet',4],transit:['r6Transit',2]};
   function native(c,kind,index,x,y,unit,flip){var n=NATIVE[kind],im=n&&images[n[0]];if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,index%n[1]*48,Math.floor(index/n[1])*64,48,64,-24*unit,-62*unit,48*unit,64*unit);c.restore();return true;}

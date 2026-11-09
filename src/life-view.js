@@ -390,10 +390,21 @@ var View = (function () {
   function floorDirt(c, floor, gone) {
     dirtSpots(floor).forEach(function (p) {
       if (gone && gone[p.key]) return;
-      if (p.kind === 'fur') { r(c, p.x, p.y, 5, 2, '#e8d2ad'); r(c, p.x + 1, p.y - 1, 3, 1, '#f3e2c4'); r(c, p.x + 4, p.y + 1, 2, 1, '#c9ae86'); }
-      else { c.fillStyle = 'rgba(96,88,80,.28)'; c.beginPath(); c.ellipse(p.x, p.y, 9, 3, 0, 0, Math.PI * 2); c.fill(); }
+      if (p.kind === 'fur') { // 보송한 털 뭉치 (빗자루로 쓴다)
+        r(c, p.x - 1, p.y - 1, 8, 3, '#c9ae86'); r(c, p.x, p.y - 2, 6, 3, '#e8d2ad'); r(c, p.x + 1, p.y - 3, 3, 1, '#f6e8cf');
+        r(c, p.x - 2, p.y, 1, 1, '#e8d2ad'); r(c, p.x + 7, p.y - 2, 1, 1, '#e8d2ad'); r(c, p.x + 3, p.y + 2, 2, 1, '#b8946a');
+      } else { // 회색 먼지 발자국 (대걸레로 닦는다)
+        var col = 'rgba(78,70,66,.55)';
+        [[0, 0], [12, -4]].forEach(function (o) {
+          var x = p.x + o[0], y = p.y + o[1];
+          r(c, x, y, 4, 3, col); r(c, x - 2, y - 3, 2, 2, col); r(c, x + 1, y - 4, 2, 2, col); r(c, x + 4, y - 3, 2, 2, col);
+        });
+      }
     });
   }
+  // codex-v5 R6 그림: 충전대에 붙은 로봇청소기, 깃털 자동 장난감(새것·닳은 것). x는 가운데, y는 바닥.
+  function robot(c, x, y, w) { PixelArt.extra(c, 'robot', x, y, w || 40); }
+  function autoToy(c, x, y, w, worn) { var k = w || 30; PixelArt.extra(c, worn ? 'autoToyWorn' : 'autoToy', x, y, worn ? k * 438 / 287 : k); }
   function cup(c, x, y, scale) { icon(c, 'coffee', x, y - 12 * scale, 2 * scale); }
   function lunchbox(c, x, y, scale) { icon(c, 'lunch', x, y - 12 * scale, 2 * scale); }
   function sandBag(c, x, y, scale) { item(c, 'litterBag', x, y, scale || 1); }
@@ -447,7 +458,7 @@ var View = (function () {
     bg: bg, sceneInto: sceneInto, cut: cut, tinted: tinted, person: person, seated: seated, portrait: portrait, cat: cat, item: item, icon: icon, shadow: shadow,
     wallClock: wallClock, slotClock: slotClock, bowl: bowl, waterBowl: waterBowl, litterBox: litterBox, foodBag: foodBag, bag: bag, hangerSuit: hangerSuit,
     bed: bed, roomDoor: roomDoor, entranceDoor: entranceDoor, windowView: windowView, toy: toy, card: card, brochure: brochure, bubble: bubble,
-    priceTag: priceTag, catTower: catTower, feeder: feeder, chart: chart, charcoal: charcoal, cup: cup, lunchbox: lunchbox, sandBag: sandBag,
+    priceTag: priceTag, catTower: catTower, feeder: feeder, robot: robot, autoToy: autoToy, chart: chart, charcoal: charcoal, cup: cup, lunchbox: lunchbox, sandBag: sandBag,
     broom: broom, mop: mop, floorDirt: floorDirt, dirtSpots: dirtSpots, commuter: commuter, BED: BED, HERO_PX: HERO_PX,
     arrow: arrow, ghostHand: ghostHand, outline: outline, fx: fx, tint: tint, nightTint: nightTint, lampGlow: lampGlow
   };

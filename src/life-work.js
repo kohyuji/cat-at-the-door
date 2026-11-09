@@ -364,7 +364,8 @@ var Work = (function () {
   // 진열대 자리: 가운데 칸(y 160)과 아래 칸(y 222), 바닥. 이름은 물건 위에, 값은 아래에 붙인다.
   var SHELF = {
     dry: { x: 262, y: 160 }, wet: { x: 318, y: 160 }, roller: { x: 372, y: 160 }, coffee: { x: 424, y: 160 }, lunch: { x: 478, y: 160 },
-    sand: { x: 276, y: 228 }, feeder: { x: 372, y: 228 }, toy: { x: 470, y: 228 }, tower: { x: 540, y: 330 }
+    sand: { x: 276, y: 228 }, feeder: { x: 372, y: 228 }, autoToy: { x: 424, y: 228 }, toy: { x: 470, y: 228 },
+    robot: { x: 330, y: 334 }, tower: { x: 540, y: 330 }
   };
   var PRO_SHELF = { charcoal: { x: 292, y: 160, price: 12000 }, dry: { x: 382, y: 160, price: 12000 }, wet: { x: 470, y: 160, price: 15000 } };
   function drawShopItem(c, item, x, y, scale) {
@@ -379,8 +380,12 @@ var Work = (function () {
     else if (item === 'tower') View.catTower(c, x, y, .82 * scale);
     else if (item === 'toy') View.toy(c, x, y - 2, G.t);
     else if (item === 'charcoal') View.charcoal(c, x, y, .9 * scale);
+    else if (item === 'robot') View.robot(c, x, y, 46 * scale);
+    else if (item === 'autoToy') View.autoToy(c, x, y, 34 * scale);
   }
-  function itemTop(item) { return item === 'tower' ? 96 : item === 'charcoal' ? 52 : item === 'toy' ? 20 : 38; }
+  function itemTop(item) { return item === 'tower' ? 96 : item === 'charcoal' ? 52 : item === 'toy' ? 20 : item === 'robot' ? 40 : 38; }
+  function shown(item) { var sh = Wk.shop; return sh.pro || Life.onShelf(S(), item); }
+  function fresh(item) { var it = Life.SHOP[item]; return !Wk.shop.pro && it && it.from && S().day <= it.from + 1; }
   function descKey(item) { var sh = Wk.shop; return sh.pro && (item === 'dry' || item === 'wet') ? (item === 'dry' ? 'proDry' : 'proWet') : item; }
   // 지금 설명을 보여 줄 물건: 마우스를 댄 것, 손가락이면 한 번 누른 것
   function focusItem() {
@@ -395,6 +400,7 @@ var Work = (function () {
     View.box(c, x - w / 2, y, w, 24, red ? '#ffe3dc' : '#fffaf0', '#5b4636', 1);
     View.text(c, name, x, y + 7, 9, '#2f2a33');
     View.text(c, Life.won(price), x, y + 17, 9, red ? '#c0392b' : '#5b4636');
+    return w;
   }
   function drawDesc(c, item) {
     var sh = Wk.shop, p = sh.shelf[item], lines = Story.ITEM_DESC[descKey(item)] || [], price = p.price || Life.SHOP[item].price;
@@ -412,13 +418,17 @@ var Work = (function () {
     View.bg(c, G, 'shop');
     if (sh.winter) { c.fillStyle = 'rgba(40,60,90,.12)'; c.fillRect(0, 0, 640, 360); }
     var wallet = sh.pro ? G.pro.wallet : s.wallet, focus = focusItem();
+    if (sh.job) { drawJob(c); return; }
+    if (jobOpen()) drawPoster(c);
     Object.keys(sh.shelf).forEach(function (item) {
       var p = sh.shelf[item], price = p.price || Life.SHOP[item].price;
-      if (!sh.pro && Life.SHOP[item].once && s.owned[item] && sh.basket.indexOf(item) < 0) return;
+      if (!shown(item)) return;
+      if (!sh.pro && Life.SHOP[item].once && s.owned[item] && !(item === 'autoToy' && !Life.autoToyOn(s)) && sh.basket.indexOf(item) < 0) return;
       if (sh.basket.indexOf(item) >= 0 && Life.SHOP[item] && Life.SHOP[item].once) return;
       var lift = item === focus ? -3 - Math.abs(Math.sin(t * 5)) * 2 : 0;
       drawShopItem(c, item, p.x, p.y + lift, item === focus ? 1.08 : 1);
-      tag(c, Story.ITEM[item], price, p.x, p.y + 3, wallet < price);
+      var tw = tag(c, Story.ITEM[item], price, p.x, p.y + 3, wallet < price);
+      if (fresh(item)) { var by = p.y - itemTop(item) + 2, bx = p.x + 14; View.box(c, bx, by, 24, 11, '#e2775e', '#5b4636', 1); View.text(c, '신상', bx + 12, by + 6, 8, '#fffaf0'); }
     });
     // 고른 물건은 계산대 위에 올려 둔다 (누르면 다시 진열대로)
     sh.basket.forEach(function (item, i) { var b = basketPos(i); drawShopItem(c, item, b.x, b.y, .62); });
@@ -429,9 +439,12 @@ var Work = (function () {
   function basketPos(i) { return { x: 500 + (i % 6) * 22, y: 246 - Math.floor(i / 6) * 14 }; }
   function hotShop() {
     var sh = Wk.shop, s = S(), list = [];
+    if (sh.job) return hotJob();
+    if (jobOpen()) list.push({ id: 'jobPoster', x: POSTER.x - 4, y: POSTER.y - 4, w: POSTER.w + 8, h: POSTER.h + 8, tap: startJob });
     Object.keys(sh.shelf).forEach(function (item) {
       var p = sh.shelf[item], price = p.price || Life.SHOP[item].price;
-      if (!sh.pro && Life.SHOP[item].once && (s.owned[item])) return;
+      if (!shown(item)) return;
+      if (!sh.pro && Life.SHOP[item].once && s.owned[item] && !(item === 'autoToy' && !Life.autoToyOn(s))) return;
       var w = item === 'tower' ? 54 : 46, h = itemTop(item) + 6;
       list.push({ id: 'shelf-' + item, x: p.x - w / 2, y: p.y - h, w: w, h: h + 28, tap: function () {
         // 손가락: 처음 누르면 설명만, 한 번 더 누르면 산다. 마우스: 대면 설명, 누르면 산다.
@@ -463,12 +476,95 @@ var Work = (function () {
     UI.sfx('tap'); sh.basket.splice(sh.basket.indexOf(item), 1);
     return null;
   }
+  // ---------- 주말 알바: 슈퍼 진열 정리 ----------
+  var POSTER = { x: 196, y: 64, w: 56, h: 42 };
+  var JOB_ITEMS = ['dry', 'sand', 'wet', 'coffee', 'lunch', 'roller'];
+  var CRATE = { x: 470, y: 300 };
+  function jobOpen() { var s = S(), sh = Wk.shop; return !sh.pro && s && s.phase === 'weekend' && !s.jobbed; }
+  function drawPoster(c) {
+    var q = POSTER, glow = Math.sin(G.t * 3) * .5 + .5;
+    View.box(c, q.x, q.y, q.w, q.h, '#fffaf0', '#5b4636', 1);
+    View.r(c, q.x + q.w / 2 - 3, q.y - 2, 6, 4, '#c0392b');
+    View.text(c, '알바 구함', q.x + q.w / 2, q.y + 11, 9, '#c0392b');
+    View.text(c, '진열 4시간', q.x + q.w / 2, q.y + 23, 8, '#3b3540');
+    View.text(c, Life.won(Life.JOB.pay), q.x + q.w / 2, q.y + 34, 8, '#3b3540');
+    if (!S().seen.job) { c.globalAlpha = .35 + glow * .4; c.strokeStyle = '#ff9a3c'; c.lineWidth = 2; c.strokeRect(q.x - 3, q.y - 3, q.w + 6, q.h + 6); c.globalAlpha = 1; }
+  }
+  function startJob() {
+    var s = S(), sh = Wk.shop, why = Life.jobBlock(s);
+    if (why === 'late') { UI.sfx('bad'); return say([me('알바는 오후 3시 전에 와야 받아 준대. 오늘은 늦었어.')]); }
+    if (why === 'tired') { UI.sfx('bad'); return say([me('지금 몸으로는 네 시간 못 버텨. 좀 쉬고 와야겠다.')]); }
+    if (why) return null;
+    s.seen.job = true;
+    return Engine.walkTo(200).then(function () {
+      return say([{ who: 'owner', text: '왔어요? 창고에서 꺼낸 물건을 빈 칸에 채워 줘요. 자리마다 그림이 붙어 있어요.' }]);
+    }).then(function () {
+      // 진열은 끌기로 하므로 여기서 기다리지 않는다 (마지막 물건을 놓으면 finishJob)
+      sh.job = { left: JOB_ITEMS.slice(), held: null, placed: [] };
+      G.hand = { x: CRATE.x, y: CRATE.y - 30, tx: SHELF[JOB_ITEMS[0]].x, ty: SHELF[JOB_ITEMS[0]].y - 20, period: 2, t0: G.t };
+    });
+  }
+  function finishJob() {
+    var s = S(), sh = Wk.shop;
+    G.hand = null;
+    return Engine.sleep(.35).then(function () { return Engine.fade(1, .4); }).then(function () {
+      var r = Life.sideJob(s);
+      sh.job = null;
+      return UI.black(['네 시간 뒤']).then(function () { return Engine.fade(0, .4); }).then(function () {
+        UI.sfx('coin');
+        Engine.puff({ x: G.hero.x, y: 230, icon: 'coin', text: '+' + Life.won(r.pay || 0), px: 1, life: 1.6 });
+        return say([{ who: 'owner', text: '수고했어요. 여기 ' + Life.won(Life.JOB.pay) + '.' }, me('허리 끊어지겠다... ' + Life.josa(s.cat, 'subject') + ' 오늘도 혼자 기다렸겠네.')]);
+      });
+    });
+  }
+  // 진열대에서 물건을 걷어 낸 빈 칸에, 상자에서 하나씩 끌어다 채운다
+  function drawJob(c) {
+    var j = Wk.shop.job, t = G.t, next = j.left[0];
+    JOB_ITEMS.forEach(function (item) {
+      var p = SHELF[item];
+      if (j.placed.indexOf(item) >= 0) { drawShopItem(c, item, p.x, p.y); return; }
+      c.globalAlpha = item === next ? .35 + (Math.sin(t * 5) * .5 + .5) * .25 : .18;
+      drawShopItem(c, item, p.x, p.y);
+      c.globalAlpha = 1;
+    });
+    // 상자
+    View.box(c, CRATE.x - 34, CRATE.y - 26, 68, 30, '#c79a63', '#5b4636', 2);
+    View.r(c, CRATE.x - 30, CRATE.y - 16, 60, 2, '#a97b47');
+    if (next && !(j.held)) drawShopItem(c, next, CRATE.x, CRATE.y - 22, .9);
+    if (j.held) drawShopItem(c, j.held.item, j.held.x, j.held.y + 18, 1);
+    View.text(c, (JOB_ITEMS.length - j.left.length) + ' / ' + JOB_ITEMS.length, CRATE.x, CRATE.y + 14, 10, '#2f2a33');
+    View.shadow(c, G.hero.x, 343, 20);
+    View.person(c, G, G.hero.x, 342, 'hoodie', 1, t, 'stand', 2.35);
+  }
+  function hotJob() {
+    var j = Wk.shop.job, next = j.left[0];
+    if (!next) return [];
+    var slot = SHELF[next];
+    return [{ id: 'crate', x: CRATE.x - 34, y: CRATE.y - 60, w: 68, h: 64, glow: true, drag: {
+      start: function (d) { j.held = { item: next, x: d.x, y: d.y }; UI.sfx('page'); G.hand = null; },
+      move: function (d) { if (j.held) { j.held.x = d.x; j.held.y = d.y; } },
+      end: function (d) {
+        var h = j.held; j.held = null;
+        if (!h) return null;
+        if (Math.abs(d.x - slot.x) < 30 && Math.abs(d.y - (slot.y - 18)) < 34) {
+          j.placed.push(next); j.left.shift(); UI.sfx('good');
+          if (!j.left.length) return finishJob();
+        } else UI.sfx('tap');
+        return null;
+      }
+    } }];
+  }
   function shop(opts) {
     opts = opts || {};
     Wk.shop = { pro: !!opts.pro, winter: !!opts.pro, shelf: opts.pro ? PRO_SHELF : SHELF, basket: [], leave: false, picked: null, focus: null };
     G.hero.x = 120; G.hero.dir = 1; G.hero.tx = null;
     Engine.setScene({ draw: drawShop, hot: hotShop, walk: function (p) { return Math.max(110, Math.min(230, p.x)); }, place: 'shop' });
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(220); }).then(function () {
+      var s = S();
+      if (!opts.pro && s && Life.onShelf(s, 'robot') && !s.seen.newStock) { s.seen.newStock = true; return say([me('새 물건이 들어왔네. 로봇청소기랑 자동 장난감?'), me('편하긴 하겠지만, 내가 직접 하는 것만은 못하겠지.')]); }
+      if (jobOpen() && !s.seen.jobPoster) { s.seen.jobPoster = true; return say([me('저게 사장님이 말한 알바 공고구나.')]); }
+      return null;
+    }).then(function () {
       if (opts.pro) return Engine.until(function () { return Wk.shop.picked; });
       return Engine.until(function () { return Wk.shop.leave; }).then(function () { return Engine.walkTo(90); });
     }).then(function () { var r = Wk.shop.pro ? Wk.shop.picked : Wk.shop.basket.slice(); return r; });

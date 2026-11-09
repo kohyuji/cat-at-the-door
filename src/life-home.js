@@ -7,7 +7,7 @@ var Home = (function () {
   var P = {
     entrance: { x: 20, y: 46, w: 94, h: 212 }, lDoor: { x: 541, y: 50, w: 88, h: 208 },
     bag: { x: 126, y: 300 }, wet: { x: 132, y: 330 }, food: { x: 164, y: 330 }, bowl: { x: 206, y: 334 }, water: { x: 266, y: 334 }, bottle: { x: 306, y: 330 },
-    feeder: { x: 160, y: 300 }, coffee: { x: 202, y: 178 }, lunch: { x: 236, y: 178 }, toy: { x: 452, y: 342 }, tower: { x: 352, y: 336 },
+    feeder: { x: 160, y: 300 }, robot: { x: 500, y: 300 }, autoToy: { x: 252, y: 302 }, coffee: { x: 202, y: 178 }, lunch: { x: 236, y: 178 }, toy: { x: 452, y: 342 }, tower: { x: 352, y: 336 },
     litter: { x: 588, y: 348 }, scoop: { x: 628, y: 344 }, sand: { x: 542, y: 346 }, sofa: { x: 380, y: 168, w: 162, h: 96 }, clock: { x: 66, y: 26 },
     memo: { x: 336, y: 120, w: 40, h: 40 }, broom: { x: 392, y: 286 }, mop: { x: 372, y: 288 },
     bDoor: { x: 523, y: 48, w: 98, h: 212 }, bed: { x: 22, y: 228, w: 200, h: 96 }, desk: { x: 265, y: 180, w: 148, h: 85 },
@@ -187,6 +187,8 @@ var Home = (function () {
       if (s.pantry.lunch > 0) View.lunchbox(c, P.lunch.x, P.lunch.y, .9);
       if (s.owned.feeder) View.feeder(c, P.feeder.x, P.feeder.y, .9);
       if (s.owned.tower) View.catTower(c, P.tower.x, P.tower.y, .95);
+      if (s.owned.robot) View.robot(c, P.robot.x, P.robot.y, 40);
+      if (s.owned.autoToy) View.autoToy(c, P.autoToy.x, P.autoToy.y, 38, !Life.autoToyOn(s));
       if (!(H.clean && H.clean.kind === 'mop')) View.mop(c, P.mop.x, P.mop.y, 1);
       if (!(H.clean && H.clean.kind === 'sweep')) View.broom(c, P.broom.x, P.broom.y, 1);
       View.bag(c, P.bag.x, P.bag.y, 1.1);
@@ -505,11 +507,11 @@ var Home = (function () {
   }
   // 집에서 하는 일이 막혔을 때 이유를 말한다
   var BLOCK_LINE = {
-    play: { notHome: '지금은 출근 준비할 시간이야. 놀아 주는 건 저녁에.', hidden: 'hiddenToy', noToy: 'noToy', played: 'played' },
+    play: { notHome: '지금은 출근 준비할 시간이야. 놀아 주는 건 저녁에.', hidden: 'hiddenToy', noToy: 'noToy', played: 'played', tired: 'tired' },
     rest: { notHome: '지금 누우면 지각이야.', full: '아직 쌩쌩해.', rested: '더 누워 있으면 잠들겠다. 자려면 침대로 가자.' },
     prep: { notHome: '고객 메모는 저녁에 읽어 두자.', noCard: '새 메일은 없네.' },
-    sweep: { notHome: '청소는 퇴근하고 하자.', clean: '바닥은 깨끗해.' },
-    mop: { notHome: '청소는 퇴근하고 하자.', clean: '바닥은 깨끗해.' }
+    sweep: { notHome: '청소는 퇴근하고 하자.', clean: '쓸 털 뭉치는 없어. 먼지 발자국은 대걸레로 닦아야 해.' },
+    mop: { notHome: '청소는 퇴근하고 하자.', clean: '닦을 먼지 발자국은 없어. 털 뭉치는 빗자루로 쓸어야 해.' }
   };
   function blockedLine(kind, why) {
     var s = S(), l = BLOCK_LINE[kind] && BLOCK_LINE[kind][why];
@@ -708,7 +710,7 @@ var Home = (function () {
       ['sweep', 'mop'].forEach(function (kind) {
         var why = Life.doBlock(s, kind), p = kind === 'sweep' ? P.broom : P.mop;
         list.push({ id: kind, x: p.x - 12, y: p.y - 48, w: 24, h: 50, chips: why ? null : [cMin(Life.T[kind])],
-          tap: function () { return why ? blockedLine(kind, why) : say([me(kind === 'sweep' ? '빗자루를 잡고 바닥을 쓸자.' : '밀대를 잡고 얼룩을 닦자.')]); }, drag: why ? null : cleanDrag(kind) });
+          tap: function () { return why ? blockedLine(kind, why) : say([me(kind === 'sweep' ? '빗자루로 털 뭉치를 쓸자. 쌓이면 정장에 털이 붙어.' : '대걸레로 먼지 발자국을 닦자. 쌓이면 ' + Life.josa(s.cat, 'subject') + ' 밤새 재채기해.')]); }, drag: why ? null : cleanDrag(kind) });
       });
       if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: LV.window.x - 6, y: LV.window.y, w: 40, h: LV.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], drag: curtainDrag() });
     }

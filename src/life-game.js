@@ -16,6 +16,7 @@ var Game = (function () {
     if (w === 'me') return { name: (G.pro && G.pro.active ? G.pro.me : s && s.me) || '', face: { variant: s && !(G.pro && G.pro.active) && s.wearing === 'suit' ? 'suit' : 'hoodie' } };
     if (w === 'lead') return { name: Story.NAMES.lead, face: { variant: 'lead' } };
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
+    if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -469,6 +470,11 @@ var Game = (function () {
     var lines = [], w = G.wake;
     if (note) lines.push(narr(note));
     if (w && w.key) lines.push(narr(Story.HEART[w.key] + '.' + (s.phase === 'morning' ? ' 치우느라 ' + Life.T.accident + '분이 걸렸다.' : '')));
+    // 자동 물건이 밤사이 한 일 (처음 한 번씩, 닳았을 때는 꼭)
+    var last = s.ledger[s.ledger.length - 1], ln = last ? last.notes : [];
+    if (ln.indexOf('autoToyWorn') >= 0) lines.push(me(Story.catLine('autoToyWorn', s.cat)));
+    else if (ln.indexOf('autoToy') >= 0 && !s.seen.autoToyNote) { s.seen.autoToyNote = true; lines.push(narr(Story.catLine('autoToy', s.cat))); }
+    if (s.today.notes.indexOf('robot') >= 0 && !s.seen.robotNote) { s.seen.robotNote = true; lines.push(narr(Story.catLine('robot', s.cat))); }
     (Story.DAY_INTRO[s.day] || []).forEach(function (l) { lines.push({ who: l.who, text: l.text }); });
     return lines;
   }
@@ -510,8 +516,15 @@ var Game = (function () {
     await Engine.fade(0, .5);
     var lines = wakeLines(s, note);
     G.wake = null;
-    if (s.floor.fur + s.floor.dust >= 4 && !s.seen.cleanDay) { s.seen.cleanDay = true; lines.push(me('바닥에 털이랑 먼지가 꽤 쌓였네. 오늘은 청소부터 할까.')); }
+    if (s.floor.fur + s.floor.dust >= 4 && !s.seen.cleanDay) { s.seen.cleanDay = true; lines.push(me('털 뭉치는 빗자루로, 먼지 발자국은 대걸레로. 오늘은 청소부터 할까.')); }
     if (lines.length) await say(lines);
+    // 첫 주말 아침: 슈퍼 사장님의 알바 문자
+    if (!s.seen.jobText) {
+      s.seen.jobText = true;
+      var m = Story.phone.job;
+      await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body }, '9:40');
+      await say([me('네 시간에 5,000원... 사료값이 모자라면 해 볼 만하겠다.'), me('대신 몸은 고되고, ' + Life.josa(s.cat, 'subject') + ' 또 혼자 있겠지.')]);
+    }
     await evening();
   }
   async function weekendShop() {

@@ -310,7 +310,7 @@ var UI = (function () {
     var d = Life.DAYS[t.day], h = '';
     h += '<h3>' + esc(d.date + ' (' + d.wd + ')') + '</h3><div class="sub">' + esc(s.me) + ' · ' + esc(s.cat) + '</div>';
     var earned = t.earned.map(function (e) {
-      return e.key === 'allowance' ? line('활동비', wonSigned(e.amount), 'plus') : line(Story.PRODUCT[e.need] + (e.pet ? ' + ' + Story.PRODUCT.pet : ''), wonSigned(e.amount), 'plus', clientName(e.id) + (e.bonus ? ' · 성과급 ×' + Life.BONUS : ''));
+      return e.key === 'allowance' ? line('활동비', wonSigned(e.amount), 'plus') : e.key === 'job' ? line('슈퍼 알바', wonSigned(e.amount), 'plus', '진열 정리 4시간') : line(Story.PRODUCT[e.need] + (e.pet ? ' + ' + Story.PRODUCT.pet : ''), wonSigned(e.amount), 'plus', clientName(e.id) + (e.bonus ? ' · 성과급 ×' + Life.BONUS : ''));
     }).join('') + t.lost.map(function (l) { return line(clientName(l.id), '0원', 'minus', Story.LOST[l.why]); }).join('');
     h += sec('coin', '번 돈', earned);
     h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
