@@ -61,11 +61,28 @@ var Engine = (function () {
   function blocked() { return UI.busy() || G.acting > 0 || G.fade > .4; }
 
   // ---------- 누르기와 끌기 ----------
+  // 행동 하나(누른 곳으로 걸어가서 하는 일)는 한 번에 하나만 한다.
+  // 다만 그곳으로 걸어가는 동안에 다른 곳을 누르면 앞의 행동은 취소하고 새로 누른 곳으로 간다.
+  var current = null;
   function run(fn) {
     if (G.acting) return;
     G.acting++;
-    var done = function () { G.acting = Math.max(0, G.acting - 1); };
+    var me = { cancelled: false };
+    current = me;
+    var done = function () { if (me.cancelled) return; G.acting = Math.max(0, G.acting - 1); if (current === me) current = null; };
     try { Promise.resolve(fn()).then(done, function (e) { console.error(e); done(); }); } catch (e) { console.error(e); done(); }
+    current = me.cancelled ? null : current;
+  }
+  // 지금 하는 행동이 아직 처음 걸음 중이면 취소할 수 있다
+  function cancelable() {
+    return !!current && !current.cancelled && G.hero.walking && arrivals.some(function (a) { return a.token === current; });
+  }
+  function cancelAction() {
+    var me = current; if (!me) return;
+    me.cancelled = true; current = null;
+    arrivals = arrivals.filter(function (a) { return a.token !== me; }); // 이 걸음의 다음 단계는 영영 오지 않는다
+    G.acting = Math.max(0, G.acting - 1);
+    G.hero.tx = null; G.hero.pose = null;
   }
   function chipsFor(spot) {
     if (!spot || !spot.chips) { UI.chips(null); return; }
@@ -77,6 +94,7 @@ var Engine = (function () {
   function down(e) {
     if (e.button !== undefined && e.button > 0) return;
     G.pointerType = e.pointerType || 'mouse';
+    if (G.acting && !UI.busy() && G.fade <= .4 && cancelable()) cancelAction();
     if (blocked()) return;
     var p = toLogical(e), spot = hit(p);
     if (e.pointerType !== 'mouse') { G.hover = spot; chipsFor(spot); clearTimeout(touchHide); }
@@ -129,7 +147,8 @@ var Engine = (function () {
     opts = opts || {};
     G.hero.tx = Math.max(24, Math.min(616, x));
     if (opts.speed) G.hero.speed = opts.speed;
-    return new Promise(function (resolve) { arrivals.push(resolve); });
+    var token = current; // 누른 행동 안에서 바로 부른 걸음만 취소할 수 있다
+    return new Promise(function (resolve) { arrivals.push({ resolve: resolve, token: token }); });
   }
   function catTo(x, opts) {
     opts = opts || {};
@@ -141,7 +160,7 @@ var Engine = (function () {
     var h = G.hero;
     if (h.tx !== null && h.tx !== undefined) {
       var dx = h.tx - h.x, step = h.speed * dt;
-      if (Math.abs(dx) <= step) { h.x = h.tx; h.tx = null; h.walking = false; var a = arrivals; arrivals = []; a.forEach(function (f) { f(); }); }
+      if (Math.abs(dx) <= step) { h.x = h.tx; h.tx = null; h.walking = false; var a = arrivals; arrivals = []; a.forEach(function (f) { f.resolve(); }); }
       else { h.x += Math.sign(dx) * step; h.dir = dx > 0 ? 1 : -1; h.walking = true; }
     } else h.walking = false;
     var k = G.cat;
@@ -152,7 +171,7 @@ var Engine = (function () {
       else { k.x += Math.sign(cx) * cs; k.dir = cx > 0 ? 1 : -1; k.walking = true; }
     } else k.walking = false;
   }
-  function stopActors() { G.hero.tx = null; G.cat.tx = null; var a = arrivals.concat(catArrivals); arrivals = []; catArrivals = []; a.forEach(function (f) { f(); }); }
+  function stopActors() { G.hero.tx = null; G.cat.tx = null; var a = arrivals.map(function (x) { return x.resolve; }).concat(catArrivals); arrivals = []; catArrivals = []; a.forEach(function (f) { f(); }); }
 
   function fade(to, sec) {
     sec = sec || .45;
@@ -181,6 +200,7 @@ var Engine = (function () {
     if (G.draw) G.draw(c);
     if (G.hover && !G.drag && !UI.busy() && G.hover.glow !== false) View.outline(c, G.hover, G.t);
     if (G.outlineAll) G.hot.forEach(function (s) { if (!s.off && s.glow !== false) View.outline(c, s, G.t); });
+    else if (!UI.busy()) G.hot.forEach(function (s) { if (s.pulse && s !== G.hover) View.outline(c, s, G.t); }); // 꼭 봐야 할 곳은 계속 빛난다
     if (G.guide && !UI.busy()) View.arrow(c, G.guide.x, G.guide.y, G.t, G.guide.dir);
     if (G.hand) drawHand();
     View.fx(c, G);
@@ -190,9 +210,13 @@ var Engine = (function () {
   // 안내 손: from에서 to로 누른 채 움직이는 모양을 반복해서 보여 준다
   function drawHand() {
     var h = G.hand, q = ((G.t - (h.t0 || 0)) % (h.period || 2)) / (h.period || 2), x, y, press;
-    if (h.shake) { x = h.x + Math.sin(q * Math.PI * 8) * 18 * (q < .7 ? 1 : 0); y = h.y; press = q > .08 && q < .9; }
+    if (h.shake) {
+      x = h.x + Math.sin(q * Math.PI * 8) * 18 * (q < .7 ? 1 : 0); y = h.y; press = q > .08 && q < .9;
+      if (q >= .7 && q < .9) View.icon(c, 'pause', x + 26, y - 30, 2); // 흔들다가 멈춘다
+    }
     else if (h.stroke) { x = h.x + (q < .5 ? q * 2 : 2 - q * 2) * h.dx; y = h.y + Math.sin(q * Math.PI * 2) * 2; press = q > .05 && q < .95; }
     else { var e = Math.min(1, Math.max(0, (q - .15) / .6)); x = h.x + (h.tx - h.x) * e; y = h.y + (h.ty - h.y) * e; press = q > .1 && q < .8; }
+    if (h.carry && press) h.carry(c, x, y); // 손이 집어 든 것 (예: 상담 카드)
     View.ghostHand(c, G, x, y, press, G.t);
   }
   function frame(now) {

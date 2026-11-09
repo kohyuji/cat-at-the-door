@@ -13,13 +13,14 @@ var Life = (function () {
 
   // 시계 (분)
   var T = {
-    wake: 465, wokeWake: 475, leaveBy: 490, commute: 50, assembly: 540,
+    wake: 460, wokeWake: 470, leaveBy: 490, commute: 50, assembly: 540,
     dress: 6, roller: 6, feed: 5, water: 3, scoop: 6, sand: 6, pet: 4, coffee: 3,
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 60
+    play: 40, rest: 60, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
   };
+  var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
   var PRODUCTS = {
     dental: { pay: 6000 }, pet: { pay: 5000 }, car: { pay: 5000 },
@@ -55,8 +56,10 @@ var Life = (function () {
 
   // 고객 15명. need는 원하는 상품, mark는 고객 메모에 적힌 특징.
   // 첫 고객(c1)은 털 알레르기가 있다: 첫날 아침 정장에 붙은 털 때문에 반드시 계약을 놓친다.
+  // 첫날은 두 명: 늦어서 첫 고객을 놓쳐도 오후 고객과 상담을 배운다.
   var CLIENTS = {
-    c1: { day: 1, need: 'dental', mark: 'sneeze', tutorial: true },
+    c1: { day: 1, need: 'dental', mark: 'sneeze' },
+    c16: { day: 1, need: 'home', mark: 'none' },
     c2: { day: 2, need: 'travel', mark: 'none' },
     c3: { day: 3, need: 'car', mark: 'none' },
     c4: { day: 3, need: 'dental', mark: 'sneeze' },
@@ -72,7 +75,7 @@ var Life = (function () {
     c14: { day: 11, need: 'car', mark: 'none' },
     c15: { day: 12, need: 'home', mark: 'none' }
   };
-  var CLIENT_IDS = Object.keys(CLIENTS);
+  var CLIENT_IDS = Object.keys(CLIENTS); // c1, c16(같은 날 오후), c2 ... 순서는 날짜 안에서만 의미가 있다
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function cleanName(n, fallback) {
@@ -103,7 +106,7 @@ var Life = (function () {
       litter: { poop: 0, sand: 2 },
       floor: { fur: 1, dust: 0 },
       toy: TOY_PLAYS,
-      fur: 0, wearing: 'hoodie',
+      fur: 0, smell: 0, locked: false, wearing: 'hoodie',
       owned: { roller: false, tower: false, feeder: false, robot: false, autoToy: false }, autoToyLeft: 0, jobbed: false,
       pantry: { sand: 0, coffee: 0, lunch: 0 },
       coffee: false, lateCoffee: false, shopped: false,
@@ -169,8 +172,10 @@ var Life = (function () {
     s.water = true;
     return { ok: true, minutes: spend(s, T.water) };
   }
+  // 모래가 다 떨어지면 똥이 바닥에 눌어붙어 퍼낼 수 없다. 새 모래를 부어야 한다.
   function scoop(s) {
     if (s.litter.poop <= 0) return { ok: false, why: 'clean' };
+    if (s.litter.sand <= 0) return { ok: false, why: 'noSand' };
     s.litter.poop = 0;
     return { ok: true, minutes: spend(s, T.scoop) };
   }
@@ -184,11 +189,13 @@ var Life = (function () {
   }
   function pet(s) {
     if (s.hidden) return { ok: false, why: 'hidden' };
-    var first = !s.petted;
+    var first = !s.petted, furred = false;
     s.petted = true;
     var minutes = spend(s, T.pet);
     if (first) heart(s, +1, 'pet');
-    return { ok: true, minutes: minutes, first: first };
+    // 정장을 입고 안아 주면 털이 묻는다
+    if (s.wearing === 'suit' && s.fur < 3) { s.fur++; furred = true; s.today.notes.push('petFur'); }
+    return { ok: true, minutes: minutes, first: first, fur: furred };
   }
   function missMeal(s, which) {
     if (s.owned.feeder && s.food.dry > 0) {
@@ -237,7 +244,7 @@ var Life = (function () {
   function search(s, spot) {
     if (!s.hidden || day(s).kind !== 'work' || !day(s).hide) return { ok: false };
     var minutes = spend(s, T.search);
-    if (spot === 'drawer') { s.hidden = false; event(s, 'drawer'); return { ok: true, found: true, minutes: minutes }; }
+    if (spot === 'drawer') { var late = s.locked; s.hidden = false; s.locked = false; event(s, late ? 'drawerLate' : 'drawer'); return { ok: true, found: true, late: late, minutes: minutes }; }
     return { ok: true, found: false, minutes: minutes };
   }
 
@@ -251,7 +258,6 @@ var Life = (function () {
     if (kind === 'sweep' && s.floor.fur <= 0) return 'clean';
     if (kind === 'mop' && s.floor.dust <= 0) return 'clean';
     if (kind === 'curtain' && (!day(s).storm || s.stormDone || s.phase !== 'evening')) return 'noStorm';
-    if (kind === 'shop' && s.phase !== 'weekend') return 'noShop';
     return null;
   }
   function act(s, kind) {
@@ -264,7 +270,7 @@ var Life = (function () {
     else if (kind === 'sweep') { s.floor.fur = 0; }
     else if (kind === 'mop') { s.floor.dust = 0; }
     else if (kind === 'curtain') { s.stormDone = true; s.hidden = false; heart(s, +1, 'curtain'); event(s, 'curtain'); }
-    else if (kind === 'shop') { s.shopped = true; }
+    else if (kind === 'shop') { s.trips = (s.trips || 0) + 1; }
     r.minutes = spend(s, { play: T.play, rest: T.rest, prep: T.prep, sweep: T.sweep, mop: T.mop, curtain: T.curtain, shop: T.shopTrip }[kind]);
     return r;
   }
@@ -292,11 +298,16 @@ var Life = (function () {
   }
 
   // ---------- 출근 ----------
+  // 화장실에 똥을 두고 나가면 옷에 냄새가 밴다 (하나면 −1, 쌓였으면 −2)
+  function smellOf(poop) { return poop >= 3 ? 2 : poop >= 1 ? 1 : 0; }
   function leaveHome(s) {
     if (s.wearing !== 'suit') return { ok: false, why: 'noSuit' };
     s.left = s.minute;
     s.late = Math.max(0, s.minute + T.commute - T.assembly);
-    if (s.hidden) s.today.notes.push('leftHidden');
+    s.smell = smellOf(s.litter.poop);
+    if (s.smell) s.today.notes.push('smell');
+    // 못 찾은 고양이는 서랍 속에 갇힌 채 하루를 보낸다
+    if (s.hidden) { s.today.notes.push('leftHidden'); s.locked = true; }
     switchMeal(s);
     s.phase = 'work';
     s.minute = s.left + T.commute;
@@ -312,7 +323,10 @@ var Life = (function () {
     if (c.evening) eff = s.energy - 2; // 저녁 8시에는 하루 일한 만큼 지쳐 있다
     var busy = c.mark === 'clock', first = id === firstClient(s) && !c.evening;
     // 늦으면 첫 고객은 기다리다 가 버린다
-    if (first && s.late > 0) return { id: id, need: c.need, mark: c.mark, leaves: true, mood: 0, reasons: [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }], steps: [], tutorial: !!c.tutorial };
+    if (first && s.late > 0) return { id: id, need: c.need, mark: c.mark, leaves: true, mood: 0, reasons: [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }], steps: [], tutorial: false };
+    // 처음으로 직접 하는 상담은 선배가 옆에서 알려 주고, 시간 제한이 없다
+    var tutorial = !(s.seen && s.seen.consulted);
+    if (s.smell) { mood -= s.smell; reasons.push({ key: s.smell > 1 ? 'stink' : 'smell', delta: -s.smell }); }
     if (fur) {
       if (c.mark === 'sneeze') { mood -= 2; reasons.push({ key: 'sneeze', delta: -2 }); }
       else if (c.mark === 'cat') { mood += 1; reasons.push({ key: 'catLover', delta: +1 }); }
@@ -325,9 +339,9 @@ var Life = (function () {
     steps.push('contract');
     return {
       id: id, need: c.need, mark: c.mark, mood: clamp(mood, 0, 4), reasons: reasons, steps: steps,
-      timer: c.tutorial ? 0 : busy ? 3.5 : 5,
+      timer: tutorial ? 0 : busy ? 3.5 : 5,
       blur: eff >= 1 && eff <= 2, blink: eff <= 0,
-      prepared: !!s.prepared[id], tutorial: !!c.tutorial, evening: !!c.evening, leaves: false, fur: fur
+      prepared: !!s.prepared[id], tutorial: tutorial, evening: !!c.evening, leaves: false, fur: fur, smell: s.smell || 0
     };
   }
   function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false }; }
@@ -346,7 +360,7 @@ var Life = (function () {
   function timeout(p, st) { if (st.done || !p.timer) return st.mood; st.mood = clamp(st.mood - 1, 0, 4); st.slow++; return st.mood; }
   function lossReason(p, st) {
     if (p.leaves) return p.reasons[0] ? p.reasons[0].key : 'lateLeft';
-    var order = ['sneeze', 'fur', 'yawn'];
+    var order = ['sneeze', 'stink', 'smell', 'fur', 'yawn'];
     if (st.wrong) return 'mistake';
     for (var i = 0; i < order.length; i++) {
       for (var j = 0; j < p.reasons.length; j++) if (p.reasons[j].key === order[i]) return order[i];
@@ -357,6 +371,7 @@ var Life = (function () {
   function finish(s, p, st) {
     var signed = !p.leaves && !!st.signed;
     var r = { id: p.id, day: s.day, need: p.need, signed: signed, pet: signed && p.steps.indexOf('pet') >= 0, pay: 0, why: null, bonus: false, goal: false };
+    if (!p.leaves) s.seen.consulted = true;
     if (signed) {
       r.bonus = s.contracts >= GOAL;
       r.pay = payFor(s, p.need) + (r.pet ? payFor(s, 'pet') : 0);
@@ -369,9 +384,9 @@ var Life = (function () {
       if (p.evening) event(s, 'groupSigned');
     } else {
       r.why = lossReason(p, st);
-      // 털 알레르기 고객을 털 묻은 정장으로 놓친 첫날, 선배가 돌돌이 이야기를 해 준다
-      var sneezed = p.reasons.some(function (x) { return x.key === 'sneeze'; });
-      if (sneezed && !s.seen.furLost) { s.seen.furLost = true; event(s, 'furLost', { id: p.id }); }
+      // 털 묻은 정장으로 처음 계약을 놓친 날, 선배가 돌돌이 이야기를 해 준다
+      var furry = p.reasons.some(function (x) { return x.key === 'sneeze' || x.key === 'fur'; });
+      if (furry && !s.seen.furLost) { s.seen.furLost = true; event(s, 'furLost', { id: p.id }); }
     }
     s.results.push(r);
     return r;
@@ -401,21 +416,26 @@ var Life = (function () {
   }
 
   // ---------- 가게 ----------
-  function buyBlock(s, item) {
+  function lateNight(s) { return (s.phase === 'evening' || s.phase === 'weekend') && s.minute >= T.bedtime; }
+  function price(s, item) {
+    var it = SHOP[item]; if (!it) return 0;
+    return lateNight(s) ? Math.ceil(it.price * NIGHT_RATE / 500) * 500 : it.price;
+  }
+  function buyBlock(s, item, extra) {
     var it = SHOP[item];
     if (!it) return 'unknown';
     if (it.from && s.day < it.from) return 'notYet';
     if (it.once && s.owned[item] && !(item === 'autoToy' && s.autoToyLeft <= 0)) return 'owned';
-    if (s.wallet < it.price) return 'money';
+    if (s.wallet - (extra || 0) < price(s, item)) return 'money';
     return null;
   }
   function onShelf(s, item) { var it = SHOP[item]; return !!it && !(it.from && s.day < it.from); }
   function buy(s, item) {
     var why = buyBlock(s, item);
     if (why) return { ok: false, why: why };
-    var price = SHOP[item].price;
-    s.wallet -= price;
-    s.today.spent.push({ item: item, amount: price });
+    var cost = price(s, item);
+    s.wallet -= cost;
+    s.today.spent.push({ item: item, amount: cost });
     if (item === 'dry') s.food.dry += DRY_MEALS;
     else if (item === 'wet') s.food.wet += WET_MEALS;
     else if (item === 'toy') s.toy += TOY_PLAYS;
@@ -457,11 +477,13 @@ var Life = (function () {
     s.meal = 'pm';
     if (s.bowl !== 'empty' && !s.fed.pm) s.bowl = 'empty';
     s.rested = 0;
-    s.wearing = 'hoodie';
+    s.wearing = 'hoodie'; s.smell = 0;
     // 혼자 보낸 하루. 캣타워가 있으면 창밖을 보며 덜 심심했다.
     if (day(s).kind === 'work') { if (s.owned.tower) heart(s, -1, 'aloneTower'); else heart(s, -2, 'alone'); }
-    s.hidden = !!day(s).storm; // 천둥 치는 밤에는 숨는다. 아침에 숨었던 것은 저녁에 나온다
-    return {};
+    s.hidden = !!day(s).storm; // 천둥 치는 밤에는 숨는다
+    // 아침에 못 찾고 나간 날: 서랍 속에 하루 종일 갇혀 있었다. 찾아 줄 때까지 안 나온다.
+    if (s.locked) { heart(s, -1, 'locked'); s.hidden = true; }
+    return { locked: !!s.locked };
   }
   // 주말 오후 3시 전에 침대에 누우면 낮잠이다. 오후 3시에 깨고, 고양이 저녁 끼니가 시작된다.
   function napFirst(s) { return s.phase === 'weekend' && s.meal === 'am'; }
@@ -490,6 +512,7 @@ var Life = (function () {
     var hungry = !s.fed.pm ? missMeal(s, 'pm') : false;
     if (!s.water) heart(s, -1, 'dry');
     if (s.floor.dust >= 3) heart(s, -1, 'dusty');
+    if (day(s).storm && !s.stormDone) { heart(s, -1, 'stormAlone'); event(s, 'stormAlone'); }
     var autoPlayed = !s.played && autoToyOn(s) && !s.hidden;
     var together = s.door === 'open' && !s.hidden;
     if (together) {
@@ -526,7 +549,7 @@ var Life = (function () {
     var d = day(s);
     s.fed = { am: false, pm: false }; s.meal = 'am'; s.bowl = 'empty';
     s.water = false; s.played = false; s.petted = false; s.rested = 0;
-    s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0;
+    s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0; s.smell = 0; s.locked = false; s.trips = 0;
     s.wearing = 'hoodie';
     s.hidden = !!d.hide;
     s.litter.poop++;
@@ -559,12 +582,18 @@ var Life = (function () {
     s.ended = 'evaluation';
     return s.evaluated;
   }
+  // 엔딩 8개: 좋음 1, 보통 3, 나쁨 3, 숨은 엔딩 1
+  var ENDINGS = ['family', 'both', 'soso', 'catStays', 'clumsy', 'oneBody', 'again', 'emptyBowl'];
+  var GRADE = { family: 'hidden', both: 'good', soso: 'normal', catStays: 'normal', clumsy: 'normal', oneBody: 'bad', again: 'bad', emptyBowl: 'bad' };
+  function has(s, key) { return s.events.some(function (e) { return e.key === key; }); }
+  // 숨은 엔딩: 목표를 채우고, 마음을 가득 채우고, 한 끼도 굶기지 않고, 천둥 치던 밤과 서랍 속 아침을 둘 다 지켜 준 사람
+  function family(s) { return s.contracts >= GOAL && s.hearts >= MAX && s.missed === 0 && has(s, 'curtain') && has(s, 'drawer'); }
   function ending(s) {
-    if (s.missed > 3) return { key: 'emptyBowl', pass: false, hearts: s.hearts, contracts: s.contracts };
+    if (s.missed > 3) return { key: 'emptyBowl', grade: 'bad', pass: false, hearts: s.hearts, contracts: s.contracts };
     var band = s.hearts >= 4 ? 'close' : s.hearts >= 2 ? 'mid' : 'far';
     var pass = s.contracts >= GOAL;
-    var key = { close: pass ? 'both' : 'catStays', mid: pass ? 'soso' : 'clumsy', far: pass ? 'oneBody' : 'again' }[band];
-    return { key: key, band: band, pass: pass, hearts: s.hearts, contracts: s.contracts };
+    var key = family(s) ? 'family' : { close: pass ? 'both' : 'catStays', mid: pass ? 'soso' : 'clumsy', far: pass ? 'oneBody' : 'again' }[band];
+    return { key: key, grade: GRADE[key], band: band, pass: pass, hearts: s.hearts, contracts: s.contracts };
   }
 
   // ---------- 저장 ----------
@@ -606,7 +635,8 @@ var Life = (function () {
     act: act, doBlock: doBlock, homeTime: homeTime,
     leaveHome: leaveHome, plan: plan, consult: consult, wants: wants, answer: answer, timeout: timeout, finish: finish, payFor: payFor,
     decideGroup: decideGroup, leaveOffice: leaveOffice,
-    buy: buy, buyBlock: buyBlock, unbuy: unbuy,
+    buy: buy, buyBlock: buyBlock, unbuy: unbuy, price: price, lateNight: lateNight, NIGHT_RATE: NIGHT_RATE, smellOf: smellOf,
+    ENDINGS: ENDINGS, GRADE: GRADE,
     arriveHome: arriveHome, napFirst: napFirst, nap: nap, toBed: toBed, setDoor: setDoor, needsPOV: needsPOV, unplayed: unplayed, sleepGain: sleepGain, sleep: sleep, morning: morning,
     evaluate: evaluate, ending: ending,
     save: save, load: load,

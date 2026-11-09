@@ -10,6 +10,12 @@ var Work = (function () {
   function inside(p, r) { return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; }
   var say = function (l) { return UI.say(l); };
 
+  // 정장에 붙은 털과 옷에 밴 냄새는 집 밖에서도 그대로 보인다
+  function heroMarks(c, x, footY) {
+    var s = S(); if (!s || (G.pro && G.pro.active)) return;
+    if (s.wearing === 'suit' && s.fur > 0) Home.furOn(c, x, footY - 96, s.fur, 1);
+    if (s.smell) Home.stinkLines(c, x + 2, footY - 98, s.smell + 1, G.t);
+  }
   // ---------- 지하철 ----------
   function drawTrain(c) {
     View.bg(c, G, 'train');
@@ -23,6 +29,7 @@ var Work = (function () {
     // 의자에 앉은 승객 넷 (codex-v5 R6 그림). 주인공은 가운데 손잡이 아래에 선다.
     SEATS.forEach(function (st) { View.commuter(c, G, st[0], 306, st[1], st[2]); });
     View.person(c, G, G.hero.x, 344, G.s && G.s.wearing === 'suit' ? 'suit' : 'hoodie', 1, t, 'stand', 2.35);
+    heroMarks(c, G.hero.x, 344);
     if (Wk.dark) View.nightTint(c, .35);
   }
   var SEATS = [[96, 0, false], [203, 1, false], [426, 2, true], [540, 3, true]];
@@ -33,9 +40,22 @@ var Work = (function () {
   }
 
   // ---------- 지점 ----------
+  // 사무실 벽시계: 그림 속 바늘을 지우고 지금 시각으로 다시 그린다 (위쪽 시계와 같은 시각)
+  function officeClock(c, minute) {
+    var cx = 463.2, cy = 63.9, h = (minute / 60) % 12, m = minute % 60;
+    c.save();
+    c.fillStyle = '#fdefda'; c.beginPath(); c.arc(cx, cy, 10.6, 0, Math.PI * 2); c.fill();
+    c.lineCap = 'round';
+    function hand(a, len, w, col) { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.sin(a) * len, cy - Math.cos(a) * len); c.stroke(); }
+    hand(h / 12 * Math.PI * 2, 7, 2, '#394258');
+    hand(m / 60 * Math.PI * 2, 10, 1.2, '#e8604a');
+    c.fillStyle = '#394258'; c.beginPath(); c.arc(cx, cy, 1.4, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
   function drawOffice(c) {
     var s = S(), t = G.t;
     View.bg(c, G, 'office');
+    officeClock(c, s.minute);
     View.chart(c, 384, 78, 60, 60, s, false, Wk.glow > G.t ? G.t : 0);
     var night = Wk.dark;
     var people = [
@@ -47,15 +67,33 @@ var Work = (function () {
       if (!p.show) return;
       View.shadow(c, p.x, 337, 20);
       View.person(c, G, p.x, 336, p.v, p.d, t, p.hero && G.hero.walking ? 'walk' : 'stand', 2.35);
-      if (p.hero && s.fur > 0) Home.furOn(c, p.x, 336 - 96, s.fur, 1);
+      if (p.hero) heroMarks(c, p.x, 336);
+      // 퇴근 전: 아직 이야기 안 한 사람 머리 위에 말풍선
+      if (!p.hero && Wk.talkable && !Wk.talked[p.v === 'lead' ? 'lead' : 'peer']) View.icon(c, 'talk', p.x + 10, 200 + Math.round(Math.sin(t * 4 + p.x) * 3), 2);
     });
     (Wk.look.marks || []).forEach(function (m) { View.icon(c, 'bang', m, 228 + Math.sin(t * 8) * 2, 1); });
+    if (Wk.board) drawBoard(c);
+    if (Wk.chartHint && !Wk.chart) View.outline(c, { x: 384, y: 78, w: 60, h: 60 }, t);
     if (night) { View.nightTint(c, .45); View.lampGlow(c, 470, 150, 160, .25); }
     if (Wk.chart) drawChartBig(c);
   }
+  // 첫 조회: 지점장님이 상품 안내서를 칠판에 붙여 가며 이 일이 무엇인지 설명한다
+  function drawBoard(c) {
+    var q = Math.min(1, (G.t - Wk.board) / .35), x = 150, y = 34, w = 300, h = 128;
+    c.save(); c.globalAlpha = q;
+    View.box(c, x, y, w, h, '#fbfbf6', '#5b4636', 3);
+    View.r(c, x + 6, y + h - 6, w - 12, 3, '#c8c2b4');
+    ['dental', 'car', 'travel', 'home'].forEach(function (k, i) {
+      var bx = x + 44 + i * 70;
+      View.brochure(c, k, bx, y + 74 + (1 - q) * 10, .9, {});
+      View.text(c, Story.PRODUCT[k], bx, y + 112, 11, '#2f2a33');
+    });
+    View.text(c, '고객님 걱정  →  맞는 보험', x + w / 2, y + 18, 13, '#c0392b');
+    c.restore();
+  }
   function office(opts) {
     opts = opts || {};
-    Wk.dark = !!opts.night; Wk.look = {};
+    Wk.dark = !!opts.night; Wk.look = {}; Wk.talkable = false; Wk.board = 0; Wk.chartHint = false;
     Engine.setScene({ draw: drawOffice, place: 'office' });
   }
   function assembly() {
@@ -66,11 +104,18 @@ var Work = (function () {
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(470); }).then(function () {
       workClock(Life.T.assembly);
       if (late) { Wk.look.marks = [Wk.lead.x, Wk.peer.x]; UI.sfx('bad'); }
-      return say(Story.assembly(s, late).map(function (l) { return { who: l.who, text: l.text }; }));
-    }).then(function () { Wk.look = {}; });
+      return say(Story.assembly(s, late).map(function (l) {
+        return { who: l.who, text: l.text, on: function () {
+          if (l.board && !Wk.board) { Wk.board = G.t; UI.sfx('page'); }
+          if (!l.board) Wk.board = 0;
+          if (l.chart) Wk.glow = G.t + 4;
+        } };
+      }));
+    }).then(function () { Wk.look = {}; Wk.board = 0; });
   }
-  // 털 때문에 첫 계약을 놓친 날: 상담이 끝난 뒤에야 선배가 이유를 알려 준다
-  function seniorLesson() {
+  // 털 때문에 첫 계약을 놓친 날: 상담이 끝난 뒤에야 선배가 이유를 알려 준다.
+  // 오후 상담이 남았으면 선배가 자기 돌돌이로 털을 떼 준다.
+  function seniorLesson(sneezed, lend) {
     var s = S();
     office(); Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
     G.hero.x = 470; G.hero.dir = -1;
@@ -82,7 +127,14 @@ var Work = (function () {
     }).then(function () {
       Wk.look.marks = [Wk.peer.x];
       for (var i = 0; i < 4; i++) Engine.puff({ x: G.hero.x - 14 + i * 8, y: 250 + i * 6, icon: 'fur', px: 1, life: 1.2, rise: 6 });
-      return say(Story.senior(s));
+      return say(Story.senior(s, sneezed, lend).map(function (l) {
+        return { who: l.who, text: l.text, on: l.lend ? function () {
+          Wk.look = {};
+          UI.sfx('scoop');
+          for (var k = 0; k < 6; k++) Engine.puff({ x: G.hero.x - 16 + k * 6, y: 236 + k * 7, icon: 'fur', px: 1, life: .9, rise: -14 });
+          s.fur = 0;
+        } : null };
+      }));
     }).then(function () { Wk.look = {}; s.seen.rollerTip = true; });
   }
   // 목표 8건을 채운 순간
@@ -124,6 +176,7 @@ var Work = (function () {
     // 탁자와 두 사람 (옆모습)
     View.seated(c, G, 196, 262, 'suit', k.heroFrame || 0, 2.5, null, false);
     if (s.fur > 0 && k.p.fur) Home.furOn(c, 198, 262 - 84, s.fur, 1); // 무릎 위 정장 소매와 가슴께
+    if (k.p.smell) Home.stinkLines(c, 204, 150, k.p.smell + 1, t);
     if (k.peer) View.person(c, G, 110, 268, 'peer', 1, t, 'stand', 2.2);
     var cl = Story.CLIENT[k.id];
     if (!k.gone) View.seated(c, G, 446 + (k.shake ? Math.sin(t * 40) * 3 : 0), 262, cl.look, 0, 2.5, cl.tint, false);
@@ -154,6 +207,15 @@ var Work = (function () {
       var pos = trayPos(kinds, i), top = k.p.prepared && kind === k.p.need;
       View.brochure(c, kind, pos.x, pos.y - (top ? 10 : 0), .95, { blur: k.p.blur || k.p.blink, t: t, top: top });
     });
+    // 처음 하는 상담: 놓을 곳(고객님 쪽)을 점선으로, 지금 낼 안내서를 통통 튀게
+    if (k.guide && k.ready && !k.st.done && !k.gone) {
+      var a = .55 + .45 * Math.sin(t * 5);
+      c.save(); c.strokeStyle = 'rgba(255,138,61,' + a + ')'; c.lineWidth = 3; c.setLineDash([8, 5]); c.lineDashOffset = -t * 24;
+      c.strokeRect(DROP.x + 60, DROP.y + 100, 150, 160); c.restore();
+      if (k.held) View.arrow(c, 446, DROP.y + 96, t, 'down');
+      var wk = Life.wants(k.p, k.st), ki = kinds.indexOf(wk);
+      if (ki >= 0 && !(k.held && k.held.kind === wk)) { var gp = trayPos(kinds, ki); View.outline(c, { x: gp.x - 24, y: gp.y - 32 - Math.abs(Math.sin(t * 4)) * 6, w: 48, h: 62 }, t); }
+    }
     if (k.held) View.brochure(c, k.held.kind, k.held.x, k.held.y, 1.05, { lift: true, blur: k.p.blur || k.p.blink, t: t });
     // 체력 0: 하품하느라 눈앞이 깜빡인다
     if (k.p.blink) { var ph = (t % 3.6); if (ph < .35) { c.fillStyle = 'rgba(10,8,14,' + (ph < .17 ? ph / .17 : (.35 - ph) / .18) * .92 + ')'; c.fillRect(0, 0, 640, 360); } }
@@ -165,16 +227,18 @@ var Work = (function () {
       var pos = trayPos(kinds, i);
       return {
         id: 'b-' + kind, x: pos.x - 24, y: pos.y - 32, w: 48, h: 62, glow: true,
+        // 누르기만 하면 안 된다: 끌어다 주는 손을 다시 보여 준다
+        tap: function () { cardHand(); UI.sfx('tap'); return null; },
         drag: {
-          start: function (d) { k.held = { kind: kind, x: d.x, y: d.y }; UI.sfx('page'); if (G.hand && G.hand.tutorial) G.hand = null; },
+          start: function (d) { k.held = { kind: kind, x: d.x, y: d.y }; UI.sfx('page'); if (G.hand && G.hand.tutorial) { k.hand = G.hand; G.hand = null; } },
           move: function (d) { if (k.held) { k.held.x = d.x; k.held.y = d.y; } },
           end: function (d) {
             var h = k.held; k.held = null;
-            if (!h || !inside(d, DROP)) return null;
+            if (!h || !inside(d, DROP)) { if (k.guide) cardHand(); return null; }
             k.drop = kind;
             return null;
           },
-          cancel: function () { k.held = null; }
+          cancel: function () { k.held = null; if (k.guide) cardHand(); }
         }
       };
     });
@@ -185,12 +249,22 @@ var Work = (function () {
     if (k.p.timer) { k.left -= dt; if (k.left <= 0) { k.left = k.p.timer; k.timeout = true; } }
     if (k.p.blink && (G.t % 3.6) < .02) UI.sfx('yawn');
   }
+  // 지금 낼 안내서에서 고객님 쪽으로 끌어 주는 손
+  function cardHand() {
+    var k = Wk.consult; if (!k || k.st.done) return;
+    var kinds = trayKinds(k.p), i = kinds.indexOf(Life.wants(k.p, k.st)); if (i < 0) return;
+    var pos = trayPos(kinds, i);
+    var kind = kinds[i];
+    G.hand = { x: pos.x, y: pos.y - 6, tx: 450, ty: 160, period: 2.2, t0: G.t, tutorial: true,
+      carry: function (c, x, y) { c.save(); c.globalAlpha = .8; View.brochure(c, kind, x, y + 6, .95, { t: G.t }); c.restore(); } };
+    if (!k.guide) setTimeout(function () { if (G.hand && G.hand.tutorial && Wk.consult === k && !k.guide) G.hand = null; }, 4400);
+  }
   function consult(id, opts) {
     opts = opts || {};
     var s = S(), p = Life.plan(s, id), st = Life.consult(p), k;
     k = Wk.consult = { id: id, p: p, st: st, left: p.timer, ready: false, gone: !!p.leaves, peer: !!p.tutorial, heroFrame: 0 };
     Engine.setScene({ draw: drawConsult, hot: hotConsult, tick: tickConsult, place: 'consult' });
-    var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', prepared: 'mail', yawn: 'zzz' };
+    var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
     return Engine.fade(0, .35).then(function () {
       if (p.leaves) return say([me(Story.CAUSE[p.reasons[0].key] || Story.CAUSE.lateLeft)]).then(function () { return Life.finish(s, p, st); });
       return say([client(id, Story.CONSULT.greet), client(id, (Story.HINT[p.need] || {}).say || Story.CONSULT.greet)]).then(function () {
@@ -200,16 +274,17 @@ var Work = (function () {
             var ic = CAUSE_ICON[r.key];
             if (r.key === 'sneeze') UI.sfx('sneeze');
             if (r.key === 'yawn') { UI.sfx('yawn'); Engine.puff({ x: 210, y: 150, icon: ic, px: 2, life: 1.6 }); }
+            else if (r.key === 'smell' || r.key === 'stink') { // 고객님이 몸을 뒤로 빼며 코를 찡그린다
+              UI.sfx('bad'); k.shake = true; setTimeout(function () { k.shake = false; }, 700);
+              Engine.puff({ x: 300, y: 170, icon: 'stink', px: 2, life: 1.6, rise: 30 }); Engine.puff({ x: 456, y: 140, icon: 'bang', px: 2, life: 1.4 });
+            }
             else Engine.puff({ x: 456, y: 150, icon: ic, px: 2, life: 1.6 });
             return say([me(Story.CAUSE[r.key === 'sneeze' && !s.seen.furLost ? 'sneezeFirst' : r.key])]);
           });
         }, Promise.resolve());
       }).then(function () {
         if (!p.tutorial) return null;
-        return say(Story.TUTORIAL).then(function () {
-          var kinds = trayKinds(p), i = kinds.indexOf(p.need), pos = trayPos(kinds, i);
-          G.hand = { x: pos.x, y: pos.y - 6, tx: 450, ty: 150, period: 2.2, t0: G.t, tutorial: true };
-        });
+        return say(Story.TUTORIAL).then(function () { k.guide = true; k.ready = true; cardHand(); });
       }).then(function () { k.ready = true; k.left = p.timer; return loop(); });
     });
     function loop() {
@@ -230,14 +305,14 @@ var Work = (function () {
         }
         UI.sfx('good'); k.heroFrame = 1;
         setTimeout(function () { k.heroFrame = 0; }, 500);
-        if (!r.done) return next();
+        if (!r.done) { if (k.guide) cardHand(); return next(); }
         if (r.signed) return say([client(id, Story.CONSULT.signed)]).then(done);
         return say([client(id, Story.CONSULT.lost)]).then(function () { k.gone = true; return done(); });
       });
     }
     function next() { return st.done ? done() : loop(); }
     function done() {
-      G.hand = null;
+      G.hand = null; k.guide = false;
       var res = Life.finish(s, p, st);
       if (!res.signed) return say([me(Story.CAUSE.lost)]).then(function () { return res; });
       return res;
@@ -255,7 +330,7 @@ var Work = (function () {
         return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
           results.push(res);
           var furLost = !res.signed && s.events.some(function (e) { return e.key === 'furLost' && e.day === s.day && e.id === res.id; });
-          if (furLost) return Engine.fade(1, .3).then(seniorLesson).then(function () { return Engine.fade(1, .3); });
+          if (furLost) return Engine.fade(1, .3).then(function () { return seniorLesson(res.why === 'sneeze', i < ids.length - 1); }).then(function () { return Engine.fade(1, .3); });
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(res.pet ? 2 : 1); })
             .then(function () { return res.goal ? goalParty() : null; });
@@ -291,15 +366,22 @@ var Work = (function () {
     Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
     G.hero.x = 470; G.hero.dir = 1;
     Life.leaveOffice(s);
+    Wk.talked = { lead: false, peer: false };
     function talk(who) {
       var p = Wk[who];
-      return Engine.walkTo(p.x + 56).then(function () { G.hero.dir = -1; p.dir = 1; return say(Story.officeTip(s, who)); });
+      return Engine.walkTo(p.x + 56).then(function () { G.hero.dir = -1; p.dir = 1; Wk.talked[who] = true; return say(Story.officeTip(s, who)); });
+    }
+    // 벽의 실적 그래프: 누르면 크게 본다 (다시 누르면 닫힌다)
+    function bigChart() {
+      return Engine.walkTo(414).then(function () { G.hero.pose = 'back'; UI.sfx('page'); Wk.chart = { fly: false, t0: G.t, view: true }; Wk.chartHint = false; s.seen.chartView = true; });
     }
     Engine.setScene({
       draw: drawOffice, place: 'office',
-      walk: function (p) { return Math.max(60, Math.min(600, p.x)); },
+      walk: function (p) { return Wk.chart ? null : Math.max(60, Math.min(600, p.x)); },
       hot: function () {
+        if (Wk.chart && Wk.chart.view) return [{ id: 'chartClose', x: 0, y: 0, w: 640, h: 360, glow: false, tap: function () { Wk.chart = null; G.hero.pose = null; return null; } }];
         var list = [];
+        list.push({ id: 'chart', x: 380, y: 74, w: 68, h: 68, tap: bigChart });
         if (!night) {
           list.push({ id: 'lead', x: Wk.lead.x - 22, y: 214, w: 44, h: 124, tap: function () { return talk('lead'); } });
           list.push({ id: 'peer', x: Wk.peer.x - 22, y: 214, w: 44, h: 124, tap: function () { return talk('peer'); } });
@@ -315,9 +397,14 @@ var Work = (function () {
       var lines = Story.leaveOffice(s, first);
       return lines.length ? say(lines) : null;
     }).then(function () {
-      if (first) G.guide = { x: EXIT.x + EXIT.w / 2, y: EXIT.y - 4, dir: 'down' };
+      Wk.talkable = !night;
+      Wk.chartHint = !s.seen.chartView;
+      if (first) { // 처음 퇴근할 때: 누를 수 있는 사람과 그래프를 한 번 다 빛낸다
+        G.outlineAll = true; setTimeout(function () { G.outlineAll = false; }, 2800);
+        G.guide = { x: EXIT.x + EXIT.w / 2, y: EXIT.y - 4, dir: 'down' };
+      }
       return Engine.until(function () { return out; });
-    }).then(function () { G.guide = null; G.hero.pose = null; return Engine.fade(1, .3); });
+    }).then(function () { G.guide = null; G.hero.pose = null; Wk.talkable = false; Wk.chartHint = false; Wk.chart = null; return Engine.fade(1, .3); });
   }
 
   // ---------- 거리 ----------
@@ -327,10 +414,12 @@ var Work = (function () {
     View.bg(c, G, st.winter ? 'streetWinter' : 'streetSpring');
     if (st.winter) PixelArt.rain(c, { x: 0, y: 0, w: 640, h: 360 }, t, 1);
     if (st.dusk) { c.fillStyle = 'rgba(255,150,90,.16)'; c.fillRect(0, 0, 640, 360); View.nightTint(c, .18); }
+    if (st.night) { View.nightTint(c, .5); View.lampGlow(c, 508, 220, 120, .3); }
     if (st.draw) st.draw(c);
     else {
       View.shadow(c, G.hero.x, 343, 20);
       View.person(c, G, G.hero.x, 342, G.s && G.s.wearing === 'suit' ? 'suit' : 'hoodie', G.hero.walking ? G.hero.dir : G.hero.dir, t, G.hero.walking ? 'walk' : 'stand', 2.35);
+      heroMarks(c, G.hero.x, 342);
     }
   }
   function street(opts) {
@@ -364,10 +453,12 @@ var Work = (function () {
   // 진열대 자리: 가운데 칸(y 160)과 아래 칸(y 222), 바닥. 이름은 물건 위에, 값은 아래에 붙인다.
   var SHELF = {
     dry: { x: 262, y: 160 }, wet: { x: 318, y: 160 }, roller: { x: 372, y: 160 }, coffee: { x: 424, y: 160 }, lunch: { x: 478, y: 160 },
-    sand: { x: 276, y: 228 }, feeder: { x: 372, y: 228 }, autoToy: { x: 424, y: 228 }, toy: { x: 470, y: 228 },
-    robot: { x: 330, y: 334 }, tower: { x: 540, y: 330 }
+    sand: { x: 266, y: 228 }, feeder: { x: 314, y: 228 }, autoToy: { x: 362, y: 228 }, toy: { x: 408, y: 228 },
+    robot: { x: 320, y: 334 }, tower: { x: 452, y: 330 }
   };
   var PRO_SHELF = { charcoal: { x: 292, y: 160, price: 12000 }, dry: { x: 382, y: 160, price: 12000 }, wet: { x: 470, y: 160, price: 15000 } };
+  // 계산대: 사장님은 계산대 뒤에 서 있고, 고른 물건은 계산대 위에 쌓인다
+  var COUNTER = { x: 470, top: 236, clerk: 596, stand: 440 };
   function drawShopItem(c, item, x, y, scale) {
     scale = scale || 1;
     if (item === 'dry') View.foodBag(c, x, y, undefined, 8, 0, scale);
@@ -387,6 +478,9 @@ var Work = (function () {
   function shown(item) { var sh = Wk.shop; return sh.pro || Life.onShelf(S(), item); }
   function fresh(item) { var it = Life.SHOP[item]; return !Wk.shop.pro && it && it.from && S().day <= it.from + 1; }
   function descKey(item) { var sh = Wk.shop; return sh.pro && (item === 'dry' || item === 'wet') ? (item === 'dry' ? 'proDry' : 'proWet') : item; }
+  function priceOf(item) { var sh = Wk.shop; return sh.pro ? sh.shelf[item].price : Life.price(S(), item); }
+  function walletNow() { var sh = Wk.shop; return sh.pro ? G.pro.wallet : S().wallet; }
+  function cartTotal() { return Wk.shop.basket.reduce(function (a, it) { return a + priceOf(it); }, 0); }
   // 지금 설명을 보여 줄 물건: 마우스를 댄 것, 손가락이면 한 번 누른 것
   function focusItem() {
     var sh = Wk.shop, hv = G.hover && G.hover.id;
@@ -394,16 +488,17 @@ var Work = (function () {
     return sh.focus || null;
   }
   // 꼬리표: 위에 이름, 아래에 값 (돈이 모자라면 값이 빨갛다)
-  function tag(c, name, price, x, y, red) {
+  function tag(c, name, price, x, y, red, night) {
     c.font = "9px 'NeoDunggeunmo', monospace";
     var w = Math.max(c.measureText(name).width, c.measureText(Life.won(price)).width) + 8;
-    View.box(c, x - w / 2, y, w, 24, red ? '#ffe3dc' : '#fffaf0', '#5b4636', 1);
+    View.box(c, x - w / 2, y, w, 24, red ? '#ffe3dc' : night ? '#fff0c9' : '#fffaf0', '#5b4636', 1);
     View.text(c, name, x, y + 7, 9, '#2f2a33');
-    View.text(c, Life.won(price), x, y + 17, 9, red ? '#c0392b' : '#5b4636');
+    View.text(c, Life.won(price), x, y + 17, 9, red ? '#c0392b' : night ? '#b0561c' : '#5b4636');
     return w;
   }
   function drawDesc(c, item) {
-    var sh = Wk.shop, p = sh.shelf[item], lines = Story.ITEM_DESC[descKey(item)] || [], price = p.price || Life.SHOP[item].price;
+    var sh = Wk.shop, p = sh.shelf[item], lines = Story.ITEM_DESC[descKey(item)] || [], price = priceOf(item);
+    if (sh.night && !sh.pro) lines = lines.concat(['밤 11시가 넘어서 심야 할증이 붙었다.']);
     c.font = "11px 'NeoDunggeunmo', monospace";
     var w = Math.max(150, Math.ceil(Math.max.apply(null, lines.map(function (l) { return c.measureText(l).width; }))) + 22);
     var h = 34 + lines.length * 17, x = Math.max(8, Math.min(632 - w, p.x - w / 2)), y = p.y - itemTop(item) - h - 8;
@@ -413,69 +508,119 @@ var Work = (function () {
     View.text(c, Life.won(price), x + w - 10, y + 17, 12, '#c0392b', 'right');
     lines.forEach(function (l, i) { View.text(c, l, x + 10, y + 36 + i * 17, 11, '#3b3540', 'left'); });
   }
+  // 계산대 뒤의 사장님: 계산대 윗면 위로 상반신만 보인다
+  function drawClerk(c) {
+    var t = G.t, sh = Wk.shop;
+    c.save(); c.beginPath(); c.rect(COUNTER.x, 0, 640 - COUNTER.x, COUNTER.top + 2); c.clip();
+    View.person(c, G, COUNTER.clerk, 292 + (sh.asking ? Math.sin(t * 6) : 0), 'customerC', -1, t, 'stand', 2.2, 200);
+    c.restore();
+    if (sh.night && !sh.pro) { // 심야 할증 안내판 (천장에 매달린 판)
+      View.r(c, 566, 92, 2, 16, '#5b4636'); View.r(c, 610, 92, 2, 16, '#5b4636');
+      View.box(c, 552, 106, 74, 24, '#2f3550', '#2f2a33', 2);
+      View.text(c, '심야 할증 ×' + Life.NIGHT_RATE, 589, 118, 10, '#ffd76a');
+    }
+  }
+  // 밤 11시가 넘으면 문 유리 너머도 밤이다 (가게 안 불빛만 환하다)
+  var GLASS = [[21, 54, 70, 25], [91, 54, 69, 25], [26, 90, 57, 145], [96, 90, 62, 145]];
+  function nightGlass(c) {
+    c.save();
+    GLASS.forEach(function (g) { c.fillStyle = 'rgba(14,20,48,.86)'; c.fillRect(g[0], g[1], g[2], g[3]); });
+    c.fillStyle = 'rgba(255,214,120,.85)';
+    [[34, 120], [44, 120], [34, 132], [62, 112], [108, 104], [118, 104], [140, 118], [108, 140], [150, 128]].forEach(function (d, i) { if ((i + Math.floor(G.t / 3)) % 7) c.fillRect(d[0], d[1], 3, 3); });
+    var lamp = c.createRadialGradient(128, 196, 2, 128, 196, 34); lamp.addColorStop(0, 'rgba(255,220,140,.45)'); lamp.addColorStop(1, 'rgba(255,220,140,0)');
+    c.beginPath(); c.rect(96, 90, 62, 145); c.clip(); c.fillStyle = lamp; c.fillRect(90, 150, 70, 90);
+    c.restore();
+  }
   function drawShop(c) {
     var sh = Wk.shop, s = S(), t = G.t;
     View.bg(c, G, 'shop');
     if (sh.winter) { c.fillStyle = 'rgba(40,60,90,.12)'; c.fillRect(0, 0, 640, 360); }
-    var wallet = sh.pro ? G.pro.wallet : s.wallet, focus = focusItem();
-    if (sh.job) { drawJob(c); return; }
+    if (sh.night) { c.fillStyle = 'rgba(20,24,52,.18)'; c.fillRect(0, 0, 640, 360); nightGlass(c); }
+    var wallet = walletNow(), focus = focusItem(), total = cartTotal();
+    if (sh.job) { drawClerk(c); drawJob(c); return; }
     if (jobOpen()) drawPoster(c);
+    drawClerk(c);
     Object.keys(sh.shelf).forEach(function (item) {
-      var p = sh.shelf[item], price = p.price || Life.SHOP[item].price;
+      var p = sh.shelf[item], price = priceOf(item);
       if (!shown(item)) return;
-      if (!sh.pro && Life.SHOP[item].once && s.owned[item] && !(item === 'autoToy' && !Life.autoToyOn(s)) && sh.basket.indexOf(item) < 0) return;
-      if (sh.basket.indexOf(item) >= 0 && Life.SHOP[item] && Life.SHOP[item].once) return;
+      if (!sh.pro && Life.SHOP[item].once && s.owned[item] && !(item === 'autoToy' && !Life.autoToyOn(s))) return;
+      if (sh.basket.indexOf(item) >= 0 && (sh.pro || (Life.SHOP[item] && Life.SHOP[item].once))) return;
       var lift = item === focus ? -3 - Math.abs(Math.sin(t * 5)) * 2 : 0;
       drawShopItem(c, item, p.x, p.y + lift, item === focus ? 1.08 : 1);
-      var tw = tag(c, Story.ITEM[item], price, p.x, p.y + 3, wallet < price);
+      tag(c, Story.ITEM[item], price, p.x, p.y + 3, wallet - total < price, sh.night && !sh.pro);
       if (fresh(item)) { var by = p.y - itemTop(item) + 2, bx = p.x + 14; View.box(c, bx, by, 24, 11, '#e2775e', '#5b4636', 1); View.text(c, '신상', bx + 12, by + 6, 8, '#fffaf0'); }
     });
-    // 고른 물건은 계산대 위에 올려 둔다 (누르면 다시 진열대로)
+    // 고른 물건은 계산대 위에 올려 둔다 (누르면 다시 진열대로). 계산 전에는 합계만 보인다.
     sh.basket.forEach(function (item, i) { var b = basketPos(i); drawShopItem(c, item, b.x, b.y, .62); });
+    if (sh.basket.length) {
+      View.box(c, 486, 252, 92, 22, '#fffaf0', '#2f2a33', 2);
+      View.text(c, '합계 ' + Life.won(total), 532, 263, 11, total > wallet ? '#c0392b' : '#2f2a33');
+    }
     View.shadow(c, G.hero.x, 343, 20);
-    View.person(c, G, G.hero.x, 342, sh.pro ? 'hoodie' : (s.wearing === 'suit' ? 'suit' : 'hoodie'), G.hero.walking ? G.hero.dir : -1, t, G.hero.walking ? 'walk' : 'stand', 2.35);
-    if (focus && sh.shelf[focus]) drawDesc(c, focus);
+    View.person(c, G, G.hero.x, 342, sh.pro ? 'hoodie' : (s.wearing === 'suit' ? 'suit' : 'hoodie'), G.hero.walking ? G.hero.dir : (sh.asking ? 1 : -1), t, G.hero.walking ? 'walk' : 'stand', 2.35);
+    if (!sh.pro) heroMarks(c, G.hero.x, 342);
+    if (focus && sh.shelf[focus] && !sh.asking) drawDesc(c, focus);
   }
-  function basketPos(i) { return { x: 500 + (i % 6) * 22, y: 246 - Math.floor(i / 6) * 14 }; }
+  function basketPos(i) { return { x: 492 + (i % 5) * 18, y: 238 - Math.floor(i / 5) * 12 }; }
   function hotShop() {
     var sh = Wk.shop, s = S(), list = [];
     if (sh.job) return hotJob();
+    if (sh.asking) return [];
     if (jobOpen()) list.push({ id: 'jobPoster', x: POSTER.x - 4, y: POSTER.y - 4, w: POSTER.w + 8, h: POSTER.h + 8, tap: startJob });
     Object.keys(sh.shelf).forEach(function (item) {
-      var p = sh.shelf[item], price = p.price || Life.SHOP[item].price;
+      var p = sh.shelf[item];
       if (!shown(item)) return;
       if (!sh.pro && Life.SHOP[item].once && s.owned[item] && !(item === 'autoToy' && !Life.autoToyOn(s))) return;
+      if (sh.basket.indexOf(item) >= 0 && (sh.pro || Life.SHOP[item].once)) return;
       var w = item === 'tower' ? 54 : 46, h = itemTop(item) + 6;
       list.push({ id: 'shelf-' + item, x: p.x - w / 2, y: p.y - h, w: w, h: h + 28, tap: function () {
-        // 손가락: 처음 누르면 설명만, 한 번 더 누르면 산다. 마우스: 대면 설명, 누르면 산다.
+        // 손가락: 처음 누르면 설명만, 한 번 더 누르면 담는다. 마우스: 대면 설명, 누르면 담는다.
         if (G.pointerType !== 'mouse' && sh.focus !== item) { sh.focus = item; UI.sfx('tap'); return null; }
         sh.focus = null;
-        return buy(item, price);
+        return pick(item);
       } });
     });
-    sh.basket.forEach(function (item, i) { var b = basketPos(i); list.push({ id: 'basket-' + i, x: b.x - 11, y: b.y - 30, w: 22, h: 32, tap: function () { return unbuy(item); } }); });
-    list.push({ id: 'exit', x: 14, y: 44, w: 152, h: 196, tap: function () { sh.leave = true; } });
+    sh.basket.forEach(function (item, i) { var b = basketPos(i); list.push({ id: 'basket-' + i, x: b.x - 9, y: b.y - 24, w: 18, h: 26, tap: function () { sh.basket.splice(i, 1); UI.sfx('tap'); return null; } }); });
+    // 계산대(사장님)를 누르거나 문으로 나가면 계산한다
+    if (sh.basket.length) list.push({ id: 'clerk', x: COUNTER.clerk - 30, y: 150, w: 60, h: 86, tap: checkout });
+    list.push({ id: 'exit', x: 14, y: 44, w: 152, h: 196, tap: function () { return sh.basket.length ? checkout() : (sh.leave = true, null); } });
     return list;
   }
-  function buy(item, price) {
-    var sh = Wk.shop, s = S(), p = sh.shelf[item];
+  // 진열대에서 집어 계산대에 올린다 (돈은 계산할 때 낸다)
+  function pick(item) {
+    var sh = Wk.shop, s = S(), p = sh.shelf[item], price = priceOf(item);
     return Engine.walkTo(Math.max(150, Math.min(230, p.x - 60))).then(function () {
-      if (sh.pro) {
-        if (G.pro.wallet < price) { UI.sfx('bad'); return say([me('돈이 모자라.')]); }
-        sh.picked = item; return null;
-      }
-      var r = Life.buy(s, item);
-      if (!r.ok) { UI.sfx('bad'); return r.why === 'money' ? say([me('돈이 모자라.')]) : null; }
-      UI.sfx('spend'); sh.basket.push(item);
+      if (walletNow() - cartTotal() < price) { UI.sfx('bad'); return say([me(cartTotal() ? '이것까지 사기엔 돈이 모자라.' : '돈이 모자라.')]); }
+      if (!sh.pro) { var why = Life.buyBlock(s, item, cartTotal()); if (why) { UI.sfx('bad'); return null; } }
+      UI.sfx('page'); sh.basket.push(item);
+      if (sh.pro) return checkout(); // 프롤로그: 하나를 고르면 바로 계산대로
       return null;
     });
   }
-  function unbuy(item) {
-    var sh = Wk.shop, s = S(), r = Life.unbuy(s, item);
-    if (!r.ok) return null;
-    UI.sfx('tap'); sh.basket.splice(sh.basket.indexOf(item), 1);
-    return null;
+  // 계산대 앞: 사장님이 합계를 말하고 묻는다. 계산하면 돈을 내고, 아니면 다시 고른다.
+  function checkout() {
+    var sh = Wk.shop, s = S(), total = cartTotal(), btn = $('actionButton'), back = $('backButton');
+    if (!sh.basket.length) return null;
+    return Engine.walkTo(COUNTER.stand).then(function () {
+      G.hero.dir = 1; sh.asking = true;
+      return say([{ who: 'owner', text: (sh.basket.length > 1 ? sh.basket.length + '개, ' : '') + '전부 ' + Life.won(total) + '이에요. 계산하시겠어요?' }]);
+    }).then(function () {
+      btn.textContent = '계산하기'; btn.hidden = false; back.hidden = false;
+      return new Promise(function (resolve) {
+        btn.onclick = function () { if (!UI.busy()) resolve(true); };
+        back.onclick = function () { if (!UI.busy()) resolve(false); };
+      });
+    }).then(function (pay) {
+      btn.hidden = true; back.hidden = true; btn.onclick = null; back.onclick = null;
+      if (!pay) { sh.asking = false; if (sh.pro) sh.basket = []; return Engine.walkTo(220); }
+      UI.sfx('coin');
+      if (sh.pro) { G.pro.wallet -= total; sh.picked = sh.basket[0]; sh.basket = []; sh.asking = false; return null; }
+      sh.basket.forEach(function (item) { var r = Life.buy(s, item); if (r.ok) sh.bought.push(item); });
+      sh.basket = [];
+      return say([{ who: 'owner', text: s.minute >= Life.T.bedtime ? '늦게까지 고생 많아요. 조심히 들어가요.' : '감사합니다. 또 오세요.' }]).then(function () { sh.asking = false; sh.leave = true; });
+    });
   }
+  function $(id) { return document.getElementById(id); }
   // ---------- 주말 알바: 슈퍼 진열 정리 ----------
   var POSTER = { x: 196, y: 64, w: 56, h: 42 };
   var JOB_ITEMS = ['dry', 'sand', 'wet', 'coffee', 'lunch', 'roller'];
@@ -486,17 +631,17 @@ var Work = (function () {
     View.box(c, q.x, q.y, q.w, q.h, '#fffaf0', '#5b4636', 1);
     View.r(c, q.x + q.w / 2 - 3, q.y - 2, 6, 4, '#c0392b');
     View.text(c, '알바 구함', q.x + q.w / 2, q.y + 11, 9, '#c0392b');
-    View.text(c, '진열 4시간', q.x + q.w / 2, q.y + 23, 8, '#3b3540');
+    View.text(c, '토·일 4시간', q.x + q.w / 2, q.y + 23, 8, '#3b3540');
     View.text(c, Life.won(Life.JOB.pay), q.x + q.w / 2, q.y + 34, 8, '#3b3540');
     if (!S().seen.job) { c.globalAlpha = .35 + glow * .4; c.strokeStyle = '#ff9a3c'; c.lineWidth = 2; c.strokeRect(q.x - 3, q.y - 3, q.w + 6, q.h + 6); c.globalAlpha = 1; }
   }
   function startJob() {
     var s = S(), sh = Wk.shop, why = Life.jobBlock(s);
     if (why === 'late') { UI.sfx('bad'); return say([me('알바는 오후 3시 전에 와야 받아 준대. 오늘은 늦었어.')]); }
-    if (why === 'tired') { UI.sfx('bad'); return say([me('지금 몸으로는 네 시간 못 버텨. 좀 쉬고 와야겠다.')]); }
+    if (why === 'tired') { UI.sfx('bad'); return say([me('지금 몸으로는 네 시간 못 버텨. 체력이 세 칸은 있어야 해. 좀 쉬고 와야겠다.')]); }
     if (why) return null;
-    s.seen.job = true;
     return Engine.walkTo(200).then(function () {
+      s.seen.job = true;
       return say([{ who: 'owner', text: '왔어요? 창고에서 꺼낸 물건을 빈 칸에 채워 줘요. 자리마다 그림이 붙어 있어요.' }]);
     }).then(function () {
       // 진열은 끌기로 하므로 여기서 기다리지 않는다 (마지막 물건을 놓으면 finishJob)
@@ -556,18 +701,21 @@ var Work = (function () {
   }
   function shop(opts) {
     opts = opts || {};
-    Wk.shop = { pro: !!opts.pro, winter: !!opts.pro, shelf: opts.pro ? PRO_SHELF : SHELF, basket: [], leave: false, picked: null, focus: null };
+    var s0 = S(), night = !opts.pro && !!s0 && Life.lateNight(s0);
+    Wk.shop = { pro: !!opts.pro, winter: !!opts.pro, night: night, shelf: opts.pro ? PRO_SHELF : SHELF, basket: [], bought: [], leave: false, picked: null, focus: null, asking: false };
     G.hero.x = 120; G.hero.dir = 1; G.hero.tx = null;
-    Engine.setScene({ draw: drawShop, hot: hotShop, walk: function (p) { return Math.max(110, Math.min(230, p.x)); }, place: 'shop' });
+    Engine.setScene({ draw: drawShop, hot: hotShop, walk: function (p) { return Wk.shop.asking ? null : Math.max(110, Math.min(230, p.x)); }, place: 'shop' });
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(220); }).then(function () {
       var s = S();
+      if (opts.intro) return say(opts.intro);
       if (!opts.pro && s && Life.onShelf(s, 'robot') && !s.seen.newStock) { s.seen.newStock = true; return say([me('새 물건이 들어왔네. 로봇청소기랑 자동 장난감?'), me('편하긴 하겠지만, 내가 직접 하는 것만은 못하겠지.')]); }
       if (jobOpen() && !s.seen.jobPoster) { s.seen.jobPoster = true; return say([me('저게 사장님이 말한 알바 공고구나.')]); }
+      if (night && !s.seen.nightShop) { s.seen.nightShop = true; return say([{ who: 'owner', text: '어서 와요. 11시 넘어서는 심야 할증이라 좀 비싸요.' }]); }
       return null;
     }).then(function () {
       if (opts.pro) return Engine.until(function () { return Wk.shop.picked; });
       return Engine.until(function () { return Wk.shop.leave; }).then(function () { return Engine.walkTo(90); });
-    }).then(function () { var r = Wk.shop.pro ? Wk.shop.picked : Wk.shop.basket.slice(); return r; });
+    }).then(function () { var r = Wk.shop.pro ? Wk.shop.picked : Wk.shop.bought.slice(); return r; });
   }
 
   return { Wk: Wk, commute: commute, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,

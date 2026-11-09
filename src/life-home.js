@@ -170,6 +170,13 @@ var Home = (function () {
     var fur = H.pro ? (H.proFur ? 2 : 0) : (S() && S().wearing === 'suit' ? S().fur : 0);
     if (fur > 0 && pose !== 'sit') furOn(c, h.x, h.y - 96 * h.scale / 2.35, fur, 1);
   }
+  // 냄새: 구불구불한 줄이 피어올랐다 사라진다 (화장실 위, 냄새 밴 옷 위)
+  function stinkLines(c, x, y, n, t) {
+    for (var i = 0; i < n; i++) {
+      var q = ((t * .7 + i / n) % 1), a = q < .2 ? q / .2 : q > .75 ? (1 - q) / .25 : 1;
+      View.icon(c, 'stink', x - (n - 1) * 7 + i * 14 + Math.sin(t * 3 + i) * 2, y - q * 22, 2, { alpha: a * .85 });
+    }
+  }
   var FUR = [[-10, 2], [6, 8], [-3, 18], [9, 24], [-12, 30], [3, 34], [-6, 12], [11, 14], [0, 26]];
   function furOn(c, x, y, n, px) { for (var i = 0; i < Math.min(FUR.length, n * 3); i++) View.icon(c, 'fur', x + FUR[i][0], y + FUR[i][1], px || 1); }
   function gone() { var s = S(); if (H.goneDay !== s.day) { H.gone = {}; H.goneDay = s.day; } return H.gone; }
@@ -179,8 +186,7 @@ var Home = (function () {
     View.entranceDoor(c, LV.entrance, H.entranceOpen || 0);
     View.roomDoor(c, G, LV.door, H.mode === 'night' ? (s.door === 'open' ? 1 : 0) : 1, 'bedroom');
     View.windowView(c, G, LV.window, sky(), t, H.room === 'living' ? H.curtain : 0, sky() === 'storm');
-    // 벽시계: 아침에는 나갈 시각, 저녁에는 잘 시각(11시)에 빨간 눈금
-    View.wallClock(c, P.clock.x, P.clock.y, 13, s ? s.minute : 1200, H.pro ? 0 : s.phase === 'morning' ? Life.T.leaveBy : Life.T.bedtime);
+    // 시계는 위쪽 표시 하나만 쓴다 (벽시계와 시각이 엇갈려 보이지 않게)
     if (!H.pro) {
       View.floorDirt(c, s.floor, gone());
       if (s.pantry.coffee > 0 && !s.coffee) View.cup(c, P.coffee.x, P.coffee.y, 1.15);
@@ -195,6 +201,7 @@ var Home = (function () {
       var ll = s.litter;
       View.litterBox(c, P.litter.x, P.litter.y, ll.poop, ll.sand, t);
       if (ll.poop > 0 && !(held === 'scoop' && H.held.full)) for (var i = 0; i < Math.min(3, ll.poop); i++) View.icon(c, 'poop', P.litter.x - 12 + i * 12, P.litter.y - 18, 1);
+      if (ll.poop > 0) stinkLines(c, P.litter.x, P.litter.y - 30, ll.poop >= 3 ? 3 : ll.poop >= 2 ? 2 : 1, t);
       if (held !== 'scoop') View.item(c, 'scoop', P.scoop.x, P.scoop.y, 1.1);
       if (s.pantry.sand > 0 && held !== 'sand') View.sandBag(c, P.sand.x, P.sand.y, 1);
       if (held !== 'toy' && !(H.toy && H.toy.caught)) { if (s.toy > 0) View.toy(c, P.toy.x, P.toy.y, t); else { View.r(c, P.toy.x - 7, P.toy.y - 4, 12, 4, '#9a8f86'); } }
@@ -207,8 +214,9 @@ var Home = (function () {
     // 사람과 고양이는 발 위치 순서로
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
-    if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리
-      View.r(c, 470, 258, 16, 3, '#d89553'); View.r(c, 484, 255, 4, 4, '#d89553');
+    if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
+      var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
+      View.r(c, 470 + shiver, 258, 16, 3, '#d89553'); View.r(c, 484 + shiver, 255, 4, 4, '#d89553');
       if (Math.floor(t * 1.5) % 4) { View.r(c, 452, 252, 2, 2, '#f5e27a'); View.r(c, 458, 252, 2, 2, '#f5e27a'); }
     }
     drawHeld(c);
@@ -251,6 +259,13 @@ var Home = (function () {
     else if (dk >= .2) View.lampGlow(c, 285, 150, 120, .2);
   }
   function drawHeld(c) {
+    drawPetMeter(c);
+    // 쥐돌이를 충분히 흔들었다: 멈추라는 표시 (고양이가 몸을 낮추고 노린다)
+    if (H.toy && H.toy.ready && !H.toy.pounce && H.held && H.held.id === 'toy') {
+      var pulse = 1 + (Math.sin(G.t * 10) * .5 + .5) * .6;
+      View.icon(c, 'pause', H.held.x + 22, H.held.y - 34, Math.round(2 * pulse));
+      View.icon(c, 'bang', G.cat.x, G.cat.y - 58 + Math.sin(G.t * 12) * 2, 1);
+    }
     var h = H.held; if (!h) return;
     var tilt = h.tilt || 0;
     if (h.id === 'food') View.foodBag(c, h.x, h.y, undefined, 8, tilt);
@@ -284,7 +299,7 @@ var Home = (function () {
       View.r(c, x + w / 2 - 18, y - 6, 36, 12, 'rgba(224,138,108,.85)'); // 테이프
       View.text(c, note.title, x + w / 2, y + 30, 17, '#2f2a33');
       note.rows.forEach(function (r, i) {
-        var ry = y + 66 + i * 36;
+        var ry = y + 62 + i * 32;
         View.icon(c, r.icon, x + 28, ry - 4, 2);
         View.text(c, r.text, x + 52, ry, 12, '#3b3540', 'left');
       });
@@ -405,6 +420,7 @@ var Home = (function () {
   function doScoop() {
     var s = S();
     if (s.litter.poop <= 0) return say([me(Story.catLine('litterClean', s.cat))]).then(sandTalkAgain);
+    if (s.litter.sand <= 0) { UI.sfx('bad'); return say([me(Story.catLine('noScoop', s.cat))].concat(s.pantry.sand ? [] : [me(Story.catLine('noSand', s.cat))])); }
     return gesture(P.litter.x - 50, 'scoop', 1, .9).then(function () {
       var r = Life.scoop(s);
       UI.sfx('scoop');
@@ -421,10 +437,11 @@ var Home = (function () {
       start: function () { moved = 0; },
       move: function (d) {
         var s = S(), box = rect(P.litter.x - 30, P.litter.y - 34, 60, 36);
-        if (inside(d, box) && s.litter.poop > 0) { moved += 4; if (moved > 24 && !H.held.full) { H.held.full = true; UI.sfx('scoop'); } }
+        if (inside(d, box) && s.litter.poop > 0 && s.litter.sand > 0) { moved += 4; if (moved > 24 && !H.held.full) { H.held.full = true; UI.sfx('scoop'); } }
       },
       end: function (d, h) {
         var s = S();
+        if (inside(d, rect(P.litter.x - 30, P.litter.y - 34, 60, 36)) && s.litter.poop > 0 && s.litter.sand <= 0) return doScoop();
         if (!h.full) return null;
         var r = Life.scoop(s);
         spent(P.litter, r.minutes, 50);
@@ -448,38 +465,64 @@ var Home = (function () {
   }
   function tapLitter() {
     var s = S();
+    if (s.litter.poop > 0 && s.litter.sand <= 0 && s.pantry.sand > 0) return sandCommit();
     if (s.litter.poop > 0) return doScoop();
     if (s.litter.sand < Life.SAND_DAYS && Life.sandLow(s) && s.pantry.sand > 0) return sandCommit();
     return say([me(Story.catLine('litterClean', s.cat))]).then(sandTalkAgain);
   }
-  // 쓰다듬기: 누른 채 등을 쓸어야 한다
+  // 쓰다듬기: 누른 채 등을 좌우로 쓸어야 한다. 쓸 때마다 작은 하트가 오르고, 위의 칸이 다 차면 골골송.
+  var PET_NEED = 90;
+  function petGuide() {
+    var k = G.cat;
+    if (G.hand && G.hand.follow) return null; // 프롤로그 안내 손은 그대로 둔다
+    G.hand = { stroke: true, x: k.x - 22, y: k.y - 26, dx: 44, period: 1.4, t0: G.t, pet: true };
+    setTimeout(function () { if (G.hand && G.hand.pet) G.hand = null; }, 2900);
+    return null;
+  }
   function petDrag() {
-    var dist = 0, lastX = 0;
+    var dist = 0, lastX = 0, pops = 0;
     return {
-      start: function (d) { dist = 0; lastX = d.x; H.held = { id: 'hand', x: d.x, y: d.y }; H.catAct = 'still'; G.cat.tx = null; },
+      start: function (d) { dist = 0; pops = 0; lastX = d.x; H.held = { id: 'hand', x: d.x, y: d.y }; H.catAct = 'still'; G.cat.tx = null; H.petting = 0; if (G.hand && G.hand.pet) G.hand = null; },
       move: function (d) {
         if (!H.held) return;
         H.held.x = d.x; H.held.y = Math.min(d.y, G.cat.y - 18);
-        var k = G.cat, onBack = Math.abs(d.x - k.x) < 34 && d.y > k.y - 60 && d.y < k.y + 6;
-        if (onBack) { dist += Math.abs(d.x - lastX); }
+        var k = G.cat, onBack = Math.abs(d.x - k.x) < 38 && d.y > k.y - 64 && d.y < k.y + 8;
+        if (onBack) { dist += Math.min(12, Math.abs(d.x - lastX)); }
         lastX = d.x;
+        H.petting = Math.min(1, dist / PET_NEED);
+        if (Math.floor(dist / 30) > pops && dist < PET_NEED) { pops++; Engine.puff({ x: k.x - 6 + pops * 5, y: k.y - 44, icon: 'heart', px: 1, life: .8, rise: 16 }); }
         if (dist > 30 && H.catAct !== 'pet') { H.catAct = 'pet'; UI.sfx('purr'); }
       },
       end: function () {
-        H.held = null;
-        var s = S(), ok = dist > 70;
-        if (!ok) { H.catAct = null; return null; }
+        H.held = null; H.petting = 0;
+        var s = S(), ok = dist >= PET_NEED;
+        if (!ok) { H.catAct = null; if (dist < 20) petGuide(); return null; }
         var r = Life.pet(s);
         H.catAct = 'pet';
         setTimeout(function () { if (H.catAct === 'pet') H.catAct = null; }, 1800);
         if (!r.ok) { H.catAct = null; return null; }
         spent({ x: G.cat.x, y: G.cat.y }, r.minutes, 64);
-        Engine.puff({ x: G.cat.x - 8, y: G.cat.y - 50, icon: 'heart', px: 1, life: 1.4 });
+        Engine.puff({ x: G.cat.x - 8, y: G.cat.y - 56, icon: 'heart', px: 2, life: 1.4 });
         if (H.onCare) H.onCare('pet');
-        return once('purr', [me(Story.catLine('purr', s.cat))]);
+        var lines = [];
+        if (r.fur) { // 정장을 입고 안아 줬다
+          for (var i = 0; i < 4; i++) Engine.puff({ x: G.hero.x - 12 + i * 8, y: G.hero.y - 70 + i * 6, icon: 'fur', px: 1, life: 1.2, rise: -6 });
+          if (!seen('petFur')) lines.push(me(Story.catLine('petFur', s.cat)));
+        }
+        if (!H.said[s.day + ':purr']) { H.said[s.day + ':purr'] = true; lines.unshift(me(Story.catLine('purr', s.cat))); }
+        return lines.length ? say(lines) : null;
       },
-      cancel: function () { H.held = null; H.catAct = null; }
+      cancel: function () { H.held = null; H.catAct = null; H.petting = 0; }
     };
+  }
+  // 쓰다듬는 동안 고양이 머리 위에 차오르는 칸
+  function drawPetMeter(c) {
+    if (!H.petting || !H.held || H.held.id !== 'hand') return;
+    var k = G.cat, x = k.x - 22, y = k.y - 74, n = 3;
+    for (var i = 0; i < n; i++) {
+      var on = H.petting >= (i + 1) / n;
+      View.icon(c, on ? 'heart' : 'heartEmpty', x + 8 + i * 14, y, 1);
+    }
   }
   // 커피: 아침이든 저녁이든 하루 한 잔
   function drinkCoffee() {
@@ -628,10 +671,17 @@ var Home = (function () {
     });
     if (G.t > (c.sfxT || 0)) { c.sfxT = G.t + .35; UI.sfx(c.kind === 'sweep' ? 'scoop' : 'water'); }
   }
+  // 커튼을 누르기만 하면: 가장자리를 잡고 가운데로 끄는 손을 보여 준다
+  function curtainHint() {
+    var w = H.room === 'living' ? LV.window : BR.window;
+    G.hand = { x: w.x + 8, y: w.y + w.h / 2, tx: w.x + w.w / 2, ty: w.y + w.h / 2, period: 1.8, t0: G.t, curtain: true };
+    setTimeout(function () { if (G.hand && G.hand.curtain) G.hand = null; }, 3600);
+    return null;
+  }
   // 비 오는 밤의 커튼: 가장자리를 끌어 닫는다
   function curtainDrag() {
     return {
-      start: function () { H.curtainDrag = true; },
+      start: function () { H.curtainDrag = true; if (G.hand && G.hand.curtain) G.hand = null; },
       move: function (d) { var w = H.room === 'living' ? LV.window : BR.window; H.curtain = Math.max(0, Math.min(1, (d.x - w.x) / (w.w / 2))); },
       end: function () {
         H.curtainDrag = false;
@@ -639,6 +689,7 @@ var Home = (function () {
         H.curtain = 1;
         var s = S(), r = Life.act(s, 'curtain');
         if (!r.ok) return null;
+        H.stormGuide = false;
         UI.sfx('good');
         var k = G.cat; k.visible = true; k.room = H.room; k.x = 486; k.y = 262; H.catAct = 'lap';
         return say([narr(Story.catLine('stormOut', s.cat))]).then(function () {
@@ -669,7 +720,7 @@ var Home = (function () {
   function catSpot(list, room, minY) {
     var s = S(), k = G.cat;
     if (!k.visible || k.room !== room || catHidden() || k.y <= minY) return;
-    list.push({ id: 'cat', x: k.x - 22, y: k.y - 46, w: 44, h: 48, chips: cost([cMin(Life.T.pet)].concat(s.petted ? [] : [cHeart(1)])), drag: petDrag(), glow: false });
+    list.push({ id: 'cat', x: k.x - 22, y: k.y - 46, w: 44, h: 48, chips: cost([cMin(Life.T.pet)].concat(s.petted ? [] : [cHeart(1)])), drag: petDrag(), tap: petGuide, glow: false });
   }
   function closeSpot() { return [{ id: 'closeUp', x: 0, y: 0, w: 640, h: 360, glow: false, tap: closeUp }]; }
   function hotLiving() {
@@ -678,7 +729,7 @@ var Home = (function () {
     if (m === 'night') return [];
     list.push({ id: 'lDoor', x: P.lDoor.x, y: P.lDoor.y, w: P.lDoor.w, h: P.lDoor.h, tap: function () { return goRoom('bedroom'); } });
     if (!H.pro) {
-      list.push({ id: 'entrance', x: P.entrance.x, y: P.entrance.y, w: P.entrance.w, h: P.entrance.h, chips: m === 'weekend' && !s.shopped ? [cMin(Life.T.shopTrip)] : null, tap: tapEntrance });
+      list.push({ id: 'entrance', x: P.entrance.x, y: P.entrance.y, w: P.entrance.w, h: P.entrance.h, chips: entranceChips(), tap: tapEntrance });
       list.push({ id: 'memo', x: P.memo.x, y: P.memo.y, w: P.memo.w, h: P.memo.h, tap: openMemo });
       list.push({ id: 'sofa', x: P.sofa.x, y: P.sofa.y, w: P.sofa.w, h: P.sofa.h, chips: Life.doBlock(s, 'rest') ? null : [cMin(Life.T.rest), cBolt(1)], tap: rest });
     }
@@ -694,8 +745,9 @@ var Home = (function () {
     list.push({ id: 'bottle', x: P.bottle.x - 12, y: P.bottle.y - 36, w: 24, h: 38, chips: cost([cMin(Life.T.water)]), tap: function () { return waterCommit(); },
       drag: pourer('bottle', waterR, function () { return !s.water; }, function (bl) { return waterCommit(bl); }, P.water.x + 44) });
     if (!H.pro) {
-      list.push({ id: 'litter', x: P.litter.x - 28, y: P.litter.y - 34, w: 56, h: 36, chips: s.litter.poop > 0 ? [cMin(Life.T.scoop)] : null, tap: tapLitter });
-      list.push({ id: 'scoop', x: P.scoop.x - 13, y: P.scoop.y - 26, w: 26, h: 30, chips: s.litter.poop > 0 ? [cMin(Life.T.scoop)] : null, tap: doScoop, drag: s.litter.poop > 0 ? scoopDrag() : null });
+      var canScoop = s.litter.poop > 0 && s.litter.sand > 0;
+      list.push({ id: 'litter', x: P.litter.x - 28, y: P.litter.y - 34, w: 56, h: 36, chips: canScoop ? [cMin(Life.T.scoop)] : null, tap: tapLitter });
+      list.push({ id: 'scoop', x: P.scoop.x - 13, y: P.scoop.y - 26, w: 26, h: 30, chips: canScoop ? [cMin(Life.T.scoop)] : null, tap: doScoop, drag: canScoop ? scoopDrag() : null });
       if (s.pantry.sand > 0) list.push({ id: 'sand', x: P.sand.x - 15, y: P.sand.y - 34, w: 30, h: 36, chips: [cMin(Life.T.sand)], tap: sandCommit,
         drag: pourer('sand', rect(P.litter.x - 32, P.litter.y - 60, 64, 64), function () { return s.litter.sand < Life.SAND_DAYS; }, function (bl) { return sandCommit(bl); }, P.litter.x - 50) });
       if (s.pantry.coffee > 0 && !s.coffee) {
@@ -712,7 +764,7 @@ var Home = (function () {
         list.push({ id: kind, x: p.x - 12, y: p.y - 48, w: 24, h: 50, chips: why ? null : [cMin(Life.T[kind])],
           tap: function () { return why ? blockedLine(kind, why) : say([me(kind === 'sweep' ? '빗자루로 털 뭉치를 쓸자. 쌓이면 정장에 털이 붙어.' : '대걸레로 먼지 발자국을 닦자. 쌓이면 ' + Life.josa(s.cat, 'subject') + ' 밤새 재채기해.')]); }, drag: why ? null : cleanDrag(kind) });
       });
-      if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: LV.window.x - 6, y: LV.window.y, w: 40, h: LV.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], drag: curtainDrag() });
+      if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: LV.window.x - 6, y: LV.window.y, w: 40, h: LV.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], pulse: !!H.stormGuide, tap: curtainHint, drag: curtainDrag() });
     }
     if (H.searching) list = list.concat(searchSpots('living'));
     return list;
@@ -736,7 +788,7 @@ var Home = (function () {
       if (s.owned.roller && s.fur > 0) list.push({ id: 'roller', x: P.roller.x - 14, y: P.roller.y - 22, w: 28, h: 24, chips: [cMin(Life.T.roller)], drag: rollerDrag() });
       if (s.seen.packed) list.push({ id: 'laptop', x: P.laptop.x - 28, y: P.laptop.y - 30, w: 56, h: 32, chips: mailWaiting() && home() ? [cMin(Life.T.prep)] : null, tap: openMail });
       if (home() || H.bedOK) list.push({ id: 'bed', x: P.bed.x, y: P.bed.y, w: P.bed.w, h: P.bed.h, chips: home() ? [{ icon: 'zzz', text: '' }, cBolt(Math.max(0, Life.sleepGain(s.minute))) ] : null, tap: tapBed });
-      if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: BR.window.x - 6, y: BR.window.y, w: 50, h: BR.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], drag: curtainDrag() });
+      if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: BR.window.x - 6, y: BR.window.y, w: 50, h: BR.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], pulse: !!H.stormGuide, tap: curtainHint, drag: curtainDrag() });
     } else if (H.bedOK) list.push({ id: 'bed', x: P.bed.x, y: P.bed.y, w: P.bed.w, h: P.bed.h, tap: tapBed });
     if (H.pro && H.rackOK) list.push({ id: 'rack', x: 420, y: 118, w: 96, h: 140, tap: hangHoodie });
     if (H.searching) list = list.concat(searchSpots('bedroom'));
@@ -758,17 +810,45 @@ var Home = (function () {
       return Engine.fade(0, .2);
     }).then(function () { if (room === 'living') return noticeNeeds(); });
   }
+  // 현관에 마우스를 대면: 아침에는 지하철 50분과 지점 도착 시각, 저녁에는 슈퍼까지 다녀오는 시간
+  function entranceChips() {
+    var s = S(); if (!s || H.pro) return null;
+    if (H.mode === 'morning') {
+      var arrive = s.minute + Life.T.commute, late = arrive > Life.T.assembly;
+      return [{ icon: 'train', text: Life.T.commute + '분' }, { icon: 'office', text: Life.clock(arrive) + (late ? ' 지각' : ''), cls: late ? 'bad' : 'good' }];
+    }
+    if (Life.doBlock(s, 'shop')) return null;
+    var list = [cMin(Life.T.shopTrip)];
+    if (s.minute + Life.cost(s, Life.T.shopTrip) >= Life.T.bedtime) list.push({ icon: 'coin', text: '심야 ×' + Life.NIGHT_RATE, cls: 'bad' });
+    return list;
+  }
   function tapEntrance() {
     var s = S();
     if (H.mode === 'morning') {
       if (s.wearing !== 'suit') { UI.sfx('bad'); return say([me('정장부터 입어야지.')]); }
+      if (s.hidden && H.searching) return confirmLeave();
       return heroGo(96).then(function () { G.hero.pose = 'back'; resolveWait('leave'); });
     }
-    if (H.mode === 'weekend') {
-      if (Life.doBlock(s, 'shop') || s.shopped) return say([me('오늘 장은 다 봤어.')]);
-      return heroGo(96).then(function () { resolveWait('shop'); });
-    }
-    return say([me('오늘은 이제 나갈 일 없어.')]);
+    if (Life.doBlock(s, 'shop')) return say([me('오늘은 이제 나갈 일 없어.')]);
+    return heroGo(96).then(function () { if (!resolveWait('shop')) return say([me('지금은 나갈 때가 아니야.')]); });
+  }
+  // 고양이를 못 찾았는데 나가려 할 때: 정말 나갈지 한 번 더 묻는다
+  function confirmLeave() {
+    var s = S(), btn = document.getElementById('actionButton'), back = document.getElementById('backButton');
+    return heroGo(96).then(function () {
+      G.hero.pose = 'back'; UI.sfx('meow');
+      return say([narr('어디선가 작게 우는 소리가 들린 것 같다.'), me(Life.josa(s.cat, 'object') + ' 아직 못 찾았는데... 이대로 나가도 될까?')]);
+    }).then(function () {
+      btn.textContent = '그냥 나가기'; btn.hidden = false; back.hidden = false;
+      return new Promise(function (resolve) {
+        btn.onclick = function () { if (!UI.busy()) resolve(true); };
+        back.onclick = function () { if (!UI.busy()) resolve(false); };
+      });
+    }).then(function (go) {
+      btn.hidden = true; back.hidden = true; btn.onclick = null; back.onclick = null; G.hero.pose = null;
+      if (go) resolveWait('leave');
+      return null;
+    });
   }
   function tapBed() {
     if (H.pro) return heroGo(200).then(function () { resolveWait('bed'); });
@@ -858,8 +938,7 @@ var Home = (function () {
     });
   }
   function hangHoodie() {
-    H.hoodieHung = true; H.rackOK = false; UI.sfx('page');
-    return heroGo(470).then(function () { resolveWait('hung'); });
+    return heroGo(470).then(function () { H.hoodieHung = true; H.rackOK = false; UI.sfx('page'); resolveWait('hung'); });
   }
   // 4/21: 아침에 보이지 않는 고양이 찾기
   var SPOTS = {
@@ -868,7 +947,7 @@ var Home = (function () {
   };
   function searchSpots(room) {
     return SPOTS[room].filter(function (sp) { return !H.searched[sp.id]; }).map(function (sp) {
-      return { id: 'search-' + sp.id, x: sp.x, y: sp.y, w: sp.w, h: sp.h, chips: [cMin(Life.T.search)], tap: function () { return search(sp); } };
+      return { id: 'search-' + sp.id, x: sp.x, y: sp.y, w: sp.w, h: sp.h, chips: [cMin(Life.T.search)], pulse: true, tap: function () { return search(sp); } };
     });
   }
   function search(sp) {
@@ -880,7 +959,7 @@ var Home = (function () {
       if (r.found) {
         H.searching = false; UI.sfx('meow');
         var k = G.cat; k.room = 'bedroom'; k.visible = true; k.x = P.drawer.x + 20; k.y = 336; k.pose = 'sit';
-        return say([me(Story.catLine('found', s.cat))]);
+        return say([me(Story.catLine(r.late ? 'foundLate' : 'found', s.cat))]);
       }
       return say([me(['여긴 없네.', '여기도 없어.', '어디 간 거지...'][Math.min(2, Object.keys(H.searched).length - 1)])]);
     });
@@ -907,7 +986,20 @@ var Home = (function () {
     H.yawnT = G.t + 6 + Math.random() * 3;
     Engine.puff({ x: h.x + 10, y: h.y - 150, icon: 'zzz', px: 1, life: 1.4 });
   }
-  function tick(dt) { catTick(dt); tickPour(); tickToy(); tickClean(); lateTick(); yawnTick(); flushLines(); if (H.extraTick) H.extraTick(dt); }
+  // 천둥 치는 저녁: 커튼을 칠 때까지 가끔 번쩍이고, 소파 밑 꼬리가 떤다
+  // 고양이를 찾는 동안: 가끔 어디선가 작게 우는 소리
+  function eventTick() {
+    var s = S(); if (!s || H.pro || H.mode === 'night') return;
+    if (catHidden() && sky() === 'storm' && !s.stormDone && G.t > (H.boltT || 0)) {
+      if (H.boltT) { G.flash = .7; UI.sfx('thunder'); }
+      H.boltT = G.t + 7 + Math.random() * 4;
+    }
+    if (H.searching && G.t > (H.meowHintT || 0)) {
+      if (H.meowHintT && !UI.busy()) UI.sfx('meow');
+      H.meowHintT = G.t + 8 + Math.random() * 4;
+    }
+  }
+  function tick(dt) { catTick(dt); tickPour(); tickToy(); tickClean(); lateTick(); yawnTick(); eventTick(); flushLines(); if (H.extraTick) H.extraTick(dt); }
   function enter(room, opts) {
     opts = opts || {};
     H.room = room; H.mode = opts.mode || H.mode; H.clean = null;
@@ -919,6 +1011,6 @@ var Home = (function () {
   return {
     P: P, H: H, enter: enter, wait: wait, resolveWait: resolveWait, goRoom: goRoom, noticeNeeds: noticeNeeds, needs: needs, draw: draw,
     drawLiving: drawLiving, drawBedroom: drawBedroom, sky: sky, once: once, seen: seen, cMin: cMin, cBolt: cBolt, cHeart: cHeart,
-    openMemo: openMemo, openMail: openMail, furOn: furOn, mailWaiting: mailWaiting
+    openMemo: openMemo, openMail: openMail, furOn: furOn, stinkLines: stinkLines, mailWaiting: mailWaiting
   };
 }());
