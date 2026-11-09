@@ -12,7 +12,7 @@ var Home = (function () {
     memo: { x: 336, y: 120, w: 40, h: 40 }, broom: { x: 392, y: 286 }, mop: { x: 372, y: 288 },
     bDoor: { x: 523, y: 48, w: 98, h: 212 }, bed: { x: 22, y: 228, w: 200, h: 96 }, desk: { x: 265, y: 180, w: 148, h: 85 },
     laptop: { x: 326, y: 186 }, roller: { x: 430, y: 99 }, charger: { x: 374, y: 186 }, bBag: { x: 246, y: 334 },
-    suitRack: { x: 452, y: 246 }, hoodieRack: { x: 490, y: 246 }, drawer: { x: 358, y: 224, w: 46, h: 32 }
+    suitRack: { x: 452, y: 178 }, hoodieRack: { x: 490, y: 178 }, drawer: { x: 358, y: 224, w: 46, h: 32 }
   };
   var H = {
     room: 'living', mode: 'evening', waiter: null, held: null, pour: 0, toy: null, curtain: 0, curtainDrag: false,

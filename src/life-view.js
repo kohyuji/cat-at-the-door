@@ -25,7 +25,7 @@ var View = (function () {
       door: { x: 527, y: 52, w: 89, h: 204 }, window: { x: 38, y: 37, w: 218, h: 143 },
       bed: { x: 30, y: 196, w: 174, h: 124 }, pillow: { x: 117, y: 262 },
       desk: { x: 265, y: 180, w: 148, h: 85 }, drawer: { x: 358, y: 228, w: 46, h: 30 }, cards: { x: 318, y: 179 },
-      rack: { x: 418, y: 115, w: 98, h: 147 }, suit: { x: 452, y: 244 }, hoodie: { x: 488, y: 244 },
+      rack: { x: 418, y: 115, w: 98, h: 147 }, suit: { x: 452, y: 178 }, hoodie: { x: 490, y: 178 },
       roller: { x: 404, y: 179 }, laptop: { x: 300, y: 179 }, charger: { x: 352, y: 179 }, bag: { x: 236, y: 336 }
     }
   };

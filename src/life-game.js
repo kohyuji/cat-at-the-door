@@ -1,7 +1,7 @@
 /* 이야기 흐름: 처음 화면, 프롤로그, 4/12~4/24의 하루, 밤의 문, 고양이 시점, 결산, 엔딩. */
 var Game = (function () {
   'use strict';
-  var KEY = 'catdoor-codex-v5-claude-save';
+  var KEY = 'catdoor-v6-save'; // 같은 github.io 주소의 다른 판(/codex-v5-claude/ 등)과 저장이 섞이지 않게
   var H = Home.H, P = Home.P;
   function $(id) { return document.getElementById(id); }
   function say(l) { return UI.say(l); }
@@ -151,8 +151,8 @@ var Game = (function () {
     G.hand = null; st.cat.pose = 'sit';
     await Engine.sleep(.6);
     UI.sfx('meow');
-    // 우산 아래에서 고양이가 처음 하는 말 (단순한 고양이 얼굴과 함께)
-    await say([{ who: 'cat', text: '너도 참 기구한 신세로구나.' }]);
+    // 우산 아래에서 고양이가 울고, 주인공이 젖은 고양이에게 말을 건다
+    await say([{ who: 'cat', text: '야옹~' }, me('너도 참 기구한 신세로구나.')]);
     st.cat.dir = -1; st.cat.pose = 'walk';
     await new Promise(function (resolve) {
       var from = st.cat.x, to = G.hero.x + 26, t0 = G.t;
