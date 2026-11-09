@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Cat at the Door</title>
-<link rel="stylesheet" href="src/life.css?v=cba72244661a">
+<link rel="stylesheet" href="src/life.css?v=936310d70d8c">
 </head>
 <body>
 <main id="app">
@@ -13,9 +13,9 @@
     <div class="title-card">
       <h1>Cat at the Door</h1>
       <p class="subtitle">내 한 몸 건사하기도 힘든 세상에서 살아남기!!!</p>
-      <label class="name-field">내 이름<input id="playerName" maxlength="8" placeholder="김신입" autocomplete="off"></label>
+      <label class="name-field">내 이름<input id="playerName" maxlength="8" autocomplete="off"></label>
       <div class="title-buttons">
-        <button id="startButton" class="primary">시작</button>
+        <button id="startButton" class="primary" disabled>시작</button>
         <button id="continueButton" hidden>이어서</button>
       </div>
     </div>
@@ -23,11 +23,14 @@
 
   <section id="gameScreen" hidden>
     <header id="hud" class="hud">
-      <div class="hud-left"><span id="hudDate"></span><span id="hudClock" class="hud-clock"></span></div>
-      <div class="hud-mid"><span id="hudWallet" class="hud-wallet"></span><span id="hudFood" class="hud-food" title="남은 사료"></span></div>
+      <div class="hud-time"><span id="hudDate" class="hud-date"></span><span id="hudClock" class="hud-clock"></span><span id="hudDue" class="hud-due" hidden></span></div>
+      <div class="hud-stats">
+        <span id="hudWallet" class="hud-stat hud-wallet" title="지갑"></span>
+        <span id="hudFood" class="hud-stat hud-food" title="남은 사료"></span>
+        <span id="hudEnergy" class="hud-stat hud-energy" title="내 체력"></span>
+        <span id="hudHearts" class="hud-stat hud-hearts" title="고양이 마음"></span>
+      </div>
       <div class="hud-right">
-        <span id="hudEnergy" class="hud-energy" title="내 체력"></span>
-        <span id="hudHearts" class="hud-hearts"></span>
         <button id="phoneButton" class="icon-button" aria-label="휴대폰"><svg viewBox="0 0 24 30" aria-hidden="true"><rect x="4" y="2" width="16" height="26" rx="3" fill="#f4f2ec" stroke="currentColor" stroke-width="2.2"/><rect x="7" y="6" width="10" height="15" rx="1" fill="#8fb4d4"/><circle cx="12" cy="24.5" r="1.4" fill="currentColor"/></svg><i id="phoneBadge" hidden>!</i></button>
         <button id="soundButton" class="icon-button" aria-label="소리"></button>
         <button id="menuButton" class="icon-button" aria-label="메뉴">☰</button>
@@ -67,7 +70,7 @@
   <section id="receipt" class="receipt-modal" hidden><div class="receipt-paper" id="receiptPaper"></div></section>
 
   <section id="naming" class="modal" hidden>
-    <form id="nameForm" class="name-card"><label for="catName">이름을 뭐라고 부를까?</label><input id="catName" placeholder="보리" maxlength="8" autocomplete="off"><button class="primary">이걸로 할래</button></form>
+    <form id="nameForm" class="name-card"><label for="catName">이름을 뭐라고 부를까?</label><input id="catName" maxlength="8" autocomplete="off"><button id="catNameOk" class="primary" disabled>이걸로 할래</button></form>
   </section>
 
   <section id="gameOver" class="gameover" hidden>
@@ -82,20 +85,24 @@
   </section>
 
   <section id="ending" class="ending" hidden>
-    <div class="ending-top"><canvas id="endingCanvas" width="640" height="360"></canvas><div class="ending-words"><h1 id="endingTitle"></h1><div id="endingBody"></div></div></div>
+    <div class="ending-top">
+      <div class="ending-stage"><canvas id="endingCanvas" width="640" height="360"></canvas><div id="endingStamp" class="ending-stamp"></div></div>
+      <div class="ending-words"><div id="endingGrade" class="ending-grade"></div><h1 id="endingTitle"></h1><div id="endingBody"></div></div>
+    </div>
+    <div class="ending-dex"><h3 id="dexTitle"></h3><div id="endingDex" class="dex-grid"></div></div>
     <div class="ending-books"><div class="ledger" id="ledger"></div><div class="diary" id="diary"></div></div>
     <div class="ending-buttons"><button id="epilogueButton" class="primary">문 너머의 열이틀</button><button id="restartButton">처음부터 다시</button></div>
   </section>
 </main>
-<script>window.__LIFE_ASSETS={"r4People":"assets/r4-people-pixel.png?v=eda49ce17737","r4Cats":"assets/r4-cats-pixel.png?v=b333579fbf67","r4Props":"assets/r4-props-pixel.png?v=5142915f16f3","r4Actions":"assets/r4-actions-pixel.png?v=ebdd0538111c","r4Seated":"assets/r4-seated-pixel.png?v=05d526f472a9","r4Portraits":"assets/r4-portraits-approved-cords.png?v=cf7d5f26602a","r4PortraitBase":"assets/r4-portraits-approved.png?v=6ba884c4a507","r4Scenes":"assets/r4-scenes-urban.png?v=82da7c2f4700","r4Outdoors":"assets/r4-outdoors-urban.png?v=7b2dd84a0d06","r6People":"assets/r6-people-v2.png?v=3496bd10f60a","r6Clean":"assets/r6-clean-v2.png?v=013d3c1a17ae","r6Care":"assets/r6-care-v2.png?v=a8dd1276c58f","r6Wet":"assets/r6-wet-v2.png?v=1fe710ab520f","r6Transit":"assets/r6-transit-v2.png?v=663124ea0b48","r6Extras":"assets/r6-extras.png?v=0118ef264493"};</script><script src="src/life-state.js?v=940e627c8066"></script>
-<script src="src/life-story.js?v=5bb9fb0d41e8"></script>
+<script>window.__LIFE_ASSETS={"r4People":"assets/r4-people-pixel.png?v=eda49ce17737","r4Cats":"assets/r4-cats-pixel.png?v=b333579fbf67","r4Props":"assets/r4-props-pixel.png?v=5142915f16f3","r4Actions":"assets/r4-actions-pixel.png?v=ebdd0538111c","r4Seated":"assets/r4-seated-pixel.png?v=05d526f472a9","r4Portraits":"assets/r4-portraits-approved-cords.png?v=cf7d5f26602a","r4PortraitBase":"assets/r4-portraits-approved.png?v=6ba884c4a507","r4Scenes":"assets/r4-scenes-urban.png?v=82da7c2f4700","r4Outdoors":"assets/r4-outdoors-urban.png?v=7b2dd84a0d06","r6People":"assets/r6-people-v2.png?v=3496bd10f60a","r6Clean":"assets/r6-clean-v2.png?v=013d3c1a17ae","r6Care":"assets/r6-care-v2.png?v=a8dd1276c58f","r6Wet":"assets/r6-wet-v2.png?v=1fe710ab520f","r6Transit":"assets/r6-transit-v2.png?v=663124ea0b48","r6Extras":"assets/r6-extras.png?v=0118ef264493"};</script><script src="src/life-state.js?v=b6bbd830ba8b"></script>
+<script src="src/life-story.js?v=4bb9483f0b7e"></script>
 <script src="src/pixel-render.js?v=b2a8574b246c"></script>
-<script src="src/pixel-icons.js?v=a7882805b27f"></script>
+<script src="src/pixel-icons.js?v=ec26c779689e"></script>
 <script src="src/life-view.js?v=42ad13fe09f6"></script>
-<script src="src/life-ui.js?v=9dfd894d150d"></script>
-<script src="src/life-engine.js?v=04d08f94d9c6"></script>
-<script src="src/life-home.js?v=aa385167d975"></script>
-<script src="src/life-work.js?v=a1e21bca97fe"></script>
-<script src="src/life-game.js?v=625c2e7b35d7"></script>
+<script src="src/life-ui.js?v=83b0a38a38e1"></script>
+<script src="src/life-engine.js?v=95a6bbad62aa"></script>
+<script src="src/life-home.js?v=e208fc2dc522"></script>
+<script src="src/life-work.js?v=1016df5d854a"></script>
+<script src="src/life-game.js?v=ec2e6219fe62"></script>
 </body>
 </html>

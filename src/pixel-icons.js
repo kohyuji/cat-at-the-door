@@ -403,6 +403,91 @@ var PixelIcons = (function () {
       '................']
   };
 
+  // 화장실 냄새: 옷이나 화장실 위로 올라가는 구불구불한 줄
+  G.stink = [
+    '.E...E..',
+    'E...E...',
+    'E...E...',
+    '.E...E..',
+    '..E...E.',
+    '..E...E.',
+    '.E...E..',
+    'E...E...'];
+  G.sand = [
+    '....kk....',
+    '...kyyk...',
+    '..kyyyyk..',
+    '.kyYyyYyk.',
+    'kyyyyyyyyk',
+    'kkkkkkkkkk'];
+  // 현관문, 지하철, 지점 건물 (아침 출발 시각 표시)
+  G.door = [
+    'kkkkkkkkkk',
+    'knnnnnnnnk',
+    'knNNNNNNnk',
+    'knNnnnnNnk',
+    'knNNNNNNnk',
+    'knnnnnnnnk',
+    'knnnnnnyyk',
+    'knnnnnnnnk',
+    'knNNNNNNnk',
+    'knNnnnnNnk',
+    'knNNNNNNnk',
+    'knnnnnnnnk',
+    'kkkkkkkkkk'];
+  G.train = [
+    '..kkkkkkkk..',
+    '.kbbbbbbbbk.',
+    'kbccbbbbccbk',
+    'kbccbbbbccbk',
+    'kbbbbbbbbbbk',
+    'kbbbbbbbbbbk',
+    'kbybbbbbbybk',
+    'kbbbbbbbbbbk',
+    '.kkkkkkkkkk.',
+    '..kk....kk..',
+    '.kk......kk.'];
+  G.office = [
+    'kkkkkkkkkk',
+    'kggggggggk',
+    'kgcgcgcgck',
+    'kggggggggk',
+    'kgcgcgcgck',
+    'kggggggggk',
+    'kgcgcgcgck',
+    'kggggggggk',
+    'kggknnkggk',
+    'kggknnkggk',
+    'kkkkkkkkkk'];
+  G.pause = [
+    'kkk.kkk',
+    'kwk.kwk',
+    'kwk.kwk',
+    'kwk.kwk',
+    'kwk.kwk',
+    'kwk.kwk',
+    'kkk.kkk'];
+  // 말 걸 수 있는 사람 머리 위 말풍선
+  G.talk = [
+    '.kkkkkkkkkkkk.',
+    'kwwwwwwwwwwwwk',
+    'kwwkkwkkwkkwwk',
+    'kwwkkwkkwkkwwk',
+    'kwwwwwwwwwwwwk',
+    '.kkkkkkkkkkkk.',
+    '...kwk........',
+    '...kk.........'];
+  G.search = [
+    '..kkkk....',
+    '.kcccck...',
+    'kccxccck..',
+    'kcxcccck..',
+    'kcccccck..',
+    '.kcccck...',
+    '..kkkkkk..',
+    '......kkk.',
+    '.......kkk',
+    '........kk'];
   G.dental = G.tooth; // 치아보험은 이 그림
 
   function draw(c, name, x, y, px, opts) {

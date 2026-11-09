@@ -58,7 +58,11 @@ var UI = (function () {
     page: function () { noise(.12, .03, 2200, 0, 1); },
     sleep: function () { tone(392, .3, 'triangle', .04); tone(330, .5, 'triangle', .035, 0, .3); },
     yawn: function () { tone(330, .6, 'triangle', .04, 180); },
-    over: function () { tone(220, .8, 'triangle', .05, 110); }
+    over: function () { tone(220, .8, 'triangle', .05, 110); },
+    stamp: function () { noise(.18, .2, 160, 0, .6); tone(90, .25, 'square', .06, 60); },
+    fanfare: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .16, 'square', .04, 0, i * .12); }); tone(1319, .5, 'triangle', .05, 0, .5); },
+    mystery: function () { [392, 494, 587, 740, 880].forEach(function (f, i) { tone(f, .3, 'triangle', .04, 0, i * .14); }); },
+    gloom: function () { tone(196, .5, 'triangle', .05, 0); tone(165, .9, 'triangle', .05, 0, .45); }
   };
   function sfx(name) { try { if (SFX[name]) SFX[name](); } catch (e) { /* 소리가 안 나도 게임은 계속 */ } }
   var SVG_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8c1.5 1.2 1.5 6.8 0 8M19 5c3 2.6 3 11.4 0 14" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
@@ -80,34 +84,48 @@ var UI = (function () {
     document.body.appendChild(d);
     setTimeout(function () { d.remove(); }, 1500);
   }
+  // 위쪽 표시: 날짜, 큰 시계, 그 옆에 다음 마감(아침 출발, 밤 취침), 지갑, 사료, 체력, 고양이 마음.
+  // 그림은 2배로 그려 멀리서도 읽히게 한다.
   function hud(v) {
     var sh = v.show || {};
     show('hudDate', sh.date); show('hudClock', sh.clock); show('hudWallet', sh.wallet);
     show('hudFood', sh.food); show('hudEnergy', sh.energy); show('hudHearts', sh.hearts);
+    show('hudDue', sh.clock && !!v.due);
     if (sh.date) setHTML($('hudDate'), esc(v.date));
     if (sh.clock) {
       var c = $('hudClock');
-      setHTML(c, esc(Life.clock(v.minute)) + (v.due ? '<span class="due">/ ' + esc(Life.clock(v.due)) + '</span>' : ''));
+      setHTML(c, esc(Life.clock(v.minute)));
       c.classList.toggle('late', !!v.late);
     }
-    if (sh.wallet) setHTML($('hudWallet'), img('coin', 1) + esc(Life.won(v.wallet)));
+    if (sh.clock && v.due) {
+      // 아침: 문 그림 8:10 · 20분 남음 / 지하철 50분 → 지점 9:00. 저녁: 잠 그림 11:00.
+      var d = $('hudDue'), left = v.due - v.minute, html;
+      if (v.dueKind === 'leave') {
+        html = img('door', 2) + '<b>' + esc(Life.clock(v.due)) + '</b>' +
+          (left >= 0 ? '<em>' + esc(left + '분 남음') + '</em>' : '<em class="bad">' + esc('지각 ' + Math.min(-left, 99) + '분') + '</em>') +
+          '<span class="trip">' + img('train', 2) + esc(v.commute + '분') + img('office', 2) + esc(Life.clock(v.arrive)) + '</span>';
+      } else {
+        html = img('zzz', 2) + '<b>' + esc(Life.clock(v.due)) + '</b>' + (v.late ? '<em class="bad">' + esc('심야') + '</em>' : '');
+      }
+      setHTML(d, html);
+      d.classList.toggle('urgent', v.dueKind === 'leave' && left < 10);
+      d.classList.toggle('late', !!v.late);
+    }
+    if (sh.wallet) setHTML($('hudWallet'), img('coin', 2) + '<b>' + esc(Life.won(v.wallet)) + '</b>');
     if (sh.food) {
-      var f = v.food || { dry: 0, wet: 0 }, pips = '', nd = Math.min(f.dry, 10), nw = Math.min(f.wet, 6);
-      for (var i = 0; i < nd; i++) pips += '<i class="pip"></i>';
-      for (var k = 0; k < nw; k++) pips += '<i class="pip wet"></i>';
-      if (!nd && !nw) pips = '<i class="pip off"></i><i class="pip off"></i>';
-      setHTML($('hudFood'), img('paw', 1) + pips + (f.dry > 10 ? '<small>+' + (f.dry - 10) + '</small>' : ''));
+      var f = v.food || { dry: 0, wet: 0 };
+      setHTML($('hudFood'), img('bowl', 2) + '<b class="' + (f.dry + f.wet <= 2 ? 'bad' : '') + '">' + esc(f.dry + '끼') + '</b>' + (f.wet ? '<small class="wet">' + esc('습식 ' + f.wet) + '</small>' : ''));
     }
     if (sh.energy) {
       var e = $('hudEnergy'), cells = '';
       for (var j = 0; j < Life.MAX; j++) cells += '<i class="' + (j < v.energy ? 'on' : '') + '"></i>';
-      setHTML(e, cells);
+      setHTML(e, img('bolt', 2) + '<span class="cells">' + cells + '</span>');
       e.classList.toggle('low', v.energy <= 2 && v.energy > 0); e.classList.toggle('empty', v.energy <= 0);
     }
     if (sh.hearts) {
       var h = '';
-      for (var m = 0; m < Life.MAX; m++) h += img(m < v.hearts ? 'heart' : 'heartEmpty', 1);
-      setHTML($('hudHearts'), h);
+      for (var m = 0; m < Life.MAX; m++) h += img(m < v.hearts ? 'heart' : 'heartEmpty', 2);
+      setHTML($('hudHearts'), img('paw', 2) + '<span class="hearts">' + h + '</span>');
     }
     if (last.ok) {
       if (sh.wallet && v.wallet !== last.wallet) float($('hudWallet'), wonSigned(v.wallet - last.wallet), v.wallet > last.wallet);
@@ -150,6 +168,7 @@ var UI = (function () {
       box.classList.toggle('no-face', !info.face);
       if (info.face) drawFace($('portrait'), info.face);
       if (line.sfx) sfx(line.sfx);
+      if (line.on) { try { line.on(); } catch (e) { console.error(e); } }
       typeText($('speech'), line.text, resolve, line.slow ? 60 : 30);
     });
   }
@@ -345,13 +364,16 @@ var UI = (function () {
   }
 
   // ---------- 작은 창 ----------
+  // 이름 칸은 비워 두고, 한 글자라도 써야 버튼이 눌린다
   function askName() {
-    var m = $('naming'), input = $('catName');
-    m.hidden = false; input.value = '';
+    var m = $('naming'), input = $('catName'), ok = $('catNameOk');
+    m.hidden = false; input.value = ''; ok.disabled = true;
+    input.oninput = function () { ok.disabled = !input.value.trim(); };
     setTimeout(function () { try { input.focus(); } catch (e) { /* 무시 */ } }, 50);
     return new Promise(function (resolve) {
       $('nameForm').onsubmit = function (e) {
         e.preventDefault();
+        if (!input.value.trim()) { input.focus(); return; }
         m.hidden = true; input.blur();
         resolve(Life.cleanName(input.value, '보리'));
       };
