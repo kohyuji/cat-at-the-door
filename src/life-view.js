@@ -360,9 +360,9 @@ var View = (function () {
   // 실적 그래프 (지점 벽, 크게 볼 때 big)
   function chart(c, x, y, w, h, s, big, glow) {
     box(c, x, y, w, h, '#fffdf4', INK, big ? 3 : 2);
-    var names = ['나', '선배', '동기A', '동기B'], others = [11, 6, 7];
+    var names = ['나', '선배', '동기A', '동기B'], others = [17, 9, 11];
     var day = s ? s.day : 0, vals = [s ? s.contracts : 0].concat(others.map(function (v) { return Math.min(v, Math.round(v * Math.min(1, (day + 1) / 12))); }));
-    var top = y + (big ? 34 : 9), bottom = y + h - (big ? 26 : 8), max = 14, bw = (w - (big ? 60 : 16)) / 4;
+    var top = y + (big ? 34 : 9), bottom = y + h - (big ? 26 : 8), max = 20, bw = (w - (big ? 60 : 16)) / 4;
     if (big) text(c, '수습 실적', x + w / 2, y + 16, 16);
     var gy = bottom - (bottom - top) * Life.GOAL / max;
     for (var i = 0; i < 4; i++) {
@@ -372,7 +372,7 @@ var View = (function () {
       if (big) text(c, names[i], bx + bw * .31, bottom + 12, 12);
     }
     c.strokeStyle = '#e0574f'; c.lineWidth = big ? 2 : 1; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(x + 4, gy); c.lineTo(x + w - 4, gy); c.stroke(); c.setLineDash([]);
-    if (big) text(c, '목표 8건', x + 24, gy - 8, 11, '#c0392b');
+    if (big) text(c, '목표 ' + Life.GOAL + '건', x + 24, gy - 8, 11, '#c0392b');
     if (glow) { c.strokeStyle = 'rgba(255,138,61,' + (.5 + .5 * Math.sin(glow * 6)) + ')'; c.lineWidth = 3; c.strokeRect(x - 3, y - 3, w + 6, h + 6); }
   }
   function charcoal(c, x, y, scale) { PixelArt.extra(c, 'charcoal', x, y, 40 * (scale || 1)); }

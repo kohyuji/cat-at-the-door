@@ -320,7 +320,7 @@ var Home = (function () {
         if (!open) { View.icon(c, 'mail', cx, top + 100 + Math.sin(t * 4) * 2, 4); return; }
         View.icon(c, info.need === 'dental' ? 'tooth' : info.need, cx, top + 70, 3);
         View.text(c, Story.PRODUCT[info.need], cx, top + 112, 14, '#c0392b');
-        wrapText(c, '“' + Story.HINT[info.need].say + '”', cx, top + 140, colW - 30, 12, '#3b3540');
+        wrapText(c, '“' + Story.stepLine(id, 'need', info.need).say + '”', cx, top + 140, colW - 30, 12, '#3b3540');
         if (info.mark !== 'none') { View.icon(c, info.mark === 'cat' ? 'paw' : info.mark, cx - (colW - 40) / 2 + 8, top + 214, 1); wrapText(c, Story.MARK_NOTE[info.mark], cx + 10, top + 218, colW - 50, 11, '#7a3b30'); }
       });
     }

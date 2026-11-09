@@ -109,6 +109,10 @@ var Work = (function () {
           if (l.board && !Wk.board) { Wk.board = G.t; UI.sfx('page'); }
           if (!l.board) Wk.board = 0;
           if (l.chart) Wk.glow = G.t + 4;
+          if (l.sniff) { // 지점장님과 선배가 코를 킁킁, 냄새 나는 쪽(나)을 돌아본다
+            Wk.lead.dir = 1; Wk.peer.dir = 1; Wk.look.marks = [Wk.lead.x, Wk.peer.x];
+            Engine.puff({ x: G.hero.x, y: 210, icon: 'stink', px: 2, life: 1.8, rise: 26 });
+          }
         } };
       }));
     }).then(function () { Wk.look = {}; Wk.board = 0; });
@@ -137,7 +141,28 @@ var Work = (function () {
       }));
     }).then(function () { Wk.look = {}; s.seen.rollerTip = true; });
   }
-  // 목표 8건을 채운 순간
+  // 냄새 때문에 처음 놓친 날: 선배가 다가와 이유를 알려 주고, 오후 상담이 남았으면 섬유 탈취제를 뿌려 준다
+  function smellLesson(lend) {
+    var s = S();
+    office(); Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
+    G.hero.x = 470; G.hero.dir = -1;
+    return Engine.fade(0, .3).then(function () {
+      return new Promise(function (resolve) {
+        var from = Wk.peer.x, to = 410, t0 = G.t;
+        (function step() { var q = Math.min(1, (G.t - t0) / .9); Wk.peer.x = from + (to - from) * q; if (q < 1) setTimeout(step, 30); else resolve(); }());
+      });
+    }).then(function () {
+      Engine.puff({ x: G.hero.x, y: 200, icon: 'stink', px: 2, life: 1.6, rise: 24 });
+      return say(Story.seniorSmell(s, lend).map(function (l) {
+        return { who: l.who, text: l.text, on: l.spray ? function () {
+          UI.sfx('water');
+          for (var k = 0; k < 6; k++) Engine.puff({ x: G.hero.x - 18 + k * 7, y: 230 + (k % 3) * 14, icon: 'drop', px: 1, life: .9, rise: 10 });
+          s.smell = Math.max(0, (s.smell || 0) - 1);
+        } : null };
+      }));
+    });
+  }
+  // 목표를 채운 순간
   function goalParty() {
     var s = S();
     UI.sfx('sticker');
@@ -171,6 +196,7 @@ var Work = (function () {
   function drawConsult(c) {
     var k = Wk.consult, s = S(), t = G.t;
     View.bg(c, G, 'office');
+    officeClock(c, s.minute);
     if (k.p.evening || Wk.dark) View.nightTint(c, .45);
     c.fillStyle = 'rgba(30,26,34,.35)'; c.fillRect(0, 0, 640, 360);
     // 탁자와 두 사람 (옆모습)
@@ -184,19 +210,13 @@ var Work = (function () {
     // 앞 책상 (안내서 자리)
     View.box(c, 40, 270, 560, 96, '#c99b6c', '#5b4636', 3); View.r(c, 46, 274, 548, 5, '#ddb487');
     if (!k.gone && !k.st.done) {
-      // 말풍선: 지금 원하는 것
-      var want = Life.wants(k.p, k.st);
-      if (want === k.p.need && !k.p.prepared && Story.HINT[want]) {
-        View.bubble(c, 388, 38, 124, 76, 448);
-        View.text(c, Story.HINT[want].bubble, 450, 80, 14, k.blink ? 'rgba(47,42,51,.4)' : '#2f2a33');
-      } else {
-        View.bubble(c, 404, 38, 92, 76, 448);
-        View.icon(c, want, 450, 76, 3, { alpha: k.blink ? .4 : 1 });
-      }
+      // 말풍선: 고객님이 지금 하는 말 (무엇을 원하는지 그림으로 보여 주지 않는다)
+      var line = Story.stepLine(k.id, k.p.steps[k.st.step], k.p.need, k.st.clue === k.st.step);
+      var bb = speechBubble(c, line.bubble, k.blink, k.st.clue === k.st.step);
       if (k.p.timer) { // 남은 시간
-        var left = Math.max(0, k.left / k.p.timer);
-        View.disc(c, 488, 46, 11, '#2f2a33'); View.disc(c, 488, 46, 9, '#fffaf0');
-        c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(488, 46); c.arc(488, 46, 8, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
+        var left = Math.max(0, k.left / k.p.timer), tx = bb.x + bb.w - 4, ty = bb.y + 4;
+        View.disc(c, tx, ty, 11, '#2f2a33'); View.disc(c, tx, ty, 9, '#fffaf0');
+        c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(tx, ty); c.arc(tx, ty, 8, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
       }
     }
     if (!k.gone) PixelIcons.mood(c, 514, 140, k.st.mood, 11);
@@ -219,6 +239,23 @@ var Work = (function () {
     if (k.held) View.brochure(c, k.held.kind, k.held.x, k.held.y, 1.05, { lift: true, blur: k.p.blur || k.p.blink, t: t });
     // 체력 0: 하품하느라 눈앞이 깜빡인다
     if (k.p.blink) { var ph = (t % 3.6); if (ph < .35) { c.fillStyle = 'rgba(10,8,14,' + (ph < .17 ? ph / .17 : (.35 - ph) / .18) * .92 + ')'; c.fillRect(0, 0, 640, 360); } }
+  }
+  // 고객님 머리 위 말풍선. 짧은 말을 한두 줄로 감싸고, 아래쪽 끝(꼬리)은 고객님 쪽에 둔다.
+  function speechBubble(c, text, blink, clue) {
+    c.font = "13px 'NeoDunggeunmo', monospace";
+    var maxW = 150, lines = [], cur = '';
+    String(text).split(' ').forEach(function (word) {
+      var tryLine = cur ? cur + ' ' + word : word;
+      if (c.measureText(tryLine).width <= maxW || !cur) cur = tryLine; else { lines.push(cur); cur = word; }
+    });
+    if (cur) lines.push(cur);
+    var w = 0; lines.forEach(function (l) { w = Math.max(w, c.measureText(l).width); });
+    w = Math.max(92, Math.min(190, w + 30)); var h = Math.max(56, 26 + lines.length * 19);
+    var bx = 450 - w / 2, by = 114 - h;
+    View.bubble(c, bx, by, w, h, 448);
+    if (clue) View.box(c, bx + 6, by + 6, 6, 6, '#ffb05a', '#5b4636', 1); // 다시 말해 준 말
+    lines.forEach(function (l, i) { View.text(c, l, 450, by + h / 2 + 4 + (i - (lines.length - 1) / 2) * 19, 13, blink ? 'rgba(47,42,51,.4)' : '#2f2a33'); });
+    return { x: bx, y: by, w: w, h: h };
   }
   function hotConsult() {
     var k = Wk.consult; if (!k || k.st.done || k.gone || !k.ready) return [];
@@ -267,7 +304,7 @@ var Work = (function () {
     var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
     return Engine.fade(0, .35).then(function () {
       if (p.leaves) return say([me(Story.CAUSE[p.reasons[0].key] || Story.CAUSE.lateLeft)]).then(function () { return Life.finish(s, p, st); });
-      return say([client(id, Story.CONSULT.greet), client(id, (Story.HINT[p.need] || {}).say || Story.CONSULT.greet)]).then(function () {
+      return say([client(id, Story.CONSULT.greet), client(id, Story.stepLine(id, 'need', p.need).say)]).then(function () {
         // 시작할 때 생기는 일과 그 이유를 한 줄씩
         return p.reasons.reduce(function (pr, r) {
           return pr.then(function () {
@@ -298,9 +335,18 @@ var Work = (function () {
         var kind = k.drop; k.drop = null;
         var r = Life.answer(p, st, kind);
         k.left = p.timer;
+        if (!r.ok && !r.done) { // 처음 틀리면: 고개를 갸웃하고, 조금 더 분명하게 다시 말해 준다
+          UI.sfx('bad'); k.shake = true;
+          Engine.puff({ x: 470, y: 130, icon: 'bang', px: 2, life: 1.2 });
+          return Engine.sleep(.35).then(function () {
+            k.shake = false;
+            var step = p.steps[st.step];
+            return say([client(id, Story.WRONG[(parseInt(id.slice(1), 10) || 0) % Story.WRONG.length]), client(id, Story.stepLine(id, step, p.need, true).say)]);
+          }).then(function () { if (k.guide) cardHand(); return next(); });
+        }
         if (!r.ok) {
           UI.sfx('bad'); k.shake = true;
-          return Engine.sleep(.35).then(function () { k.shake = false; return say([client(id, Story.CONSULT.wrong), client(id, Story.CONSULT.lost)]); })
+          return Engine.sleep(.35).then(function () { k.shake = false; return say([client(id, Story.CONSULT.wrongAgain), client(id, Story.CONSULT.lost)]); })
             .then(function () { k.gone = true; return done(); });
         }
         UI.sfx('good'); k.heroFrame = 1;
@@ -330,7 +376,9 @@ var Work = (function () {
         return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
           results.push(res);
           var furLost = !res.signed && s.events.some(function (e) { return e.key === 'furLost' && e.day === s.day && e.id === res.id; });
-          if (furLost) return Engine.fade(1, .3).then(function () { return seniorLesson(res.why === 'sneeze', i < ids.length - 1); }).then(function () { return Engine.fade(1, .3); });
+          var smellLost = !res.signed && s.events.some(function (e) { return e.key === 'smellLost' && e.day === s.day && e.id === res.id; });
+          if (furLost || smellLost) return Engine.fade(1, .3).then(function () { return furLost ? seniorLesson(res.why === 'sneeze', i < ids.length - 1) : null; })
+            .then(function () { return smellLost ? smellLesson(i < ids.length - 1) : null; }).then(function () { return Engine.fade(1, .3); });
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(res.pet ? 2 : 1); })
             .then(function () { return res.goal ? goalParty() : null; });

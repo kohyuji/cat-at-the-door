@@ -96,12 +96,12 @@ test('4/12 일요일 저녁 7시, 지갑 2만 원과 사료 반 봉지로 시작
   assert.equal(Life.DAYS[12].date, '4/24');
 });
 
-test('고객은 평일 열흘 동안 저녁 8시 단체 고객까지 모두 16명이고, 첫날은 두 명이다', () => {
+test('고객은 평일 열흘 동안 날마다 두 분(오전, 오후)과 저녁 8시 단체 고객까지 모두 21명이다', () => {
   const ids = Object.keys(Life.CLIENTS);
-  assert.equal(ids.length, 16);
+  assert.equal(ids.length, 21);
   assert.deepEqual(Life.clientsOn(1), ['c1', 'c16']);
   let weekdays = 0;
-  for (let d = 0; d < Life.DAYS.length; d++) if (Life.DAYS[d].kind === 'work') { weekdays++; assert.ok(Life.clientsOn(d).length >= 1); }
+  for (let d = 0; d < Life.DAYS.length; d++) if (Life.DAYS[d].kind === 'work') { weekdays++; assert.equal(Life.clientsOn(d).length, 2, Life.DAYS[d].date); }
   assert.equal(weekdays, 10);
   assert.equal(Life.clientsOn(9)[0], 'c10');
   assert.equal(Life.CLIENTS.c10.mark, 'clock');
@@ -259,21 +259,27 @@ test('메일을 안 읽고 가면 여유가 없고, 읽고 가면 털이나 머�
   assert.equal(Life.finish(s, p, st).signed, true);      // 읽고 가면 한 번 머뭇거려도 계약
 });
 
-test('엉뚱한 안내서를 한 번이라도 건네면 그 자리에서 계약을 놓친다', () => {
+test('엉뚱한 안내서를 건네면 기분이 한 칸 내려가고 고객이 다시 말해 준다. 두 번이면 그 자리에서 놓친다', () => {
   const s = Life.create('나', '보리');
   s.day = 2; s.energy = 4; s.prepared.c2 = true;
-  const p = Life.plan(s, 'c2'), st = Life.consult(p);
+  let p = Life.plan(s, 'c2'), st = Life.consult(p);
   const wrong = Life.answer(p, st, 'car');
   assert.equal(wrong.ok, false);
-  assert.equal(wrong.done, true);
-  assert.equal(Life.answer(p, st, 'travel').done, true); // 끝난 상담에는 더 건넬 수 없다
-  const r = Life.finish(s, p, st);
+  assert.equal(wrong.done, false);
+  assert.equal(wrong.clue, true);
+  assert.equal(st.mood, p.mood - 1);
+  assert.equal(st.clue, 0);                               // 지금 차례(need)를 더 분명하게 말해 준다
+  const again = Life.answer(p, st, 'home');
+  assert.equal(again.done, true);
+  assert.equal(Life.answer(p, st, 'travel').done, true);  // 끝난 상담에는 더 건넬 수 없다
+  let r = Life.finish(s, p, st);
   assert.equal(r.signed, false);
   assert.equal(r.why, 'mistake');
-  // 가장 반가워하는 고객(털 + 준비 + 고양이 집사)도 마찬가지다
-  s.day = 5; s.fur = 1; s.prepared.c7 = true;
-  assert.equal(play(s, 'c7', 1).signed, false);
-  assert.equal(play(s, 'c7').signed, true);
+  // 메일을 읽고 갔으면 한 번 틀려도 계약까지 간다. 안 읽었으면 한 번에 놓친다.
+  assert.equal(play(s, 'c2', 1).signed, true);
+  s.prepared.c2 = false;
+  assert.equal(play(s, 'c2', 1).signed, false);
+  assert.equal(play(s, 'c2').signed, true);
 });
 
 test('오래 머뭇거리면 기분이 한 칸씩 내려가고, 메일을 읽었어도 두 번이면 놓친다', () => {
@@ -314,9 +320,9 @@ test('고양이를 키우는 고객이 털을 보고 웃으면 펫보험까지 �
   assert.equal(s.contracts, 2);
 });
 
-test('8건을 채우면 목표 달성으로 남기고, 그 뒤 계약은 성과급 1.5배다', () => {
+test('목표 건수를 채우면 목표 달성으로 남기고, 그 뒤 계약은 성과급 1.5배다', () => {
   const s = Life.create('나', '보리');
-  s.day = 9; s.phase = 'work'; s.energy = 4; s.contracts = 7;
+  s.day = 9; s.phase = 'work'; s.energy = 4; s.contracts = Life.GOAL - 1;
   const a = play(s, 'c11');
   assert.equal(a.goal, true);
   assert.equal(a.bonus, false);
@@ -340,7 +346,7 @@ test('지점을 나설 때 활동비와 수당이 들어오고 체력이 두 칸
   Life.leaveOffice(s);
   assert.equal(s.wallet, 20000 + Life.ALLOWANCE + Life.PRODUCTS.dental.pay);
   assert.equal(s.energy, e - 2);
-  assert.deepEqual(s.cards, ['c2']);
+  assert.deepEqual(s.cards, ['c2', 'c17']);
   assert.equal(s.today.earned.length, 2);
 });
 
@@ -349,7 +355,7 @@ test('메일을 읽으면(준비) 한 시간이 들고, 금요일에 온 월요�
   assert.equal(Life.act(s, 'prep').why, 'noCard');
   s.day = 5; s.phase = 'work';
   Life.leaveOffice(s);
-  assert.deepEqual(s.cards, ['c9']);
+  assert.deepEqual(s.cards, ['c9', 'c19']);
   Life.arriveHome(s); Life.toBed(s); Life.sleep(s); Life.morning(s);
   assert.equal(s.phase, 'weekend');
   assert.equal(s.minute, T.weekendStart);
@@ -729,23 +735,24 @@ test('4/21 아침에는 고양이가 안 보이고, 서랍 속에서 찾는다',
 
 test('엔딩은 하트와 계약 건수로 정해지고, 다 지켜 준 사람만 숨은 엔딩을 본다', () => {
   const s = Life.create('나', '보리');
+  const G = Life.GOAL;
   const pick = (h, c) => { s.hearts = h; s.contracts = c; return Life.ending(s).key; };
-  assert.equal(pick(5, 8), 'both');
+  assert.equal(pick(5, G), 'both');
   s.events.push({ day: 3, key: 'curtain' });
-  assert.equal(pick(5, 8), 'both');                 // 서랍 속 아침도 지켜 줘야
+  assert.equal(pick(5, G), 'both');                 // 서랍 속 아침도 지켜 줘야
   s.events.push({ day: 9, key: 'drawer' });
-  assert.equal(pick(5, 8), 'family');
+  assert.equal(pick(5, G), 'family');
   assert.equal(Life.ending(s).grade, 'hidden');
-  assert.equal(pick(4, 8), 'both');                 // 마음이 하나라도 비면 아니다
+  assert.equal(pick(4, G), 'both');                 // 마음이 하나라도 비면 아니다
   s.missed = 1;
-  assert.equal(pick(5, 8), 'both');                 // 한 끼라도 굶기면 아니다
+  assert.equal(pick(5, G), 'both');                 // 한 끼라도 굶기면 아니다
   s.missed = 0; s.events = [];
   assert.equal(Life.ENDINGS.length, 8);
   assert.deepEqual(Life.ENDINGS.map(k => Life.GRADE[k]), ['hidden', 'good', 'normal', 'normal', 'normal', 'bad', 'bad', 'bad']);
-  assert.equal(pick(4, 7), 'catStays');
-  assert.equal(pick(3, 9), 'soso');
+  assert.equal(pick(4, G - 1), 'catStays');
+  assert.equal(pick(3, G + 1), 'soso');
   assert.equal(pick(2, 3), 'clumsy');
-  assert.equal(pick(1, 10), 'oneBody');
+  assert.equal(pick(1, G + 2), 'oneBody');
   assert.equal(pick(0, 0), 'again');
 });
 
@@ -759,11 +766,12 @@ test('저장하고 다시 불러오면 같은 상태다', () => {
   assert.equal(Life.load('{"v":0}'), null);
 });
 
-test('성실한 12일: 메일 읽고 일찍 자고 털을 떼면 8건을 넘기지만, 지갑은 빠듯하다', () => {
+test('성실한 12일: 메일 읽고 일찍 자고 털을 떼면 목표를 넘기지만, 지갑은 빠듯하고 목표는 둘째 주에야 채운다', () => {
   const { s, min } = twelveDays({ buy: sensibleBuy });
   assert.equal(s.ended, 'evaluation');
   assert.ok(s.contracts >= Life.GOAL, 'contracts ' + s.contracts);
   assert.ok(s.goalDay !== null);
+  assert.ok(s.goalDay >= 8, '목표 달성일 ' + Life.DAYS[s.goalDay].date);
   assert.ok(min >= 0);
   assert.ok(min < 10000, '가장 적을 때 ' + min);
   assert.equal(s.missed, 0);
@@ -772,13 +780,15 @@ test('성실한 12일: 메일 읽고 일찍 자고 털을 떼면 8건을 넘기�
   assert.equal(s.diary.length, 13);
 });
 
-test('메일을 안 읽고 가서 고객 말을 알아듣느라 머뭇거리거나, 엉뚱한 안내서를 건네면 8건을 못 채운다', () => {
+test('메일을 안 읽고 가서 고객 말을 알아듣느라 머뭇거리거나, 엉뚱한 안내서를 건네면 목표를 못 채운다', () => {
   const read = twelveDays({ buy: sensibleBuy, hesitate: true }).s;
   assert.ok(read.contracts >= Life.GOAL, '읽고 머뭇 ' + read.contracts);
   const lazy = twelveDays({ buy: sensibleBuy, acts: ['play', 'rest'], hesitate: true }).s;
   assert.ok(lazy.contracts < Life.GOAL, '안 읽고 머뭇 ' + lazy.contracts);
-  const clumsy = twelveDays({ buy: sensibleBuy, mistakes: 1 }).s;
-  assert.equal(clumsy.contracts, 0);
+  const clumsy = twelveDays({ buy: sensibleBuy, acts: ['play', 'rest'], mistakes: 1 }).s;
+  assert.equal(clumsy.contracts, 0);                  // 안 읽고 가서 한 번씩 틀리면 하나도 못 딴다
+  const readClumsy = twelveDays({ buy: sensibleBuy, mistakes: 1 }).s;
+  assert.ok(readClumsy.contracts >= Life.GOAL, '읽고 한 번씩 틀림 ' + readClumsy.contracts); // 읽고 가면 실수 하나는 버틴다
 });
 
 test('늦게 자고 털도 안 떼면 지각과 하품으로 계약이 크게 준다', () => {

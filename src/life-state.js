@@ -6,7 +6,7 @@ var Life = (function () {
   'use strict';
 
   var VERSION = 2;
-  var GOAL = 8;            // 수습 평가 목표 계약 건수
+  var GOAL = 12;           // 수습 평가 목표 계약 건수 (평일마다 고객 두 분, 저녁 단체 하나)
   var ALLOWANCE = 2000;    // 출근한 날 활동비
   var BONUS = 1.5;         // 목표를 채운 뒤의 계약 수당 배율 (성과급)
   var MAX = 5;             // 체력, 하트 칸 수
@@ -23,8 +23,8 @@ var Life = (function () {
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
   var PRODUCTS = {
-    dental: { pay: 6000 }, pet: { pay: 5000 }, car: { pay: 5000 },
-    home: { pay: 4000 }, travel: { pay: 3000 }, group: { pay: 20000 }
+    dental: { pay: 4500 }, pet: { pay: 4000 }, car: { pay: 4000 },
+    home: { pay: 3000 }, travel: { pay: 2500 }, group: { pay: 15000 }
   };
 
   var SHOP = {
@@ -57,25 +57,31 @@ var Life = (function () {
   // 고객 15명. need는 원하는 상품, mark는 고객 메모에 적힌 특징.
   // 첫 고객(c1)은 털 알레르기가 있다: 첫날 아침 정장에 붙은 털 때문에 반드시 계약을 놓친다.
   // 첫날은 두 명: 늦어서 첫 고객을 놓쳐도 오후 고객과 상담을 배운다.
+  // 평일마다 오전 10시와 오후 2시에 한 분씩. 늦어서 오전 고객을 놓쳐도 오후 고객은 만난다.
   var CLIENTS = {
     c1: { day: 1, need: 'dental', mark: 'sneeze' },
     c16: { day: 1, need: 'home', mark: 'none' },
     c2: { day: 2, need: 'travel', mark: 'none' },
+    c17: { day: 2, need: 'home', mark: 'none' },
     c3: { day: 3, need: 'car', mark: 'none' },
     c4: { day: 3, need: 'dental', mark: 'sneeze' },
     c5: { day: 4, need: 'home', mark: 'none' },
+    c18: { day: 4, need: 'car', mark: 'sneeze' },
     c6: { day: 4, need: 'group', mark: 'none', evening: true },
     c7: { day: 5, need: 'home', mark: 'cat' },
     c8: { day: 5, need: 'travel', mark: 'clock' },
     c9: { day: 8, need: 'car', mark: 'none' },
+    c19: { day: 8, need: 'travel', mark: 'cat' },
     c10: { day: 9, need: 'dental', mark: 'clock' },
     c11: { day: 9, need: 'home', mark: 'none' },
     c12: { day: 10, need: 'travel', mark: 'sneeze' },
+    c20: { day: 10, need: 'car', mark: 'clock' },
     c13: { day: 11, need: 'dental', mark: 'cat' },
     c14: { day: 11, need: 'car', mark: 'none' },
-    c15: { day: 12, need: 'home', mark: 'none' }
+    c15: { day: 12, need: 'home', mark: 'none' },
+    c21: { day: 12, need: 'dental', mark: 'none' }
   };
-  var CLIENT_IDS = Object.keys(CLIENTS); // c1, c16(같은 날 오후), c2 ... 순서는 날짜 안에서만 의미가 있다
+  var CLIENT_IDS = Object.keys(CLIENTS); // 순서는 날짜 안에서만 의미가 있다 (오전, 오후)
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function cleanName(n, fallback) {
@@ -316,7 +322,8 @@ var Life = (function () {
   function firstClient(s) { return clientsOn(s.day)[0]; }
   // 상담 계획. 처음 보는 신입이라 기분은 1에서 시작하고, 계약서를 건넬 때 3 이상이어야 서명한다.
   // 메일을 읽고 가면 +1이라 실수 하나쯤은 버틴다. 안 읽고 가면 털, 하품, 머뭇거림 하나에 놓친다.
-  // 맞게 건네면 +1, 너무 오래 걸리면 −1. 엉뚱한 것을 건네면 고객은 그 자리에서 생각해 보겠다고 한다.
+  // 맞게 건네면 +1, 너무 오래 걸리면 −1. 엉뚱한 것을 건네면 −1이고 고객이 조금 더 분명하게 말해 준다.
+  // 두 번 엉뚱한 것을 건네면 고객은 그 자리에서 생각해 보겠다고 한다.
   function plan(s, id) {
     var c = CLIENTS[id], mood = 1, reasons = [], fur = s.fur > 0;
     var eff = s.energy;
@@ -344,7 +351,7 @@ var Life = (function () {
       prepared: !!s.prepared[id], tutorial: tutorial, evening: !!c.evening, leaves: false, fur: fur, smell: s.smell || 0
     };
   }
-  function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false }; }
+  function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false, clue: -1 }; }
   function wants(p, st) {
     var step = p.steps[st.step];
     return step === 'need' ? p.need : step;
@@ -352,7 +359,12 @@ var Life = (function () {
   function answer(p, st, item) {
     if (st.done) return { ok: false, done: true };
     var want = wants(p, st);
-    if (item !== want) { st.mood = 0; st.wrong++; st.done = true; st.signed = false; return { ok: false, done: true, signed: false, mood: 0, want: want }; }
+    if (item !== want) {
+      st.wrong++;
+      if (st.wrong >= 2) { st.mood = 0; st.done = true; st.signed = false; return { ok: false, done: true, signed: false, mood: 0, want: want }; }
+      st.mood = clamp(st.mood - 1, 0, 4); st.clue = st.step;
+      return { ok: false, done: false, clue: true, mood: st.mood, want: want };
+    }
     if (want === 'contract') { st.done = true; st.signed = st.mood >= 3; return { ok: true, done: true, signed: st.signed, mood: st.mood }; }
     st.mood = clamp(st.mood + 1, 0, 4); st.step++;
     return { ok: true, mood: st.mood, next: wants(p, st) };
@@ -387,6 +399,9 @@ var Life = (function () {
       // 털 묻은 정장으로 처음 계약을 놓친 날, 선배가 돌돌이 이야기를 해 준다
       var furry = p.reasons.some(function (x) { return x.key === 'sneeze' || x.key === 'fur'; });
       if (furry && !s.seen.furLost) { s.seen.furLost = true; event(s, 'furLost', { id: p.id }); }
+      // 냄새 때문에 처음 놓친 날에는 선배가 냄새 이야기를 해 준다
+      var smelly = p.reasons.some(function (x) { return x.key === 'smell' || x.key === 'stink'; });
+      if (smelly && !s.seen.smellLost) { s.seen.smellLost = true; event(s, 'smellLost', { id: p.id }); }
     }
     s.results.push(r);
     return r;
