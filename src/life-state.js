@@ -18,7 +18,7 @@ var Life = (function () {
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, prep: 60, sweep: 30, mop: 30, curtain: 10, lunch: 15, shopTrip: 60
+    play: 40, rest: 60, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 60
   };
 
   var PRODUCTS = {
@@ -29,8 +29,12 @@ var Life = (function () {
   var SHOP = {
     dry: { price: 12000 }, sand: { price: 8000 }, wet: { price: 15000 }, toy: { price: 3500 },
     tower: { price: 30000, once: true }, feeder: { price: 25000, once: true },
-    roller: { price: 3000, once: true }, coffee: { price: 2000 }, lunch: { price: 6000 }
+    roller: { price: 3000, once: true }, coffee: { price: 2000 }, lunch: { price: 6000 },
+    // 4/17(금)부터 진열되는 자동 물건. 손으로 하는 것보다 효과가 눈에 띄게 적다.
+    robot: { price: 24000, once: true, from: 5 }, autoToy: { price: 16000, once: true, from: 5 }
   };
+  var AUTO_TOY_NIGHTS = 5;  // 자동 장난감은 혼자 노는 밤 다섯 번이면 닳는다
+  var JOB = { pay: 5000, minutes: 240, energy: 3, lastStart: 900 }; // 주말 슈퍼 알바
   var DRY_MEALS = 8, WET_MEALS = 6, SAND_DAYS = 4, TOY_PLAYS = 4;
 
   var DAYS = [
@@ -100,7 +104,7 @@ var Life = (function () {
       floor: { fur: 1, dust: 0 },
       toy: TOY_PLAYS,
       fur: 0, wearing: 'hoodie',
-      owned: { roller: false, tower: false, feeder: false },
+      owned: { roller: false, tower: false, feeder: false, robot: false, autoToy: false }, autoToyLeft: 0, jobbed: false,
       pantry: { sand: 0, coffee: 0, lunch: 0 },
       coffee: false, lateCoffee: false, shopped: false,
       played: false, petted: false, rested: 0,
@@ -241,7 +245,7 @@ var Life = (function () {
   function homeTime(s) { return s.phase === 'evening' || s.phase === 'weekend'; }
   function doBlock(s, kind) {
     if (!homeTime(s)) return 'notHome';
-    if (kind === 'play') { if (s.hidden) return 'hidden'; if (s.toy <= 0) return 'noToy'; if (s.played) return 'played'; }
+    if (kind === 'play') { if (s.hidden) return 'hidden'; if (s.toy <= 0) return 'noToy'; if (s.played) return 'played'; if (s.energy <= 1) return 'tired'; }
     if (kind === 'prep') { if (!s.cards.length) return 'noCard'; if (s.cards.every(function (id) { return s.prepared[id]; })) return 'prepared'; }
     if (kind === 'rest') { if (s.energy >= MAX) return 'full'; if (s.rested >= (s.phase === 'weekend' ? 2 : 1)) return 'rested'; }
     if (kind === 'sweep' && s.floor.fur <= 0) return 'clean';
@@ -263,6 +267,28 @@ var Life = (function () {
     else if (kind === 'shop') { s.shopped = true; }
     r.minutes = spend(s, { play: T.play, rest: T.rest, prep: T.prep, sweep: T.sweep, mop: T.mop, curtain: T.curtain, shop: T.shopTrip }[kind]);
     return r;
+  }
+
+  // ---------- 주말 알바 ----------
+  // 슈퍼 진열 정리 네 시간에 5,000원. 몸이 고되고, 그동안 고양이는 혼자 있다.
+  function jobBlock(s) {
+    if (s.phase !== 'weekend') return 'notWeekend';
+    if (s.jobbed) return 'done';
+    if (s.minute > JOB.lastStart) return 'late';
+    if (s.energy < JOB.energy) return 'tired';
+    return null;
+  }
+  function sideJob(s) {
+    var why = jobBlock(s);
+    if (why) return { ok: false, why: why };
+    s.jobbed = true;
+    var minutes = spend(s, T.job);
+    energy(s, -JOB.energy);
+    s.wallet += JOB.pay;
+    s.today.earned.push({ key: 'job', amount: JOB.pay });
+    heart(s, -1, 'jobAlone');
+    event(s, 'job');
+    return { ok: true, minutes: minutes, pay: JOB.pay };
   }
 
   // ---------- 출근 ----------
@@ -378,10 +404,12 @@ var Life = (function () {
   function buyBlock(s, item) {
     var it = SHOP[item];
     if (!it) return 'unknown';
-    if (it.once && s.owned[item]) return 'owned';
+    if (it.from && s.day < it.from) return 'notYet';
+    if (it.once && s.owned[item] && !(item === 'autoToy' && s.autoToyLeft <= 0)) return 'owned';
     if (s.wallet < it.price) return 'money';
     return null;
   }
+  function onShelf(s, item) { var it = SHOP[item]; return !!it && !(it.from && s.day < it.from); }
   function buy(s, item) {
     var why = buyBlock(s, item);
     if (why) return { ok: false, why: why };
@@ -395,6 +423,7 @@ var Life = (function () {
     else if (item === 'coffee') s.pantry.coffee++;
     else if (item === 'lunch') s.pantry.lunch++;
     else s.owned[item] = true;
+    if (item === 'autoToy') s.autoToyLeft = AUTO_TOY_NIGHTS;
     s.shopped = true;
     return { ok: true, wallet: s.wallet };
   }
@@ -415,6 +444,7 @@ var Life = (function () {
     else if (item === 'toy') s.toy -= TOY_PLAYS;
     else if (s.pantry[item] !== undefined) s.pantry[item]--;
     else s.owned[item] = false;
+    if (item === 'autoToy') s.autoToyLeft = 0;
     if (!sp.length && s.phase !== 'weekend') s.shopped = false;
     return { ok: true, wallet: s.wallet };
   }
@@ -444,7 +474,9 @@ var Life = (function () {
   }
   function toBed(s) { s.phase = 'night'; }
   function setDoor(s, open) { s.door = open ? 'open' : 'closed'; return s.door; }
-  function unplayed(s) { return !s.played && !s.owned.tower; }
+  // 안 놀아 준 밤: 자동 장난감이 돌면 혼자 놀아서 울지 않는다 (마음은 오르지 않는다)
+  function autoToyOn(s) { return !!s.owned.autoToy && s.autoToyLeft > 0; }
+  function unplayed(s) { return !s.played && !autoToyOn(s); }
   function needsPOV(s) { return s.door === 'closed' && unplayed(s) && !s.hidden; }
   // 잠든 시각에 따라 찰 체력: 11시 전 +3, 그 뒤로 한 시간마다 1칸씩 덜 찬다
   function sleepGain(minute) {
@@ -458,6 +490,7 @@ var Life = (function () {
     var hungry = !s.fed.pm ? missMeal(s, 'pm') : false;
     if (!s.water) heart(s, -1, 'dry');
     if (s.floor.dust >= 3) heart(s, -1, 'dusty');
+    var autoPlayed = !s.played && autoToyOn(s) && !s.hidden;
     var together = s.door === 'open' && !s.hidden;
     if (together) {
       heart(s, +1, 'together');
@@ -467,6 +500,7 @@ var Life = (function () {
       if (opt.cat === 'scratch') { woke = true; note = 'scratched'; event(s, 'scratched'); }
       else { heart(s, -1, 'lonely'); note = 'lonely'; event(s, 'lonely'); }
     } else note = 'closed';
+    if (autoPlayed) { s.autoToyLeft--; t.notes.push(s.autoToyLeft > 0 ? 'autoToy' : 'autoToyWorn'); }
     var base = sleepGain(bed), lost = [];
     if (bed > T.bedtime) lost.push('late');
     if (woke) lost.push('woke');
@@ -502,6 +536,9 @@ var Life = (function () {
     // 고양이 털은 매일 바닥에 쌓이고, 먼지는 이틀에 한 번 쌓인다
     s.floor.fur = Math.min(6, s.floor.fur + 1);
     if (s.day % 2 === 0) s.floor.dust = Math.min(6, s.floor.dust + 1);
+    // 로봇청소기: 밤새 돌아서 털이 더 쌓이지 않게 막는다. 다 치우지는 못하고, 먼지는 못 닦는다.
+    if (s.owned.robot && s.floor.fur > 1) { s.floor.fur--; s.today.notes.push('robot'); }
+    s.jobbed = false;
     if (d.kind === 'off') {
       s.phase = 'weekend'; s.minute = T.weekendStart;
     } else {
@@ -565,7 +602,7 @@ var Life = (function () {
     DRY_MEALS: DRY_MEALS, WET_MEALS: WET_MEALS, SAND_DAYS: SAND_DAYS, TOY_PLAYS: TOY_PLAYS,
     create: create, day: day, clientsOn: clientsOn, nextWorkDay: nextWorkDay, tired: tired, cost: cost,
     feed: feed, feedBlock: feedBlock, ate: ate, water: giveWater, scoop: scoop, refill: refill, sandLow: sandLow, pet: pet,
-    dress: dress, roll: roll, canRoll: canRoll, coffee: drinkCoffee, lunch: eatLunch, search: search,
+    dress: dress, roll: roll, canRoll: canRoll, coffee: drinkCoffee, jobBlock: jobBlock, sideJob: sideJob, JOB: JOB, autoToyOn: autoToyOn, onShelf: onShelf, lunch: eatLunch, search: search,
     act: act, doBlock: doBlock, homeTime: homeTime,
     leaveHome: leaveHome, plan: plan, consult: consult, wants: wants, answer: answer, timeout: timeout, finish: finish, payFor: payFor,
     decideGroup: decideGroup, leaveOffice: leaveOffice,

@@ -32,6 +32,6 @@ R4 생성 스프라이트·배경은 r4-asset-manifest.json과 r4-prompts.md를 
 | `r6-clean-v2.png` | 빗자루질과 물걸레질 |
 | `r6-care-v2.png`, `r6-wet-v2.png` | 사료와 물 붓기, 무릎 꿇기, 습식 캔 |
 | `r6-transit-v2.png` | 지하철에 앉은 승객 넷 |
-| `r6-extras.png` | `tools/build-extras.py`로 잘라 묶은 조각: 방문, 침대, 우산, 번개탄, 고양이 얼굴, 빗자루, 물걸레 |
+| `r6-extras.png` | `tools/build-extras.py`로 잘라 묶은 조각: 방문, 침대, 우산, 번개탄, 고양이 얼굴, 빗자루, 물걸레, 로봇청소기, 깃털 자동 장난감 |
 
 `r6-extras.png`는 `python3 tools/build-extras.py`로 다시 만들 수 있다(원본은 git의 `origin/codex-v5`에서 읽는다). 결과 좌표는 `src/pixel-render.js`의 `EXTRA`에 넣는다. 주인공은 R4 사람들과 키가 맞도록 한 칸을 4배로 그린다.

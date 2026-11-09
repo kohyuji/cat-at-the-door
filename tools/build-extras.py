@@ -27,6 +27,7 @@ def key_border(im, seeds, tol=34):  # 테두리에 닿은 벽·바닥을 투명�
     return im
 
 home, props, catp, bed, dev = load('r5-home.png'), load('r5-props.png'), load('r5-cat-portrait.png'), load('r6-bed-v2.png'), load('r6-devices.png')
+states = load('r6-device-states.png')
 
 def border_seeds(w, h, step=6):
     pts = [(x, 0) for x in range(0, w, step)] + [(x, h - 1) for x in range(0, w, step)]
@@ -50,6 +51,9 @@ pieces['charcoal'] = hard(props.crop((374, 658, 565, 910)))
 pieces['catPortrait'] = hard(catp.crop((286, 222, 963, 1158)))
 pieces['broom'] = hard(dev.crop((540, 492, 807, 839)))
 pieces['mop'] = hard(dev.crop((964, 490, 1257, 839)))
+pieces['robot'] = hard(dev.crop((1411, 153, 1692, 390)))
+pieces['autoToy'] = hard(dev.crop((89, 542, 376, 823)))
+pieces['autoToyWorn'] = hard(states.crop((1139, 359, 1577, 582)))
 
 # 한 줄씩 쌓는다
 W = 1800

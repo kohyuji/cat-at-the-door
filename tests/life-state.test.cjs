@@ -136,7 +136,7 @@ test('집에서 하는 일은 아침이든 저녁이든 시계를 움직이고, 
   assert.equal(s.minute, m0 + T.feed + T.water + T.pet);
   s.energy = 1;
   assert.equal(Life.tired(s), true);
-  assert.equal(Life.act(s, 'play').minutes, Math.ceil(T.play * 1.5));
+  assert.equal(Life.act(s, 'sweep').minutes, Math.ceil(T.sweep * 1.5));
   Life.toBed(s); Life.setDoor(s, false); Life.sleep(s); Life.morning(s);
   assert.equal(s.minute, T.wake);
   Life.dress(s); Life.feed(s, 'dry'); Life.water(s); Life.scoop(s);
@@ -426,7 +426,7 @@ test('같이 자면 하트가 오르고 다음 날 정장에 털이 붙는다. �
   assert.equal(t.minute, T.wokeWake);
 });
 
-test('문 닫고 자면 안 논 밤에는 고양이 시점에서 긁을지 참을지 고른다. 캣타워가 있으면 덜 심심하다', () => {
+test('문 닫고 자면 안 논 밤에는 고양이 시점에서 긁을지 참을지 고른다. 자동 장난감이 돌면 혼자 논다', () => {
   const a = Life.create('나', '보리');
   Life.feed(a, 'dry'); Life.water(a);
   a.energy = 1;
@@ -442,8 +442,68 @@ test('문 닫고 자면 안 논 밤에는 고양이 시점에서 긁을지 참�
   assert.equal(b.hearts, h - 1);
   const c = Life.create('나', '보리');
   c.owned.tower = true;
+  Life.feed(c, 'dry'); Life.water(c);
   Life.toBed(c); Life.setDoor(c, false);
+  assert.equal(Life.needsPOV(c), true, '캣타워는 낮의 외로움만 덜어 준다');
+  c.owned.autoToy = true; c.autoToyLeft = 1;
   assert.equal(Life.needsPOV(c), false);
+  const hc = c.hearts;
+  sleep(c, {});
+  assert.equal(c.hearts, hc, '자동 장난감은 울지 않게 할 뿐 마음을 올리지 않는다');
+  assert.equal(c.autoToyLeft, 0);
+  assert.ok(c.ledger[c.ledger.length - 1].notes.includes('autoToyWorn'));
+});
+
+test('지쳐 있으면(체력 1 이하) 쥐돌이로 놀아 줄 수 없다', () => {
+  const s = Life.create('나', '보리');
+  s.energy = 1;
+  assert.equal(Life.act(s, 'play').why, 'tired');
+  s.energy = 2;
+  assert.equal(Life.act(s, 'play').ok, true);
+});
+
+test('주말 알바: 네 시간, 5,000원, 체력 3칸, 마음 1칸. 하루 한 번, 오후 3시 전, 체력 3 이상', () => {
+  const s = Life.create('나', '보리');
+  assert.equal(Life.jobBlock(s), 'notWeekend');
+  s.day = 6; s.phase = 'weekend'; s.minute = T.weekendStart; s.energy = 4; s.meal = 'am'; s.fed = { am: true, pm: false };
+  const w = s.wallet, h = s.hearts;
+  const r = Life.sideJob(s);
+  assert.equal(r.ok, true);
+  assert.equal(s.wallet, w + 5000);
+  assert.equal(s.minute, T.weekendStart + 240);
+  assert.equal(s.energy, 1);
+  assert.equal(s.hearts, h - 1);
+  assert.equal(Life.jobBlock(s), 'done');
+  assert.equal(Life.act(s, 'play').why, 'tired', '알바한 날은 쉬어야 놀아 줄 수 있다');
+  const t = Life.create('나', '보리');
+  t.day = 6; t.phase = 'weekend'; t.minute = 901; t.energy = 5;
+  assert.equal(Life.jobBlock(t), 'late');
+  t.minute = 700; t.energy = 2;
+  assert.equal(Life.jobBlock(t), 'tired');
+});
+
+test('로봇청소기는 털이 더 쌓이지 않게만 막고 먼지는 못 닦는다', () => {
+  const s = Life.create('나', '보리');
+  s.owned.robot = true; s.floor = { fur: 3, dust: 2 };
+  Life.feed(s, 'dry'); Life.water(s); Life.toBed(s); Life.setDoor(s, false); Life.sleep(s, { cat: 'endure' }); Life.morning(s);
+  assert.equal(s.floor.fur, 3, '밤새 쌓인 만큼만 치운다');
+  assert.equal(s.floor.dust, 2);
+  s.floor.fur = 1; s.day++; Life.morning(s);
+  assert.equal(s.floor.fur, 1, '한 뭉치는 늘 남는다');
+});
+
+test('로봇청소기와 자동 장난감은 4/17부터 슈퍼에 나온다', () => {
+  const s = Life.create('나', '보리');
+  s.wallet = 100000; s.day = 4;
+  assert.equal(Life.onShelf(s, 'robot'), false);
+  assert.equal(Life.buy(s, 'autoToy').why, 'notYet');
+  assert.equal(Life.onShelf(s, 'tower'), true);
+  s.day = 5;
+  assert.equal(Life.buy(s, 'autoToy').ok, true);
+  assert.equal(s.autoToyLeft, 5);
+  assert.equal(Life.buy(s, 'autoToy').why, 'owned');
+  s.autoToyLeft = 0;
+  assert.equal(Life.buy(s, 'autoToy').ok, true, '닳으면 다시 살 수 있다');
 });
 
 test('혼자 집을 본 날은 하트가 두 칸 줄고, 캣타워가 있으면 한 칸만 준다', () => {

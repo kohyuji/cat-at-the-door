@@ -63,11 +63,11 @@
     "r6Extras": {
       "file": "assets/r6-extras.png",
       "width": 1800,
-      "height": 1912,
-      "bytes": 1631699,
-      "sha256": "04244486e8cf4361363c6db1631820ffba79f1f1c6482cba37a4db49ba356a67",
-      "from": "tools/build-extras.py가 codex-v5의 r5-home, r5-props, r5-cat-portrait, r6-bed-v2, r6-devices에서 잘라 묶음",
-      "contents": "방문(닫힘·열림), 침대(빈·깬·잠든), 우산, 번개탄, 단순한 고양이 얼굴, 빗자루, 물걸레. 좌표는 src/pixel-render.js EXTRA"
+      "height": 2195,
+      "bytes": 1890200,
+      "sha256": "0118ef264493347adf382ceea71608517ce0b239dfa3cf3a7d231ad225177bd5",
+      "from": "tools/build-extras.py가 codex-v5의 r5-home, r5-props, r5-cat-portrait, r6-bed-v2, r6-devices, r6-device-states에서 잘라 묶음",
+      "contents": "방문(닫힘·열림), 침대(빈·깬·잠든), 우산, 번개탄, 단순한 고양이 얼굴, 빗자루, 물걸레, 로봇청소기, 깃털 자동 장난감(새것·닳은 것). 좌표는 src/pixel-render.js EXTRA"
     }
   }
 }
