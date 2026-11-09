@@ -75,3 +75,11 @@
 - 픽셀아트: ChatGPT(Codex)가 그린 R4·R6 그림을 바탕으로 썼습니다. 어느 그림을 어디서 가져왔는지는 [`assets/README.md`](assets/README.md)와 `assets/*-asset-manifest.json`에 있습니다.
 - 코드와 밸런스: Claude (Claude Code)
 - 글꼴: Neo둥근모 Pro, 둥근모꼴 ([`assets/fonts/`](assets/fonts/))
+
+## 디벨롭 계획
+
+- [] 주말 컨텐츠 추가
+- [] 배경음악 추가
+- [] 작은 사건들 추가해서 스토리 보강
+- [] 청소 컨텐츠 보강
+- [] 로봇청소기, 자동 장난감 등 아이템 추가
