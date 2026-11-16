@@ -775,6 +775,6 @@ var Game = (function () {
     $('titleScreen').hidden = true; $('gameScreen').hidden = false; Engine.resize();
     return ready.then(fn);
   }
-  return { checkpoint: checkpoint, loadSave: loadSave, KEY: KEY, mainLoop: mainLoop, endingScreen: endingScreen, testStart: testStart,
+  return { checkpoint: checkpoint, loadSave: loadSave, KEY: KEY, mainLoop: mainLoop, startGame: startGame, hudAll: hudAll, endingScreen: endingScreen, testStart: testStart,
     steps: { prologue: prologue, rainyStreet: rainyStreet, proShelf: proShelf, proHome: proHome, montage: montage, dayZero: dayZero, morning: morning, evening: evening, night: night, catPOV: catPOV, arriveHome: arriveHome, weekend: weekend, goShop: goShop } };
 }());
