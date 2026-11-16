@@ -30,13 +30,14 @@ var Work = (function () {
     SEATS.forEach(function (st) { View.commuter(c, G, st[0], 306, st[1], st[2]); });
     View.person(c, G, G.hero.x, 344, G.s && G.s.wearing === 'suit' ? 'suit' : 'hoodie', 1, t, 'stand', 2.35);
     heroMarks(c, G.hero.x, 344);
+    Arc.drawTrainPeer(c);
     if (Wk.dark) View.nightTint(c, .35);
   }
   var SEATS = [[96, 0, false], [203, 1, false], [426, 2, true], [540, 3, true]];
   function commute(evening) {
     G.hero.x = 300; G.hero.tx = null; Wk.dark = !!evening;
     Engine.setScene({ draw: drawTrain, place: 'train' });
-    return Engine.fade(0, .35).then(function () { return Engine.sleep(1.4); }).then(function () { return Engine.fade(1, .35); });
+    return Engine.fade(0, .35).then(function () { return Wk.withPeer ? say([{ who: 'narr', text: Story.ARC.d11Train }]) : Engine.sleep(1.4); }).then(function () { return Engine.fade(1, .35); });
   }
 
   // ---------- 지점 ----------
@@ -445,6 +446,15 @@ var Work = (function () {
       var lines = Story.leaveOffice(s, first);
       return lines.length ? say(lines) : null;
     }).then(function () {
+      // 선배 이야기가 있는 날: 선배가 곁으로 다가와 말을 건다
+      var arc = night ? [] : Arc.officeLines(s);
+      if (!arc.length) return null;
+      return new Promise(function (resolve) {
+        var from = Wk.peer.x, to = 400, t0 = G.t;
+        (function step() { var q = Math.min(1, (G.t - t0) / .8); Wk.peer.x = from + (to - from) * q; if (q < 1) setTimeout(step, 30); else resolve(); }());
+      }).then(function () { G.hero.dir = -1; Wk.peer.dir = 1; return say(arc); });
+    }).then(function () {
+      Arc.clearOverlay();
       Wk.talkable = !night;
       Wk.chartHint = !s.seen.chartView;
       if (first) { // 처음 퇴근할 때: 누를 수 있는 사람과 그래프를 한 번 다 빛낸다
@@ -462,6 +472,7 @@ var Work = (function () {
     View.bg(c, G, st.winter ? 'streetWinter' : 'streetSpring');
     if (st.winter) PixelArt.rain(c, { x: 0, y: 0, w: 640, h: 360 }, t, 1);
     if (st.dusk) { c.fillStyle = 'rgba(255,150,90,.16)'; c.fillRect(0, 0, 640, 360); View.nightTint(c, .18); }
+    if (!st.winter) Arc.drawStreetPoster(c);
     if (st.night) { View.nightTint(c, .5); View.lampGlow(c, 508, 220, 120, .3); }
     if (st.draw) st.draw(c);
     else {
@@ -482,16 +493,19 @@ var Work = (function () {
     street({
       dusk: true,
       hot: function () {
-        return [
+        var list = [], reading = Arc.posterUp(s) && !s.seen.arcPoster;
+        if (Arc.posterUp(s)) list.push(Arc.posterSpot());
+        if (reading) return list; // 처음 붙은 날은 포스터부터 읽는다
+        return list.concat([
           { id: 'shopDoor', x: SHOPDOOR.x, y: SHOPDOOR.y, w: SHOPDOOR.w, h: SHOPDOOR.h, tap: function () { return Engine.walkTo(508).then(function () { choice = 'shop'; }); } },
           { id: 'home', x: 586, y: 180, w: 54, h: 180, tap: function () { return Engine.walkTo(630).then(function () { choice = 'home'; }); } }
-        ];
+        ]);
       },
       walk: function (p) { return Math.max(30, Math.min(610, p.x)); }
     });
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(300); }).then(function () {
-      if (first) { G.guide = { x: 508, y: 160, dir: 'down' }; return say([me('그 슈퍼다.')]); }
-      return null;
+      if (first) { G.guide = { x: 508, y: 160, dir: 'down' }; return say([me('그 슈퍼다.')]).then(function () { return Arc.streetBeat(s); }); }
+      return Arc.streetBeat(s);
     }).then(function () {
       return Engine.until(function () { return choice; });
     }).then(function () { G.guide = null; return Engine.fade(1, .3).then(function () { return choice; }); });
@@ -756,6 +770,8 @@ var Work = (function () {
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(220); }).then(function () {
       var s = S();
       if (opts.intro) return say(opts.intro);
+      var told = !opts.pro && s && Arc.ownerLines(s);
+      if (told) return say(told);
       if (!opts.pro && s && Life.onShelf(s, 'robot') && !s.seen.newStock) { s.seen.newStock = true; return say([me('새 물건이 들어왔네. 로봇청소기랑 자동 장난감?'), me('편하긴 하겠지만, 내가 직접 하는 것만은 못하겠지.')]); }
       if (jobOpen() && !s.seen.jobPoster) { s.seen.jobPoster = true; return say([me('저게 사장님이 말한 알바 공고구나.')]); }
       if (night && !s.seen.nightShop) { s.seen.nightShop = true; return say([{ who: 'owner', text: '어서 와요. 11시 넘어서는 심야 할증이라 좀 비싸요.' }]); }

@@ -37,6 +37,7 @@ var Life = (function () {
   var AUTO_TOY_NIGHTS = 5;  // 자동 장난감은 혼자 노는 밤 다섯 번이면 닳는다
   var JOB = { pay: 5000, minutes: 240, energy: 3, lastStart: 900 }; // 주말 슈퍼 알바
   var DRY_MEALS = 8, WET_MEALS = 6, SAND_DAYS = 4, TOY_PLAYS = 4;
+  var CLEAN_FROM = 2, DUST_FROM = 4; // 바닥 청소와 화장실은 4/14부터, 먼지 발자국은 4/16부터
 
   var DAYS = [
     { date: '4/12', wd: '일', kind: 'eve' },
@@ -109,8 +110,8 @@ var Life = (function () {
       food: { dry: 4, wet: 0 },
       bowl: 'empty', bowlKind: 'dry', meal: 'pm', fed: { am: true, pm: false },
       water: false,
-      litter: { poop: 0, sand: 2 },
-      floor: { fur: 1, dust: 0 },
+      litter: { poop: 0, sand: 4 },
+      floor: { fur: 0, dust: 0 },
       toy: TOY_PLAYS,
       fur: 0, smell: 0, locked: false, wearing: 'hoodie',
       owned: { roller: false, tower: false, feeder: false, robot: false, autoToy: false }, autoToyLeft: 0, jobbed: false,
@@ -123,7 +124,9 @@ var Life = (function () {
       contracts: 0, goalDay: null, results: [], missed: 0,
       today: null, ledger: [], diary: [], events: [],
       morningNote: null, evaluated: null, ended: null,
-      seen: {}
+      seen: {},
+      // 전체 이야기: 선배가 잃어버린 고양이. outcome은 4/23 저녁에 정해진다 (kept, keptHard, farewell)
+      arc: { outcome: null, collar: false, gone: false }
     };
     s.today = freshToday(s);
     return s;
@@ -313,7 +316,7 @@ var Life = (function () {
     s.smell = smellOf(s.litter.poop);
     if (s.smell) s.today.notes.push('smell');
     // 못 찾은 고양이는 서랍 속에 갇힌 채 하루를 보낸다
-    if (s.hidden) { s.today.notes.push('leftHidden'); s.locked = true; }
+    if (s.hidden && !s.arc.gone) { s.today.notes.push('leftHidden'); s.locked = true; }
     switchMeal(s);
     s.phase = 'work';
     s.minute = s.left + T.commute;
@@ -524,8 +527,9 @@ var Life = (function () {
     opt = opt || {};
     var t = s.today, woke = false, note = null;
     var bed = s.minute;
-    var hungry = !s.fed.pm ? missMeal(s, 'pm') : false;
-    if (!s.water) heart(s, -1, 'dry');
+    var gone = !!s.arc.gone;
+    var hungry = !s.fed.pm && !gone ? missMeal(s, 'pm') : false;
+    if (!s.water && !gone) heart(s, -1, 'dry');
     if (s.floor.dust >= 3) heart(s, -1, 'dusty');
     if (day(s).storm && !s.stormDone) { heart(s, -1, 'stormAlone'); event(s, 'stormAlone'); }
     var autoPlayed = !s.played && autoToyOn(s) && !s.hidden;
@@ -534,6 +538,7 @@ var Life = (function () {
       heart(s, +1, 'together');
       if (hungry || unplayed(s)) { woke = true; note = hungry ? 'wakeHungry' : 'wakeZoomies'; }
       else note = 'slept';
+    } else if (gone) { note = 'gone';
     } else if (needsPOV(s)) {
       if (opt.cat === 'scratch') { woke = true; note = 'scratched'; event(s, 'scratched'); }
       else { heart(s, -1, 'lonely'); note = 'lonely'; event(s, 'lonely'); }
@@ -566,14 +571,16 @@ var Life = (function () {
     s.water = false; s.played = false; s.petted = false; s.rested = 0;
     s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0; s.smell = 0; s.locked = false; s.trips = 0;
     s.wearing = 'hoodie';
-    s.hidden = !!d.hide;
-    s.litter.poop++;
+    s.hidden = !!d.hide || !!s.arc.gone;
+    // 일은 하나씩 늘어난다: 첫 출근 날은 털(돌돌이)만, 사흘째(4/14)부터 화장실과 바닥 털, 4/16부터 먼지
+    if (s.day >= CLEAN_FROM && !s.arc.gone) s.litter.poop++;
     var dirty = s.litter.poop >= 3, noSand = s.litter.sand <= 0, accident = dirty || noSand;
     var why = noSand && !dirty ? 'Sand' : '';
-    s.litter.sand = Math.max(0, s.litter.sand - 1);
+    if (s.arc.gone) { dirty = noSand = accident = false; }
+    else s.litter.sand = Math.max(0, s.litter.sand - 1);
     // 고양이 털은 매일 바닥에 쌓이고, 먼지는 이틀에 한 번 쌓인다
-    s.floor.fur = Math.min(6, s.floor.fur + 1);
-    if (s.day % 2 === 0) s.floor.dust = Math.min(6, s.floor.dust + 1);
+    if (s.day >= CLEAN_FROM && !s.arc.gone) s.floor.fur = Math.min(6, s.floor.fur + 1);
+    if (s.day >= DUST_FROM && s.day % 2 === 0 && !s.arc.gone) s.floor.dust = Math.min(6, s.floor.dust + 1);
     // 로봇청소기: 밤새 돌아서 털이 더 쌓이지 않게 막는다. 다 치우지는 못하고, 먼지는 못 닦는다.
     if (s.owned.robot && s.floor.fur > 1) { s.floor.fur--; s.today.notes.push('robot'); }
     s.jobbed = false;
@@ -598,18 +605,40 @@ var Life = (function () {
     return s.evaluated;
   }
   // 엔딩 8개: 좋음 1, 보통 3, 나쁨 3, 숨은 엔딩 1
-  var ENDINGS = ['family', 'both', 'soso', 'catStays', 'clumsy', 'oneBody', 'again', 'emptyBowl'];
-  var GRADE = { family: 'hidden', both: 'good', soso: 'normal', catStays: 'normal', clumsy: 'normal', oneBody: 'bad', again: 'bad', emptyBowl: 'bad' };
+  var ENDINGS = ['family', 'both', 'soso', 'catStays', 'clumsy', 'farewell', 'oneBody', 'again', 'emptyBowl'];
+  var GRADE = { family: 'hidden', both: 'good', soso: 'normal', catStays: 'normal', clumsy: 'normal', farewell: 'normal', oneBody: 'bad', again: 'bad', emptyBowl: 'bad' };
   function has(s, key) { return s.events.some(function (e) { return e.key === key; }); }
   // 숨은 엔딩: 목표를 채우고, 마음을 가득 채우고, 한 끼도 굶기지 않고, 천둥 치던 밤과 서랍 속 아침을 둘 다 지켜 준 사람
-  function family(s) { return s.contracts >= GOAL && s.hearts >= MAX && s.missed === 0 && has(s, 'curtain') && has(s, 'drawer'); }
+  function family(s) { return s.contracts >= GOAL && s.hearts >= MAX && s.missed === 0 && has(s, 'curtain') && has(s, 'drawer') && s.arc.collar; }
   function ending(s) {
     if (s.missed > 3) return { key: 'emptyBowl', grade: 'bad', pass: false, hearts: s.hearts, contracts: s.contracts };
+    if (s.arc.gone) return { key: 'farewell', grade: 'normal', pass: s.contracts >= GOAL, hearts: s.hearts, contracts: s.contracts };
     var band = s.hearts >= 4 ? 'close' : s.hearts >= 2 ? 'mid' : 'far';
     var pass = s.contracts >= GOAL;
     var key = family(s) ? 'family' : { close: pass ? 'both' : 'catStays', mid: pass ? 'soso' : 'clumsy', far: pass ? 'oneBody' : 'again' }[band];
     return { key: key, grade: GRADE[key], band: band, pass: pass, hearts: s.hearts, contracts: s.contracts };
   }
+
+  // ---------- 전체 이야기: 선배의 나비 ----------
+  // 고양이와 쌓은 정. 지금 마음에, 함께 넘긴 밤(천둥, 서랍)과 같이 잔 밤을 더한다.
+  // 4/20 저녁 옛 이름 연습과 4/23 저녁 선배 앞에서 고양이가 누구에게 갈지 정한다.
+  var BOND_NEED = 4;
+  function bond(s) {
+    var together = s.events.filter(function (e) { return e.key === 'together'; }).length;
+    var played = s.diary.filter(function (d) { return d.played; }).length;
+    return s.hearts + (has(s, 'curtain') ? 1 : 0) + (has(s, 'drawer') ? 1 : 0) + (together >= 4 ? 1 : 0) + (played >= 5 ? 1 : 0);
+  }
+  function choosesMe(s) { return bond(s) >= BOND_NEED; }
+  // 선배가 다녀간 결과. kept: 내게 와서 목걸이를 받았다, keptHard: 선배에게 갔지만 붙잡았다, farewell: 보내 주었다
+  function visitEnd(s, outcome) {
+    s.arc.outcome = outcome;
+    event(s, outcome);
+    if (outcome === 'kept') { s.arc.collar = true; heart(s, +1, 'collar'); }
+    if (outcome === 'keptHard') heart(s, -1, 'keptHard');
+    if (outcome === 'farewell') { s.arc.gone = true; s.hidden = true; }
+    return s.arc;
+  }
+  function oldName(s) { return s.cat === '나비' ? '콩이' : '나비'; }
 
   // ---------- 저장 ----------
   function save(s) { return JSON.stringify(s); }
@@ -618,6 +647,7 @@ var Life = (function () {
       var s = typeof text === 'string' ? JSON.parse(text) : text;
       if (!s || s.v !== VERSION || typeof s.day !== 'number' || !s.today) return null;
       if (!s.seen) s.seen = {};
+      if (!s.arc) s.arc = { outcome: null, collar: false, gone: false };
       return s;
     } catch (e) { return null; }
   }
@@ -653,7 +683,7 @@ var Life = (function () {
     buy: buy, buyBlock: buyBlock, unbuy: unbuy, price: price, lateNight: lateNight, NIGHT_RATE: NIGHT_RATE, smellOf: smellOf,
     ENDINGS: ENDINGS, GRADE: GRADE,
     arriveHome: arriveHome, napFirst: napFirst, nap: nap, toBed: toBed, setDoor: setDoor, needsPOV: needsPOV, unplayed: unplayed, sleepGain: sleepGain, sleep: sleep, morning: morning,
-    evaluate: evaluate, ending: ending,
+    evaluate: evaluate, ending: ending, bond: bond, choosesMe: choosesMe, visitEnd: visitEnd, oldName: oldName, BOND_NEED: BOND_NEED, CLEAN_FROM: CLEAN_FROM, DUST_FROM: DUST_FROM,
     save: save, load: load,
     hasBatchim: hasBatchim, nameForm: nameForm, josa: josa, clock: clock, won: won, cleanName: cleanName
   };

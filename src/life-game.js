@@ -381,6 +381,8 @@ var Game = (function () {
   }
   async function arriveHome() {
     var s = G.s;
+    // 4/23: 선배가 같이 왔다
+    if (Life.day(s).eve && !s.arc.outcome) { await Arc.visit(); checkpoint(); await Home.noticeNeeds(); return; }
     H.mode = 'evening'; H.inBed = false; H.curtain = 0; H.closeUp = null; H.catAct = null; H.searching = false; H.searched = {};
     Home.enter('living', { mode: 'evening', heroX: 70, catRoom: 'living', catX: 150 });
     G.hero.dir = 1;
@@ -404,7 +406,20 @@ var Game = (function () {
       await say([narr(Story.catLine('lockedHome', s.cat))]);
       H.searching = true;
     }
+    await Arc.rehearsal();
+    await cleanIntro();
     await Home.noticeNeeds();
+  }
+  // 바닥 청소는 털이 처음 쌓인 날(4/14), 대걸레는 먼지 발자국이 처음 생긴 날 알려 준다
+  async function cleanIntro() {
+    var s = G.s;
+    if (s.floor.fur > 0 && !s.seen.broomIntro) {
+      s.seen.broomIntro = true; H.cleanGuide = 'sweep';
+      await say([me('바닥에 털 뭉치가 굴러다니네. 이대로 두면 정장에 다 붙겠다.'), me('빗자루를 잡고 바닥을 쓸어 주자.')]);
+    } else if (s.floor.dust > 0 && !s.seen.mopIntro) {
+      s.seen.mopIntro = true; H.cleanGuide = 'mop';
+      await say([me('바닥에 먼지 발자국이 찍혀 있다. 쌓이면 ' + Life.josa(s.cat, 'subject') + ' 밤새 재채기할 텐데.'), me('대걸레로 닦아 주자.')]);
+    }
   }
   // 밤: 침대에 누워 문을 고른다. 뒤로 가면 저녁으로 돌아간다.
   async function night() {
@@ -528,8 +543,9 @@ var Game = (function () {
     var lines = wakeLines(s, note);
     G.wake = null;
     if (Life.tired(s) && !s.seen.tiredMorning) { s.seen.tiredMorning = true; lines.push(me('몸이 무겁다... 피곤하면 뭘 해도 오래 걸리는데.')); }
+    if (s.arc.gone) lines.push(me('아침에 밥 달라고 우는 소리가 없다. ...조용하다.'));
     if (lines.length) await say(lines);
-    if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
+    if (s.hidden && !s.arc.gone) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
     // 화면이 다 어두워진 뒤에 집을 나선다 (그 사이 창밖이 밤으로 바뀌어 보이지 않게)
@@ -540,9 +556,16 @@ var Game = (function () {
     if (Life.day(s).group) await Work.groupEvening();
     if (Life.day(s).final) { await evaluation(); return; }
     await Work.leaveOffice();
-    await Work.commute(true);
-    var choice = await Work.walkHome();
-    if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
+    if (Life.day(s).eve && !s.arc.outcome) {
+      // 4/23: 선배와 같이 퇴근해서 곧장 집으로
+      Work.Wk.withPeer = true;
+      await Work.commute(true);
+      Work.Wk.withPeer = false;
+    } else {
+      await Work.commute(true);
+      var choice = await Work.walkHome();
+      if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
+    }
     H.stormGuide = false;
     Life.arriveHome(s);
     checkpoint();
@@ -567,6 +590,8 @@ var Game = (function () {
       await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body }, '9:40');
       await say([me('네 시간에 5,000원... 사료값이 모자라면 해 볼 만하겠다.'), me('대신 몸은 고되고, ' + Life.josa(s.cat, 'subject') + ' 또 혼자 있겠지.')]);
     }
+    await Arc.weekendText(s);
+    await cleanIntro();
     await evening();
   }
   // 집에서 다시 나가 슈퍼에 다녀온다 (저녁이든 주말이든 몇 번이든. 한 번에 40분, 밤 11시 넘으면 심야 할증)
@@ -620,13 +645,14 @@ var Game = (function () {
     var close = key === 'both' || key === 'catStays' || key === 'soso' || key === 'family';
     H.room = 'living'; H.mode = 'evening'; H.inBed = false; H.closeUp = null; H.curtain = 0; H.held = null; H.stormGuide = false;
     G.hero.visible = true; G.hero.x = 130; G.hero.y = 334; G.hero.pose = null; G.hero.dir = 1;
-    G.cat.visible = key !== 'emptyBowl'; G.cat.room = 'living';
+    G.cat.visible = key !== 'emptyBowl' && key !== 'farewell'; G.cat.room = 'living';
     if (key === 'family') { G.hero.x = 430; G.hero.y = 262; G.hero.pose = 'sit'; G.hero.face = 1; G.cat.x = 455; G.cat.y = 238; G.cat.pose = 'purr'; G.cat.dir = -1; }
     else if (close) { G.cat.x = 190; G.cat.y = 336; G.cat.pose = 'purr'; G.cat.dir = -1; }
     else if (key === 'clumsy') { G.cat.x = 470; G.cat.y = 228; G.cat.pose = 'groom'; }
     else { G.cat.x = 500; G.cat.y = 228; G.cat.pose = 'sleep'; }
     s.wearing = key === 'family' ? 'hoodie' : 'suit';
     if (key === 'emptyBowl') { s.bowl = 'empty'; H.entranceOpen = 0; G.hero.visible = false; }
+    if (key === 'farewell') { s.bowl = 'empty'; H.entranceOpen = 0; G.hero.x = 120; G.hero.dir = -1; }
     Home.drawLiving(c);
     G.hero.face = undefined;
     // 등급마다 화면 위에 한 겹: 좋음과 숨은 엔딩은 하트가 오르고, 나쁨은 어둡게 가라앉는다
@@ -653,6 +679,8 @@ var Game = (function () {
     $('endingGrade').textContent = Story.GRADE_NAME[grade] + ' · 엔딩 ' + Life.ENDINGS.length + '개 중 ' + (Life.ENDINGS.indexOf(e.key) + 1) + '번';
     $('endingTitle').textContent = Story.endingTitle(e.key, s);
     var lines = body.map(function (l, i) { return '<p style="animation-delay:' + (1.6 + i * .7).toFixed(1) + 's">' + UI.esc(l) + '</p>'; });
+    var arcLine = Story.endingArc(e.key, s);
+    if (arcLine) { body = body.concat([arcLine]); lines.push('<p style="animation-delay:' + (1.6 + (body.length - 1) * .7).toFixed(1) + 's">' + UI.esc(arcLine) + '</p>'); }
     if (mem) lines.push('<p class="memory" style="animation-delay:' + (1.6 + body.length * .7).toFixed(1) + 's">' + UI.esc(mem) + '</p>');
     $('endingBody').innerHTML = lines.join('');
     // 엔딩 도감: 여덟 칸. 본 것은 이름과 등급, 못 본 것은 귀띔만.

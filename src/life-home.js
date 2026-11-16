@@ -159,6 +159,7 @@ var Home = (function () {
     if (H.toy && H.toy.pounce) { View.cat(c, G, k.x, k.y, k.dir, G.t, 'jump', k.scale); return; }
     View.shadow(c, k.x, k.y + 1, 15);
     View.cat(c, G, k.x, k.y, k.dir, G.t, k.walking ? (k.run ? 'run' : 'walk') : k.pose, k.scale);
+    if (!k.walking) Arc.collarOn(c, k);
   }
   function heroLook() { return H.pro ? 'hoodie' : (S() && S().wearing) || 'hoodie'; }
   function drawHero(c) {
@@ -179,6 +180,7 @@ var Home = (function () {
   }
   var FUR = [[-10, 2], [6, 8], [-3, 18], [9, 24], [-12, 30], [3, 34], [-6, 12], [11, 14], [0, 26]];
   function furOn(c, x, y, n, px) { for (var i = 0; i < Math.min(FUR.length, n * 3); i++) View.icon(c, 'fur', x + FUR[i][0], y + FUR[i][1], px || 1); }
+  function cleanTools() { var s = S(); return !!s && s.day >= Life.CLEAN_FROM; }
   function gone() { var s = S(); if (H.goneDay !== s.day) { H.gone = {}; H.goneDay = s.day; } return H.gone; }
   function drawLiving(c) {
     var s = S(), t = G.t, held = H.held && H.held.id;
@@ -195,8 +197,9 @@ var Home = (function () {
       if (s.owned.tower) View.catTower(c, P.tower.x, P.tower.y, .95);
       if (s.owned.robot) View.robot(c, P.robot.x, P.robot.y, 40);
       if (s.owned.autoToy) View.autoToy(c, P.autoToy.x, P.autoToy.y, 38, !Life.autoToyOn(s));
-      if (!(H.clean && H.clean.kind === 'mop')) View.mop(c, P.mop.x, P.mop.y, 1);
-      if (!(H.clean && H.clean.kind === 'sweep')) View.broom(c, P.broom.x, P.broom.y, 1);
+      // 빗자루와 대걸레는 바닥에 털이 쌓이기 시작하는 날(4/14)부터 꺼내 둔다
+      if (cleanTools() && !(H.clean && H.clean.kind === 'mop')) View.mop(c, P.mop.x, P.mop.y, 1);
+      if (cleanTools() && !(H.clean && H.clean.kind === 'sweep')) View.broom(c, P.broom.x, P.broom.y, 1);
       View.bag(c, P.bag.x, P.bag.y, 1.1);
       var ll = s.litter;
       View.litterBox(c, P.litter.x, P.litter.y, ll.poop, ll.sand, t);
@@ -213,6 +216,7 @@ var Home = (function () {
     if (held !== 'bottle') View.item(c, 'waterBottle', P.bottle.x, P.bottle.y, 1.1);
     // 사람과 고양이는 발 위치 순서로
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
+    if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -655,6 +659,7 @@ var Home = (function () {
         var r = Life.act(s, kind);
         if (!r.ok) return null;
         UI.sfx('good'); spent({ x: G.hero.x, y: G.hero.y }, r.minutes, 110);
+        if (H.cleanGuide === kind) H.cleanGuide = null;
         if (H.onAct) H.onAct(kind);
         return null;
       },
@@ -759,9 +764,10 @@ var Home = (function () {
       var playWhy = Life.doBlock(s, 'play');
       list.push({ id: 'toy', x: P.toy.x - 18, y: P.toy.y - 24, w: 36, h: 28, chips: playWhy ? null : [cMin(Life.T.play), cHeart(1)],
         tap: function () { return playWhy ? blockedLine('play', playWhy) : (G.hand = { shake: true, x: P.toy.x, y: P.toy.y - 30, period: 2, t0: G.t }, null); }, drag: playWhy ? null : toyDrag() });
-      ['sweep', 'mop'].forEach(function (kind) {
+      if (cleanTools()) ['sweep', 'mop'].forEach(function (kind) {
         var why = Life.doBlock(s, kind), p = kind === 'sweep' ? P.broom : P.mop;
         list.push({ id: kind, x: p.x - 12, y: p.y - 48, w: 24, h: 50, chips: why ? null : [cMin(Life.T[kind])],
+          pulse: !why && H.cleanGuide === kind,
           tap: function () { return why ? blockedLine(kind, why) : say([me(kind === 'sweep' ? '빗자루로 털 뭉치를 쓸자. 쌓이면 정장에 털이 붙어.' : '대걸레로 먼지 발자국을 닦자. 쌓이면 ' + Life.josa(s.cat, 'subject') + ' 밤새 재채기해.')]); }, drag: why ? null : cleanDrag(kind) });
       });
       if (Life.doBlock(s, 'curtain') === null && catHidden()) list.push({ id: 'curtain', x: LV.window.x - 6, y: LV.window.y, w: 40, h: LV.window.h, chips: [cMin(Life.T.curtain), cHeart(1)], pulse: !!H.stormGuide, tap: curtainHint, drag: curtainDrag() });
@@ -794,9 +800,9 @@ var Home = (function () {
     if (H.searching) list = list.concat(searchSpots('bedroom'));
     return list;
   }
-  function hot() { if (H.lock) return []; return H.room === 'bedroom' ? hotBedroom() : hotLiving(); }
+  function hot() { if (H.arcHot) return H.arcHot(); if (H.lock) return []; return H.room === 'bedroom' ? hotBedroom() : hotLiving(); }
   function walkable(p) {
-    if (H.mode === 'night' || H.closeUp || H.clean) return null;
+    if (H.mode === 'night' || H.closeUp || H.clean || H.arcHot) return null;
     return Math.max(H.room === 'living' ? 130 : 230, Math.min(H.room === 'living' ? 560 : 520, p.x));
   }
 
@@ -959,7 +965,7 @@ var Home = (function () {
       if (r.found) {
         H.searching = false; UI.sfx('meow');
         var k = G.cat; k.room = 'bedroom'; k.visible = true; k.x = P.drawer.x + 20; k.y = 336; k.pose = 'sit';
-        return say([me(Story.catLine(r.late ? 'foundLate' : 'found', s.cat))]);
+        return say([me(Story.catLine(r.late ? 'foundLate' : 'found', s.cat))].concat(s.arc.outcome ? [] : [me(Story.ARC.d9(s))]));
       }
       return say([me(['여긴 없네.', '여기도 없어.', '어디 간 거지...'][Math.min(2, Object.keys(H.searched).length - 1)])]);
     });

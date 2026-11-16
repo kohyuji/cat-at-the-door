@@ -198,6 +198,7 @@ var Engine = (function () {
     c.imageSmoothingEnabled = false;
     c.fillStyle = '#1f1e25'; c.fillRect(0, 0, W, H);
     if (G.draw) G.draw(c);
+    if (G.overlay) G.overlay(c);
     if (G.hover && !G.drag && !UI.busy() && G.hover.glow !== false) View.outline(c, G.hover, G.t);
     if (G.outlineAll) G.hot.forEach(function (s) { if (!s.off && s.glow !== false) View.outline(c, s, G.t); });
     else if (!UI.busy()) G.hot.forEach(function (s) { if (s.pulse && s !== G.hover) View.outline(c, s, G.t); }); // 꼭 봐야 할 곳은 계속 빛난다
