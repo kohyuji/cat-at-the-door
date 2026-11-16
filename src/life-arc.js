@@ -317,7 +317,7 @@ var Arc = (function () {
   return {
     tick: tick, momentDraw: momentDraw, homeSpots: homeSpots, drawKitchen: drawKitchen, photoSpot: photoSpot,
     knead: knead, officeLines: officeLines, clearOverlay: clearOverlay, dinnerOffer: dinnerOffer, homeBeats: function () { // 장면이 끝날 때까지 다른 물건은 눌리지 않게 한다
-      var H = Home.H, none = function () { return []; }; H.arcHot = none;
+      var H = Home.H, none = function () { return []; }; H.arcHot = none; G.drag = null; H.held = null; G.hero.tx = null;
       return homeBeats().then(function () { if (H.arcHot === none) H.arcHot = null; }, function (e) { if (H.arcHot === none) H.arcHot = null; throw e; });
     }, lastPrep: lastPrep,
     rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
