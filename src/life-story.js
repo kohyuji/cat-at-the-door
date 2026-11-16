@@ -83,6 +83,7 @@ var Story = (function () {
     catLover: '고객님도 고양이 키우시는구나.',
     fur: '소매에 털이... 지저분해 보였겠다.',
     prepared: '메일을 읽어 둔 덕분에 이야기가 잘 풀린다.',
+    photos: '고객님 고양이 사진을 보다가, 나도 휴대폰 속 사진을 보여 드렸다.',
     yawn: '어젯밤에 잠을 설쳤더니...',
     busyLeft: '늦는 바람에 바쁜 고객님이 먼저 가 버리셨대.',
     smell: '고객님이 코를 찡그리신다... 아침에 화장실을 안 치우고 나왔더니 옷에 냄새가 뱄나 봐.',
@@ -103,7 +104,9 @@ var Story = (function () {
     aloneTower: '하루 종일 혼자였지만 캣타워에서 창밖을 봤다', dusty: '먼지 때문에 밤새 재채기를 했다',
     jobAlone: '주말에도 알바 가서 혼자 있었다', locked: '서랍 속에 하루 종일 갇혀 있었다',
     stormAlone: '천둥 치는 밤을 소파 밑에서 혼자 떨었다',
-    collar: '방울 목걸이를 걸어 줬다', keptHard: '옛 이름을 부르는 사람에게서 억지로 떼어 놓았다'
+    kneadPet: '새벽 꾹꾹이를 받아 줬다', kneadPush: '새벽 꾹꾹이에 이불을 덮어썼다', mealTogether: '주말에 마주 앉아 같이 먹었다',
+    waitedAsleep: '야근하는 동안 현관에서 기다리다 잠들었다', lateHome: '늦게 들어온 밤, 현관에서 오래 기다렸다',
+    moved: '자판 위에서 내려놓았다', lid: '노트북을 덮고 같이 놀았다'
   };
   function morningNote(n, cat) {
     if (!n) return null;
@@ -114,7 +117,6 @@ var Story = (function () {
       scratched: '새벽에 문 긁는 소리에 깼다.',
       lonely: '문을 여니 ' + c + ' 문 앞에 웅크리고 자고 있었다.',
       slept: j(cat, 'with') + ' 같이 푹 잤다.',
-      gone: '밤새 아무도 문을 긁지 않았다.',
       closed: '문을 닫고 푹 잤다.'
     }[n.key] || null;
   }
@@ -334,21 +336,28 @@ var Story = (function () {
     ];
   }
   // 집 냉장고에 붙여 둔 돌봄 메모. 검은 화면이 아니라 종이 한 장으로 보여 준다.
-  function careNote(cat) {
+  // 냉장고에 붙여 둔 돌봄 메모. 한 번에 다 알려 주지 않고, 그 일이 처음 생기는 날 한 줄씩 늘어난다.
+  var CARE_ROWS = [
+    { from: 0, icon: 'bowl', text: '밥은 아침저녁 두 번. 굶기면 마음이 준다.' },
+    { from: 0, icon: 'drop', text: '물은 매일 새로. 그릇이 마르면 마음이 준다.' },
+    { from: 0, icon: 'mouse', text: '쥐돌이로 놀아 주기. 안 놀면 밤에 문 앞에서 운다.' },
+    { from: 0, icon: 'zzz', text: '나는 11시 전에 자기. 늦을수록 체력이 덜 찬다.' },
+    { from: 1, icon: 'rice', text: '나도 저녁 먹기. 굶고 자면 다음 날 체력이 준다.' },
+    { from: 1, icon: 'camera', text: '반짝이는 순간은 휴대폰으로 남겨 두기.' },
+    { from: 2, icon: 'poop', text: '똥은 출근 전에 치우기. 안 치우면 옷에 냄새가 밴다.' },
+    { from: 2, icon: 'clock', text: '모래는 나흘에 한 번 새로. 떨어지면 똥도 못 퍼낸다.' },
+    { from: 2, icon: 'fur', text: '바닥 털은 빗자루로. 쌓이면 정장에 묻는다.' },
+    { from: 4, icon: 'paw', text: '먼지 발자국은 대걸레로. 쌓이면 밤새 재채기한다.' },
+    { from: 4, icon: 'heart', text: '습식은 비싸지만 먹을 때마다 마음 +1.' }
+  ];
+  function careNote(cat, day, seenDay) {
+    var d = day === undefined ? 99 : day, old = seenDay === undefined ? 99 : seenDay;
     return {
       title: j(cat, 'of') + ' 하루',
-      rows: [
-        { icon: 'bowl', text: '밥은 아침저녁 두 번. 굶기면 마음이 준다.' },
-        { icon: 'drop', text: '물은 매일 새로. 그릇이 마르면 마음이 준다.' },
-        { icon: 'poop', text: '똥은 출근 전에 치우기. 안 치우면 옷에 냄새가 밴다.' },
-        { icon: 'clock', text: '모래는 나흘에 한 번 새로. 떨어지면 똥도 못 퍼낸다.' },
-        { icon: 'heart', text: '습식은 비싸지만 먹을 때마다 마음 +1.' },
-        { icon: 'mouse', text: '쥐돌이로 놀아 주기. 안 놀면 밤에 문 앞에서 운다.' },
-        { icon: 'fur', text: '바닥 털은 빗자루로. 쌓이면 정장에 묻는다.' },
-        { icon: 'zzz', text: '나는 11시 전에 자기. 늦을수록 체력이 덜 찬다.' }
-      ]
+      rows: CARE_ROWS.filter(function (r) { return r.from <= d; }).map(function (r) { return { icon: r.icon, text: r.text, fresh: r.from > old }; })
     };
   }
+  function careFresh(day, seenDay) { return CARE_ROWS.some(function (r) { return r.from <= day && r.from > seenDay; }); }
   function groupOffer(s) {
     return [{ who: 'lead', text: s.me + ' 씨, 식당 사장님 한 분이 직원 단체보험을 알아보신대요. 문자 보냈다던데 확인해 봐요.' }];
   }
@@ -363,133 +372,38 @@ var Story = (function () {
     ];
   }
 
-  // ---------- 전체 이야기: 선배가 잃어버린 고양이 ----------
-  // 처음(4/13~14) 선배가 털을 알아보고, 슈퍼 벽에 포스터가 붙는다.
-  // 중간(4/15~19) 선배의 사진, 슈퍼 사장님의 기억, 주말 문자. 4/20 옛 이름을 불러 본다.
-  // 절정(4/23) 선배가 집에 온다. 고양이는 그동안 쌓인 정을 따라 한 사람에게 간다.
-  // 끝(4/24, 엔딩) 고양이 시점 일기가 프롤로그의 비 오는 밤을 다시 읽게 한다.
-  var ARC = {
-    // 4/13 퇴근 전: 선배가 털 색을 알아본다
-    d1: function (s) {
-      return [
-        { who: 'peer', text: s.me + ' 씨, 아까 소매에서 뗀 털이요. 하양에 주황, 까망... 삼색이죠?' },
-        { who: 'me', text: '네. 작년 겨울에 역 앞 슈퍼에서 데려왔어요. 이름은 ' + j(s.cat, 'bare') + '예요.' },
-        { who: 'peer', text: '...역 앞 슈퍼요?' },
-        { who: 'peer', text: '아, 아니에요. 내일 봐요.' }
-      ];
-    },
-    d1Street: '선배는 우리 동네 역 앞 슈퍼를 어떻게 알았지?',
-    // 4/14 퇴근길: 슈퍼 벽에 새 포스터
-    d2Street: '못 보던 종이가 붙어 있다.',
-    poster: function (s) {
-      return {
-        title: '고양이를 찾습니다',
-        rows: ['이름: ' + Life.oldName(s) + ' (삼색이, 두 살)', '네 발에 하얀 양말을 신었어요', '작년 12월, 이사하던 날 이 근처에서', '잃어버렸어요. 보신 분은 꼭 연락 주세요.'],
-        phone: '010-4821-27',
-        stamp: '4월에 다시 붙입니다'
-      };
-    },
-    d2After: function (s) { return [{ who: 'me', text: '삼색이에 하얀 양말...' }, { who: 'me', text: j(s.cat, 'with') + ' 닮았다. ...닮은 고양이야 많지.' }]; },
-    // 4/15 퇴근 전: 천둥 예보 (게임 힌트이자 선배의 과거)
-    d3: function (s) {
-      return [
-        { who: 'peer', text: '오늘 밤에 천둥 친대요. 고양이들은 천둥을 엄청 무서워해요.' },
-        { who: 'peer', text: '창문 커튼을 쳐 주면 좀 나아요. ...예전에 키우던 애가 그랬거든요.' }
-      ];
-    },
-    // 4/17 퇴근 전: 선배의 휴대폰 사진
-    d5: function (s) {
-      var old = Life.oldName(s);
-      return [
-        { who: 'peer', text: s.me + ' 씨, 이거 한번 볼래요?', photo: true },
-        { who: 'peer', text: '제가 키우던 ' + j(old, 'bare') + '예요. 작년 12월에 이사하던 날, 문이 열린 틈에 나갔어요.' },
-        { who: 'peer', text: s.me + ' 씨 사는 그 역 앞이었어요. 한 달을 매일 저녁 찾았는데...' },
-        { who: 'peer', text: '월요일에 ' + s.me + ' 씨 소매에서 삼색 털을 보고, 그날 밤에 포스터를 다시 붙였어요. 바보 같죠.' },
-        { who: 'me', text: '(사진 속 고양이는 ' + j(s.cat, 'with') + ' 똑같았다.)' },
-        { who: 'peer', text: '...주말 잘 보내요.' }
-      ];
-    },
-    // 주말 이후 슈퍼에 처음 들렀을 때: 사장님이 그 겨울을 기억한다
-    owner: function (s) {
-      return [
-        { who: 'owner', text: '저 포스터 봤어요? 작년 겨울에 젊은 아가씨가 붙이고, 매일 저녁 와서 찾았지.' },
-        { who: 'owner', text: '나도 그 삼색이 밥을 가게 앞에서 챙겨 줬어요. 비 오던 밤에 우산 든 사람이 데려가는 걸 봤는데...' },
-        { who: 'owner', text: '...그게 손님이었구나. 잘 크고 있죠?' },
-        { who: 'me', text: '...네.' }
-      ];
-    },
-    // 4/19 일요일 아침: 선배의 문자
-    text: function (s) {
-      return { from: '선배', time: '오전 10:12', preview: '주말에 미안해요. 계속 마음에 걸려서요...',
-        body: '주말에 미안해요. 계속 마음에 걸려서요.\n\n목요일 퇴근길에 ' + s.me + ' 씨 집에 같이 가서, 한 번만 봐도 될까요?\n\n' + Life.oldName(s) + '가 아니면 그냥 웃고 갈게요.', replies: ['네, 목요일에 같이 가요'] };
-    },
-    textAfter: function (s) { return [{ who: 'me', text: Life.oldName(s) + '라고 부르면... ' + j(s.cat, 'subject') + ' 돌아볼까.' }]; },
-    // 4/20 저녁: 옛 이름을 불러 본다 (4/23의 연습)
-    d8Call: function (s) { return [{ who: 'me', text: '...' + Life.josa(Life.oldName(s), 'call') + '?' }]; },
-    d8Door: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 귀를 쫑긋 세우더니 현관문 앞으로 가서 앉았다.' }, { who: 'me', text: Life.josa(s.cat, 'call') + '.' }]; },
-    d8Back: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 돌아와서 내 발에 머리를 비볐다.' }, { who: 'me', text: '그래. 넌 ' + j(s.cat, 'bare') + '야.' }]; },
-    d8Stay: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 한참 동안 현관문만 바라봤다.' }, { who: 'me', text: '목요일까지... 더 잘해 주자. 밥도, 놀이도, 같이 자는 밤도.' }]; },
-    // 4/21 서랍에서 찾았을 때 한 줄 더
-    d9: function (s) { return '늘 내 냄새가 나는 데로 숨는다. ...' + Life.oldName(s) + '였을 때도 그랬을까.'; },
-    // 4/22 퇴근 전
-    d10: function (s) {
-      return [
-        { who: 'peer', text: '내일이네요. ...사실 좀 무서워요.' },
-        { who: 'peer', text: Life.oldName(s) + '면 어떡하지. 아니면 또 어떡하지.' },
-        { who: 'me', text: '(나는 어느 쪽이 무서운 걸까.)' }
-      ];
-    },
-    // 4/23 퇴근: 같이 간다
-    d11Office: [{ who: 'peer', text: '...같이 가요.' }],
-    d11Train: '선배는 지하철에서 한마디도 하지 않았다.',
-    // 4/23 저녁, 집
-    visitIn: function (s) { return [{ who: 'narr', text: '현관문이 열리자 ' + j(s.cat, 'subject') + ' 마중을 나오다가 멈춰 섰다.' }]; },
-    look: function (s) {
-      var l = [];
-      if (s.litter.poop > 0) l.push('화장실은... 제가 치워 줄까요? ' + Life.oldName(s) + '는 깔끔한 걸 좋아했거든요.');
-      else l.push('화장실이 깨끗하네요.');
-      if (s.water) l.push('물그릇도 채워 두셨네.');
-      if (s.floor.fur >= 3) l.push('털이 많이 빠졌네요. 봄이라 그래요.');
-      if (s.owned.tower) l.push('캣타워도 있네요. ' + Life.oldName(s) + '는 높은 데를 좋아했어요.');
-      return l.slice(0, 2).map(function (t) { return { who: 'peer', text: t }; });
-    },
-    peerCall: function (s) { return [{ who: 'peer', text: '...' + Life.josa(Life.oldName(s), 'call') + '.' }]; },
-    turn: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 그 이름에 고개를 돌렸다.' }]; },
-    myCall: function (s) { return [{ who: 'me', text: Life.josa(s.cat, 'call') + '.' }]; },
-    kept: function (s) {
-      return [
-        { who: 'narr', text: j(s.cat, 'subject') + ' 내 발에 머리를 비볐다.' },
-        { who: 'peer', text: '...이제 ' + j(s.cat, 'bare') + '네요.' },
-        { who: 'peer', text: '사진 속 ' + Life.oldName(s) + '는 늘 창밖만 봤는데. 여기선 ' + s.me + ' 씨만 보네.' },
-        { who: 'peer', text: '이거, 그 겨울에 걸어 주려고 샀던 방울 목걸이예요. 결국 못 걸어 줬어요.' },
-        { who: 'peer', text: j(s.cat, 'to') + ' 걸어 줄래요?' }
-      ];
-    },
-    keptBye: function (s) { return [{ who: 'peer', text: '잘 어울린다. ...가끔 사진 보내 줘요.' }]; },
-    toPeer: function (s) {
-      return [
-        { who: 'narr', text: j(s.cat, 'subject') + ' 선배 발에 머리를 비볐다.' },
-        { who: 'peer', text: Life.josa(Life.oldName(s), 'call') + '... 나 기억하는구나.' },
-        { who: 'peer', text: s.me + ' 씨, 미안한데... 제가 데려가도 될까요?' }
-      ];
-    },
-    hold: function (s) {
-      return [
-        { who: 'me', text: '...안 돼요. 이제 우리 집 애예요.' },
-        { who: 'peer', text: '...그렇죠. 제가 무슨 말을.' },
-        { who: 'peer', text: '잘 키워 줘요.' }
-      ];
-    },
-    letGo: function (s) {
-      return [
-        { who: 'me', text: '...잘 가, ' + j(s.cat, 'bare') + '야.' },
-        { who: 'peer', text: '고마워요. 정말로.' }
-      ];
-    },
-    after: {
-      kept: '현관에서 방울 소리가 딸랑, 났다.',
-      keptHard: '그날 밤 고양이는 현관문 앞에 오래 앉아 있었다.',
-      farewell: '현관 앞에 빈 밥그릇만 남았다.'
+  // ---------- 둘이라서: 열이틀의 사건 ----------
+  // 기(4/13~15) 둘이라 무겁다, 승(4/16~20) 쌓이다가 풀린다, 전(4/21~23) 잘될수록 멀어진다, 결(4/24) 다시 비.
+  // 사건은 꼭 일어나고, 플레이어의 손이 그 결과만 바꾼다. 설명하는 말은 줄이고 장면과 손짓으로 보여 준다.
+  var BEAT = {
+    meal: [{ who: 'me', text: '배고프다... 나도 뭘 좀 먹어야지.' }],
+    photo: function (s) { return [{ who: 'me', text: '지금 이 얼굴은 남겨 둬야 해.' }]; },
+    knead: function (s) { return [{ who: 'narr', text: '새벽 다섯 시. 얼굴 위에 말랑한 발이 꾹, 꾹.' }]; },
+    kneadPet: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 골골거린다. 다시 잠들기는 글렀다.' }]; },
+    kneadPush: function (s) { return [{ who: 'narr', text: '이불을 머리끝까지 덮었다. 발이 멈췄다.' }]; },
+    storm: [
+      { who: 'peer', text: '오늘 밤에 천둥 친대요. 고양이들은 천둥을 엄청 무서워해요.' },
+      { who: 'peer', text: '창문 커튼을 쳐 주면 좀 나아요.' }
+    ],
+    friday: function (s) { return [{ who: 'narr', text: s.contracts < 5 ? '금요일. 실적 그래프에서 내 칸이 제일 짧다. 지점장님은 아무 말 없이 다음 사람으로 넘어갔다.' : '금요일. 첫 주가 끝났다.' }]; },
+    dinnerText: { from: '동기 단톡', time: '오후 5:52', preview: '금요일인데 다 같이 저녁 먹고 가요!',
+      body: '금요일인데 다 같이 저녁 먹고 가요!\n\n제 친구가 여행자보험 알아본대서 소개해 줄게요 ㅎㅎ', yes: '갈게요!', no: '오늘은 먼저 갈게요' },
+    momText: { from: '엄마', time: '오후 9:40', preview: '회사는 다닐 만하니? 밥은 먹고 다니고?',
+      body: '회사는 다닐 만하니? 밥은 먹고 다니고?', replies: ['응, 괜찮아.'] },
+    momAfter: function (s) { return [{ who: 'narr', text: '몇 번을 썼다 지우고, 그 한 줄만 보냈다.' }, { who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' }]; },
+    alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'bare') + '.' }]; },
+    alarmLate: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다.' }, { who: 'me', text: '8시 20분...?! 늦었다!' }]; },
+    overtime: function (s) { return [{ who: 'lead', text: '평가 전이니까요. 남을 사람은 남아서 한 건 더 해 봐요.' }, { who: 'me', text: '(집에서 ' + j(s.cat, 'subject') + ' 기다릴 텐데.)' }]; },
+    waitedAsleep: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관 매트 위에서 웅크린 채 잠들어 있었다.' }]; },
+    lateHome: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관에서 한참 기다린 얼굴이다.' }]; },
+    prep: function (s) { return [{ who: 'me', text: '내일 발표 준비만 하고 자자.' }]; },
+    onKeys: function (s) { return [{ who: 'narr', text: '타닥. ' + j(s.cat, 'subject') + ' 자판 위에 앉았다.' }]; },
+    prepWork: function (s) { return [{ who: 'narr', text: j(s.cat, 'object') + ' 옆으로 내려놓았다. 슬라이드가 하나씩 채워진다.' }, { who: 'narr', text: j(s.cat, 'subject') + ' 등을 돌리고 앉았다.' }]; },
+    prepLid: function (s) { return [{ who: 'narr', text: '노트북을 덮었다.' }, { who: 'me', text: '그래. 오늘은 너랑 놀자.' }]; },
+    rain: function (s) { var l = [{ who: 'narr', text: '돌아오는 길, 그날처럼 비가 온다.' }]; if (s.fur > 0) l.push({ who: 'me', text: '소매에 털 한 가닥이 남아 있다. ...그냥 두자.' }); return l; },
+    home: function (s) {
+      return s.hearts >= 3 ? [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관에서 기다리고 있었다.' }, { who: 'narr', text: '오늘은 내 밥도 차렸다. 둘이 먹는 저녁.' }]
+        : [{ who: 'narr', text: j(s.cat, 'subject') + ' 소파 위에서 고개만 들었다.' }, { who: 'narr', text: '오늘은 내 밥도 차렸다. 마주 앉아 먹는 건 나 혼자였다.' }];
     }
   };
 
@@ -502,28 +416,24 @@ var Story = (function () {
     soso: { title: '그럭저럭 둘이서', body: function (s) { return ['정식 설계사가 되었다.', j(s.cat, 'topic') + ' 가끔 나를 모른 척한다. 그래도 저녁이면 현관에 와 있다.']; } },
     clumsy: { title: '둘 다 아직 서툴다', body: function (s) { return ['수습은 한 달 늘었다.', j(s.cat, 'with') + ' 나는 아직 서로에게 서툴다.']; } },
     oneBody: { title: '한 몸만 건사했다', body: function (s) { return ['정식 설계사가 되었다.', '집에 오면 ' + j(s.cat, 'subject') + ' 더 이상 현관에 나와 있지 않다.']; } },
-    farewell: { title: function (s) { return Life.oldName(s) + '에게로'; }, body: function (s) { return [s.contracts >= Life.GOAL ? '정식 설계사가 되었다.' : '수습은 한 달 늘었다.', '선배가 가끔 사진을 보내 준다. 창가에 누운 ' + Life.oldName(s) + '의 목에서 방울이 반짝인다.', '현관을 열면 이제 아무도 없다. 그래도 그 겨울밤, 우산은 기울어 있었다.']; } },
     again: { title: '다시 처음부터', body: function (s) { return ['일도, ' + j(s.cat, 'with') + '의 하루도 잘 풀리지 않았다.', '이건 게임이니까, 처음부터 다시 해 볼 수 있다.']; } },
     emptyBowl: { title: '빈 밥그릇', body: function (s) { return ['밥그릇이 너무 자주 비어 있었다.', '어느 날 아침, ' + j(s.cat, 'subject') + ' 열린 창틈으로 나가 슈퍼 앞으로 돌아갔다. 슈퍼 사장님이 밥을 챙겨 준다고 한다.', '이건 게임이니까, 처음부터 다시 해 볼 수 있다.']; } }
   };
   function endingTitle(key, s) { var t = ENDING[key].title; return typeof t === 'function' ? t(s) : t; }
-  // 엔딩 글 끝에 붙는 선배 이야기의 마무리
+  // 엔딩 글 끝에 붙는 사진첩 한 줄
   function endingArc(key, s) {
-    var o = s.arc && s.arc.outcome;
-    if (key === 'farewell' || key === 'emptyBowl') return null;
-    if (o === 'kept') return '현관에서 방울 소리가 난다. 선배에게 이번 주 사진을 보냈다.';
-    if (o === 'keptHard') return '선배는 그 뒤로 고양이 이야기를 하지 않았다.';
-    return null;
+    if (key === 'emptyBowl') return null;
+    var n = (s.photos || []).length;
+    return n ? '휴대폰 사진첩을 넘긴다. 고객 메모 캡처 사이사이에 ' + j(s.cat, 'subject') + ' ' + n + '장.' : '휴대폰 사진첩에는 고객 메모 캡처뿐이다.';
   }
   var GRADE_NAME = { good: 'GOOD ENDING', normal: 'NORMAL ENDING', bad: 'BAD ENDING', hidden: 'HIDDEN ENDING' };
   // 아직 못 본 엔딩 칸에 보이는 귀띔
   var ENDING_HINT = {
-    family: '천둥 치던 밤, 서랍 속 아침, 그리고 방울 목걸이...',
-    both: '목표 ' + Life.GOAL + '건, 그리고 마음 네 칸 이상',
-    soso: '목표 ' + Life.GOAL + '건, 마음은 두세 칸',
+    family: '천둥 치던 밤, 서랍 속 아침, 그리고 가득 찬 사진첩...',
+    both: '목표 ' + Life.GOAL + '건, 마음 네 칸, 사진 ' + Life.PHOTO_GOOD + '장 이상',
+    soso: '목표 ' + Life.GOAL + '건, 그런데 마음이나 사진이 조금 모자라면',
     catStays: '실적은 모자라도 마음은 네 칸 이상',
     clumsy: '실적도 마음도 조금씩 모자라면',
-    farewell: '옛 이름을 부르는 사람에게 보내 준다면',
     oneBody: '목표는 채웠지만 마음이 한 칸 이하',
     again: '일도 고양이도 잘 안 풀리면',
     emptyBowl: '밥그릇이 너무 자주 비면'
@@ -532,22 +442,24 @@ var Story = (function () {
   // 엔딩 글에 넣을, 실제로 있었던 날 하나
   function memory(s, key) {
     var ev = s.events, pick = null, date = function (d) { return Life.DAYS[d].date; };
-    var good = ['kept', 'curtain', 'drawer', 'catLover', 'groupSigned', 'firstContract', 'together'];
-    var bad = ['farewell', 'keptHard', 'drawerLate', 'stormAlone', 'lonely', 'scratched'];
+    var good = ['lid', 'catWoke', 'curtain', 'drawer', 'catLover', 'firstPhoto', 'groupSigned', 'firstContract', 'together'];
+    var bad = ['waitedAsleep', 'moved', 'drawerLate', 'stormAlone', 'lonely', 'scratched'];
     var order = key === 'oneBody' || key === 'again' || key === 'clumsy' || key === 'emptyBowl' ? bad.concat(good) : good;
     for (var i = 0; i < order.length && !pick; i++) for (var k = ev.length - 1; k >= 0; k--) if (ev[k].key === order[i]) { pick = ev[k]; break; }
     if (!pick) return null;
     var c = s.cat;
     var text = {
-      kept: '선배 앞에서 ' + j(c, 'subject') + ' 내 발에 머리를 비볐다.',
-      keptHard: '옛 이름을 듣고 돌아선 ' + j(c, 'object') + ' 붙잡았다.',
-      farewell: j(c, 'subject') + ' 옛 이름을 따라 현관을 나섰다.',
+      lid: '발표 전날 밤, 노트북을 덮고 ' + j(c, 'with') + ' 놀았다.',
+      catWoke: '알람이 고장 난 아침, ' + j(c, 'subject') + ' 나를 깨웠다.',
+      firstPhoto: '처음으로 ' + j(c, 'of') + ' 사진을 찍었다.',
+      waitedAsleep: '야근한 밤, ' + j(c, 'subject') + ' 현관 매트에서 기다리다 잠들었다.',
+      moved: '발표 전날 밤, 자판 위의 ' + j(c, 'object') + ' 내려놓았다.',
+      groupSigned: '밤 8시, 남아서 단체보험을 계약했다.',
       curtain: '비 오던 밤, 커튼을 쳐 주었다.',
       drawer: '아침에 서랍 속 후드티 위에서 ' + j(c, 'object') + ' 찾았다.',
       drawerLate: j(c, 'subject') + ' 하루 종일 서랍 속에 갇혀 있었다.',
       stormAlone: '천둥 치는 밤, ' + j(c, 'subject') + ' 소파 밑에서 혼자 떨었다.',
       catLover: '고양이를 키우는 고객님이 내 소매의 털을 보고 웃었다.',
-      groupSigned: '밤 8시, 식당 사장님과 단체보험을 계약했다.',
       firstContract: '첫 계약 스티커를 붙였다.',
       together: j(c, 'with') + ' 같이 잤다.',
       lonely: j(c, 'subject') + ' 닫힌 문 앞에서 혼자 잤다.',
@@ -558,10 +470,10 @@ var Story = (function () {
 
   // 엔딩 뒤 고양이 시점: 같은 날들을 한 줄씩
   function epilogue(s) {
-    var lines = [], o = s.arc && s.arc.outcome, old = Life.oldName(s);
-    // 프롤로그의 비 오는 밤을 고양이 쪽에서 다시 본다
-    lines.push('작년 겨울. 이삿짐 상자 사이로 문이 열려 있었다. 밖에 나갔다가 집을 잃었다. ' + old + '라고 부르던 목소리가 멀어졌다.');
-    lines.push('비가 오던 밤. 슈퍼 앞에서 울었다. 처음 보는 사람이 우산을 기울였다.');
+    var lines = [];
+    // 프롤로그의 겨울을 고양이 쪽에서 다시 본다
+    lines.push('작년 겨울. 비가 오던 밤, 슈퍼 앞에서 울었다. 처음 보는 사람이 우산을 기울였다.');
+    lines.push('그 사람 방에서 겨울을 났다. 사람은 휴대폰을 보며 자주 한숨을 쉬었다. 나는 그 옆에서 잤다.');
     s.diary.forEach(function (d) {
       var date = Life.DAYS[d.day].date, parts = [];
       if (d.meals === 0) parts.push('그릇이 하루 종일 비어 있었다');
@@ -572,14 +484,17 @@ var Story = (function () {
       if (ev.indexOf('drawer') >= 0) parts.push('사람 냄새 나는 옷 속에 숨었다');
       if (ev.indexOf('drawerLate') >= 0) parts.push('옷 속에 숨었다가 나오지 못했다. 하루가 길었다');
       if (ev.indexOf('stormAlone') >= 0) parts.push('천둥이 무서워서 소파 밑에서 떨었다');
-      if (ev.indexOf('kept') >= 0) parts.push('옛 이름을 들었다. 그래도 이 사람 발에 머리를 비볐다. 목에서 방울이 울렸다');
-      if (ev.indexOf('keptHard') >= 0) parts.push('옛 이름을 들었다. 따라가려는데 사람이 나를 안았다');
-      if (ev.indexOf('farewell') >= 0) parts.push('옛 이름을 들었다. 그 목소리를 따라갔다');
+      if (ev.indexOf('catWoke') >= 0) parts.push('사람이 안 일어나길래 얼굴을 눌러 깨웠다');
+      if (ev.indexOf('waitedAsleep') >= 0) parts.push('현관에서 기다리다 잠들었다');
+      if (ev.indexOf('lid') >= 0) parts.push('따뜻한 상자 위에 앉았더니 사람이 상자를 덮고 놀아 줬다');
+      if (ev.indexOf('moved') >= 0) parts.push('따뜻한 상자 위에 앉았는데 사람이 나를 내려놓았다');
+      if (d.photos) parts.push('사람이 나를 보고 웃으며 휴대폰을 들었다');
+      if (ev.indexOf('kneadPet') >= 0) parts.push('새벽에 얼굴을 꾹꾹 눌렀다. 사람이 쓰다듬어 줬다');
+      if (ev.indexOf('kneadPush') >= 0) parts.push('새벽에 얼굴을 눌렀더니 사람이 이불 속으로 숨었다');
       if (d.together) parts.push('사람 옆에서 잤다. 따뜻했다');
       else if (ev.indexOf('scratched') >= 0) parts.push('문을 긁었더니 사람이 깼다');
       else if (ev.indexOf('lonely') >= 0) parts.push('문 앞에서 잤다');
-      if (Life.DAYS[d.day].final) parts.push(o === 'farewell' ? '새 창가에서 그 집 쪽을 봤다' : '현관에서 기다렸다');
-      if (!parts.length && o === 'farewell' && d.day > 11) parts.push('새 집이었다');
+      if (Life.DAYS[d.day].final) parts.push('사람이 비 냄새를 묻히고 왔다. 현관에서 기다렸다');
       if (!parts.length) parts.push(Life.DAYS[d.day].kind === 'work' ? '사람이 아침에 나가서 저녁에 왔다' : '사람이 하루 종일 집에 있었다');
       lines.push(date + '. ' + parts.join('. ') + '.');
     });
@@ -588,10 +503,10 @@ var Story = (function () {
 
   return {
     opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
-    HINT: HINT, MARK_NOTE: MARK_NOTE, officeTip: officeTip, goalReached: goalReached, careNote: careNote,
+    HINT: HINT, MARK_NOTE: MARK_NOTE, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
     assembly: assembly, senior: senior, seniorSmell: seniorSmell, stepLine: stepLine, CLIENT_HINT: CLIENT_HINT, WRONG: WRONG, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
-    evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, ARC: ARC, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
+    evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());
 if (typeof module !== 'undefined' && module.exports) module.exports = Story;

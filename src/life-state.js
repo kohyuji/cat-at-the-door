@@ -18,7 +18,7 @@ var Life = (function () {
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
+    play: 40, rest: 60, cook: 40, quick: 5, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
   };
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
@@ -44,13 +44,13 @@ var Life = (function () {
     { date: '4/13', wd: '월', kind: 'work', first: true },
     { date: '4/14', wd: '화', kind: 'work' },
     { date: '4/15', wd: '수', kind: 'work', storm: true },
-    { date: '4/16', wd: '목', kind: 'work', group: 'c6' },
-    { date: '4/17', wd: '금', kind: 'work' },
+    { date: '4/16', wd: '목', kind: 'work' },
+    { date: '4/17', wd: '금', kind: 'work', dinner: true, mom: true },
     { date: '4/18', wd: '토', kind: 'off' },
     { date: '4/19', wd: '일', kind: 'off' },
-    { date: '4/20', wd: '월', kind: 'work' },
+    { date: '4/20', wd: '월', kind: 'work', alarm: true },
     { date: '4/21', wd: '화', kind: 'work', hide: true },
-    { date: '4/22', wd: '수', kind: 'work' },
+    { date: '4/22', wd: '수', kind: 'work', group: 'c6', overtime: true },
     { date: '4/23', wd: '목', kind: 'work', eve: true },
     { date: '4/24', wd: '금', kind: 'work', final: true }
   ];
@@ -68,12 +68,12 @@ var Life = (function () {
     c4: { day: 3, need: 'dental', mark: 'sneeze' },
     c5: { day: 4, need: 'home', mark: 'none' },
     c18: { day: 4, need: 'car', mark: 'sneeze' },
-    c6: { day: 4, need: 'group', mark: 'none', evening: true },
+    c6: { day: 10, need: 'group', mark: 'none', evening: true }, // 4/22 야근: 남아서 한 건 더
     c7: { day: 5, need: 'home', mark: 'cat' },
     c8: { day: 5, need: 'travel', mark: 'clock' },
     c9: { day: 8, need: 'car', mark: 'none' },
     c19: { day: 8, need: 'travel', mark: 'cat' },
-    c10: { day: 9, need: 'dental', mark: 'clock' },
+    c10: { day: 9, need: 'dental', mark: 'cat' }, // 4/21 고양이를 키우는 고객
     c11: { day: 9, need: 'home', mark: 'none' },
     c12: { day: 10, need: 'travel', mark: 'sneeze' },
     c20: { day: 10, need: 'car', mark: 'clock' },
@@ -125,8 +125,8 @@ var Life = (function () {
       today: null, ledger: [], diary: [], events: [],
       morningNote: null, evaluated: null, ended: null,
       seen: {},
-      // 전체 이야기: 선배가 잃어버린 고양이. outcome은 4/23 저녁에 정해진다 (kept, keptHard, farewell)
-      arc: { outcome: null, collar: false, gone: false }
+      // 둘이라서: 내가 찍은 사진, 내 저녁, 4/17 회식, 4/20 알람, 4/23 마지막 준비
+      photos: [], myMeal: null, cooked: false, out: null, alarm: null, lid: null
     };
     s.today = freshToday(s);
     return s;
@@ -262,7 +262,7 @@ var Life = (function () {
   function doBlock(s, kind) {
     if (!homeTime(s)) return 'notHome';
     if (kind === 'play') { if (s.hidden) return 'hidden'; if (s.toy <= 0) return 'noToy'; if (s.played) return 'played'; if (s.energy <= 1) return 'tired'; }
-    if (kind === 'prep') { if (!s.cards.length) return 'noCard'; if (s.cards.every(function (id) { return s.prepared[id]; })) return 'prepared'; }
+    if (kind === 'prep') { if (s.lid === 'lid') return 'lid'; if (!s.cards.length) return 'noCard'; if (s.cards.every(function (id) { return s.prepared[id]; })) return 'prepared'; }
     if (kind === 'rest') { if (s.energy >= MAX) return 'full'; if (s.rested >= (s.phase === 'weekend' ? 2 : 1)) return 'rested'; }
     if (kind === 'sweep' && s.floor.fur <= 0) return 'clean';
     if (kind === 'mop' && s.floor.dust <= 0) return 'clean';
@@ -316,7 +316,7 @@ var Life = (function () {
     s.smell = smellOf(s.litter.poop);
     if (s.smell) s.today.notes.push('smell');
     // 못 찾은 고양이는 서랍 속에 갇힌 채 하루를 보낸다
-    if (s.hidden && !s.arc.gone) { s.today.notes.push('leftHidden'); s.locked = true; }
+    if (s.hidden) { s.today.notes.push('leftHidden'); s.locked = true; }
     switchMeal(s);
     s.phase = 'work';
     s.minute = s.left + T.commute;
@@ -342,6 +342,8 @@ var Life = (function () {
       else if (c.mark === 'cat') { mood += 1; reasons.push({ key: 'catLover', delta: +1 }); }
       else { mood -= 1; reasons.push({ key: 'fur', delta: -1 }); }
     }
+    // 고양이를 키우는 고객: 내 휴대폰 속 사진을 보여 주면 이야기가 풀린다
+    if (c.mark === 'cat' && (s.photos || []).length >= 2) { mood += 1; reasons.push({ key: 'photos', delta: +1 }); }
     if (s.prepared[id]) { mood += 1; reasons.push({ key: 'prepared', delta: +1 }); }
     if (eff <= 1) { mood -= 1; reasons.push({ key: 'yawn', delta: -1 }); }
     var steps = ['need', 'price'];
@@ -424,7 +426,7 @@ var Life = (function () {
       else s.today.lost.push({ id: r.id, why: r.why });
     });
     energy(s, -2);
-    var wentGroup = day(s).group && s.group === 'go';
+    var wentGroup = outLate(s);
     if (wentGroup) energy(s, -1);
     var next = nextWorkDay(s.day);
     s.cards = next < 0 ? [] : clientsOn(next);
@@ -488,8 +490,10 @@ var Life = (function () {
   }
 
   // ---------- 저녁, 밤 ----------
+  // 늦게 들어오는 날: 4/22 야근, 4/17 동기들과 저녁
+  function outLate(s) { return !!(day(s).group && s.group === 'go') || s.out === 'dinner'; }
   function arriveHome(s) {
-    var wentGroup = day(s).group && s.group === 'go';
+    var wentGroup = outLate(s);
     s.phase = 'evening';
     s.minute = wentGroup ? T.groupHome : T.homeArrive + (s.shopped ? T.shopStop : 0);
     s.meal = 'pm';
@@ -501,7 +505,10 @@ var Life = (function () {
     s.hidden = !!day(s).storm; // 천둥 치는 밤에는 숨는다
     // 아침에 못 찾고 나간 날: 서랍 속에 하루 종일 갇혀 있었다. 찾아 줄 때까지 안 나온다.
     if (s.locked) { heart(s, -1, 'locked'); s.hidden = true; }
-    return { locked: !!s.locked };
+    // 늦게 온 밤: 현관에서 기다리다 잠들었다
+    if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
+    else if (s.out === 'dinner') heart(s, -1, 'lateHome');
+    return { locked: !!s.locked, late: wentGroup };
   }
   // 주말 오후 3시 전에 침대에 누우면 낮잠이다. 오후 3시에 깨고, 고양이 저녁 끼니가 시작된다.
   function napFirst(s) { return s.phase === 'weekend' && s.meal === 'am'; }
@@ -527,9 +534,8 @@ var Life = (function () {
     opt = opt || {};
     var t = s.today, woke = false, note = null;
     var bed = s.minute;
-    var gone = !!s.arc.gone;
-    var hungry = !s.fed.pm && !gone ? missMeal(s, 'pm') : false;
-    if (!s.water && !gone) heart(s, -1, 'dry');
+    var hungry = !s.fed.pm ? missMeal(s, 'pm') : false;
+    if (!s.water) heart(s, -1, 'dry');
     if (s.floor.dust >= 3) heart(s, -1, 'dusty');
     if (day(s).storm && !s.stormDone) { heart(s, -1, 'stormAlone'); event(s, 'stormAlone'); }
     var autoPlayed = !s.played && autoToyOn(s) && !s.hidden;
@@ -538,7 +544,6 @@ var Life = (function () {
       heart(s, +1, 'together');
       if (hungry || unplayed(s)) { woke = true; note = hungry ? 'wakeHungry' : 'wakeZoomies'; }
       else note = 'slept';
-    } else if (gone) { note = 'gone';
     } else if (needsPOV(s)) {
       if (opt.cat === 'scratch') { woke = true; note = 'scratched'; event(s, 'scratched'); }
       else { heart(s, -1, 'lonely'); note = 'lonely'; event(s, 'lonely'); }
@@ -548,7 +553,10 @@ var Life = (function () {
     if (bed > T.bedtime) lost.push('late');
     if (woke) lost.push('woke');
     if (s.lateCoffee) lost.push('coffee');
-    var want = Math.max(0, base - (woke ? 1 : 0) - (s.lateCoffee ? 1 : 0));
+    // 내 저녁: 굶고 자면 덜 차고, 제대로 차려 먹었으면 더 찬다
+    var skipped = !s.myMeal && s.day > 0, fed = s.cooked ? 1 : 0;
+    if (skipped) lost.push('hungry');
+    var want = Math.max(0, base - (woke ? 1 : 0) - (s.lateCoffee ? 1 : 0) - (skipped ? 1 : 0) + fed);
     var gain = energy(s, want);
     s.woke = woke;
     s.morningNote = { key: note, gain: gain };
@@ -556,7 +564,7 @@ var Life = (function () {
     if (together) s.fur = Math.min(3, s.fur + 1);
     t.energyNext = s.energy;
     t.total = s.contracts;
-    s.diary.push({ day: s.day, together: together, meals: (s.fed.am ? 1 : 0) + (s.fed.pm ? 1 : 0), played: s.played, water: s.water });
+    s.diary.push({ day: s.day, together: together, meals: (s.fed.am ? 1 : 0) + (s.fed.pm ? 1 : 0), played: s.played, water: s.water, photos: s.photos.filter(function (p) { return p.day === s.day; }).length, myMeal: s.myMeal });
     if (together) event(s, 'together');
     s.ledger.push(t);
     if (s.missed > 3) s.ended = 'emptyBowl';
@@ -570,17 +578,16 @@ var Life = (function () {
     s.fed = { am: false, pm: false }; s.meal = 'am'; s.bowl = 'empty';
     s.water = false; s.played = false; s.petted = false; s.rested = 0;
     s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0; s.smell = 0; s.locked = false; s.trips = 0;
-    s.wearing = 'hoodie';
-    s.hidden = !!d.hide || !!s.arc.gone;
+    s.wearing = 'hoodie'; s.myMeal = null; s.cooked = false; s.out = null;
+    s.hidden = !!d.hide;
     // 일은 하나씩 늘어난다: 첫 출근 날은 털(돌돌이)만, 사흘째(4/14)부터 화장실과 바닥 털, 4/16부터 먼지
-    if (s.day >= CLEAN_FROM && !s.arc.gone) s.litter.poop++;
+    if (s.day >= CLEAN_FROM) s.litter.poop++;
     var dirty = s.litter.poop >= 3, noSand = s.litter.sand <= 0, accident = dirty || noSand;
     var why = noSand && !dirty ? 'Sand' : '';
-    if (s.arc.gone) { dirty = noSand = accident = false; }
-    else s.litter.sand = Math.max(0, s.litter.sand - 1);
+    s.litter.sand = Math.max(0, s.litter.sand - 1);
     // 고양이 털은 매일 바닥에 쌓이고, 먼지는 이틀에 한 번 쌓인다
-    if (s.day >= CLEAN_FROM && !s.arc.gone) s.floor.fur = Math.min(6, s.floor.fur + 1);
-    if (s.day >= DUST_FROM && s.day % 2 === 0 && !s.arc.gone) s.floor.dust = Math.min(6, s.floor.dust + 1);
+    if (s.day >= CLEAN_FROM) s.floor.fur = Math.min(6, s.floor.fur + 1);
+    if (s.day >= DUST_FROM && s.day % 2 === 0) s.floor.dust = Math.min(6, s.floor.dust + 1);
     // 로봇청소기: 밤새 돌아서 털이 더 쌓이지 않게 막는다. 다 치우지는 못하고, 먼지는 못 닦는다.
     if (s.owned.robot && s.floor.fur > 1) { s.floor.fur--; s.today.notes.push('robot'); }
     s.jobbed = false;
@@ -588,6 +595,12 @@ var Life = (function () {
       s.phase = 'weekend'; s.minute = T.weekendStart;
     } else {
       s.phase = 'morning'; s.minute = s.woke ? T.wokeWake : T.wake;
+    }
+    // 4/20 알람이 고장 난 아침: 마음이 가까우면 고양이가 깨워 주고, 아니면 늦잠
+    if (d.alarm) {
+      s.alarm = s.hearts >= ALARM_HEARTS ? 'cat' : 'late';
+      if (s.alarm === 'cat') { s.minute = T.wake; event(s, 'catWoke'); }
+      else s.minute = T.wake + 40;
     }
     // 문을 열어 두고 잤으면 침대까지 와서, 닫고 잤으면 거실 바닥에 실수한다
     var key = 'accident' + why + (doorOpen ? 'Bed' : '');
@@ -605,40 +618,73 @@ var Life = (function () {
     return s.evaluated;
   }
   // 엔딩 8개: 좋음 1, 보통 3, 나쁨 3, 숨은 엔딩 1
-  var ENDINGS = ['family', 'both', 'soso', 'catStays', 'clumsy', 'farewell', 'oneBody', 'again', 'emptyBowl'];
-  var GRADE = { family: 'hidden', both: 'good', soso: 'normal', catStays: 'normal', clumsy: 'normal', farewell: 'normal', oneBody: 'bad', again: 'bad', emptyBowl: 'bad' };
+  // 일(계약)과 고양이(마음)와 둘이 보낸 순간(사진) 셋이 함께 정한다. 한쪽만 챙기면 좋은 엔딩은 안 나온다.
+  var ENDINGS = ['family', 'both', 'soso', 'catStays', 'clumsy', 'oneBody', 'again', 'emptyBowl'];
+  var GRADE = { family: 'hidden', both: 'good', soso: 'normal', catStays: 'normal', clumsy: 'normal', oneBody: 'bad', again: 'bad', emptyBowl: 'bad' };
+  var PHOTO_GOOD = 4, PHOTO_FAMILY = 7;
   function has(s, key) { return s.events.some(function (e) { return e.key === key; }); }
-  // 숨은 엔딩: 목표를 채우고, 마음을 가득 채우고, 한 끼도 굶기지 않고, 천둥 치던 밤과 서랍 속 아침을 둘 다 지켜 준 사람
-  function family(s) { return s.contracts >= GOAL && s.hearts >= MAX && s.missed === 0 && has(s, 'curtain') && has(s, 'drawer') && s.arc.collar; }
+  function photos(s) { return (s.photos || []).length; }
+  // 숨은 엔딩: 목표를 채우고, 마음을 가득 채우고, 한 끼도 굶기지 않고, 천둥 치던 밤과 서랍 속 아침을 둘 다 지켜 주고, 사진첩이 가득한 사람
+  function family(s) { return s.contracts >= GOAL && s.hearts >= MAX && s.missed === 0 && has(s, 'curtain') && has(s, 'drawer') && photos(s) >= PHOTO_FAMILY; }
   function ending(s) {
     if (s.missed > 3) return { key: 'emptyBowl', grade: 'bad', pass: false, hearts: s.hearts, contracts: s.contracts };
-    if (s.arc.gone) return { key: 'farewell', grade: 'normal', pass: s.contracts >= GOAL, hearts: s.hearts, contracts: s.contracts };
     var band = s.hearts >= 4 ? 'close' : s.hearts >= 2 ? 'mid' : 'far';
     var pass = s.contracts >= GOAL;
-    var key = family(s) ? 'family' : { close: pass ? 'both' : 'catStays', mid: pass ? 'soso' : 'clumsy', far: pass ? 'oneBody' : 'again' }[band];
-    return { key: key, grade: GRADE[key], band: band, pass: pass, hearts: s.hearts, contracts: s.contracts };
+    var key = family(s) ? 'family' : { close: pass ? (photos(s) >= PHOTO_GOOD ? 'both' : 'soso') : 'catStays', mid: pass ? 'soso' : 'clumsy', far: pass ? 'oneBody' : 'again' }[band];
+    return { key: key, grade: GRADE[key], band: band, pass: pass, hearts: s.hearts, contracts: s.contracts, photos: photos(s) };
   }
 
-  // ---------- 전체 이야기: 선배의 나비 ----------
-  // 고양이와 쌓은 정. 지금 마음에, 함께 넘긴 밤(천둥, 서랍)과 같이 잔 밤을 더한다.
-  // 4/20 저녁 옛 이름 연습과 4/23 저녁 선배 앞에서 고양이가 누구에게 갈지 정한다.
-  var BOND_NEED = 4;
-  function bond(s) {
-    var together = s.events.filter(function (e) { return e.key === 'together'; }).length;
-    var played = s.diary.filter(function (d) { return d.played; }).length;
-    return s.hearts + (has(s, 'curtain') ? 1 : 0) + (has(s, 'drawer') ? 1 : 0) + (together >= 4 ? 1 : 0) + (played >= 5 ? 1 : 0);
+  // ---------- 둘이라서 ----------
+  var ALARM_HEARTS = 3;          // 4/20 아침, 이만큼 가까우면 고양이가 깨워 준다
+  var KNEAD_NIGHTS = [2, 4, 6, 9]; // 같이 잔 이 밤들의 새벽 5시에 얼굴을 꾹꾹 누른다
+  // 반짝이는 순간을 휴대폰으로 찍는다 (평일 저녁 두 장, 주말 세 장까지)
+  function photoCap(s) { return s.phase === 'weekend' ? 3 : 2; }
+  function photosToday(s) { return s.photos.filter(function (p) { return p.day === s.day; }).length; }
+  function photo(s, pose) {
+    if (!homeTime(s) || s.hidden) return { ok: false, why: 'notNow' };
+    if (photosToday(s) >= photoCap(s)) return { ok: false, why: 'cap' };
+    s.photos.push({ day: s.day, pose: pose || 'sit' });
+    if (s.photos.length === 1) event(s, 'firstPhoto');
+    return { ok: true, n: s.photos.length, minutes: spend(s, T.photo) };
   }
-  function choosesMe(s) { return bond(s) >= BOND_NEED; }
-  // 선배가 다녀간 결과. kept: 내게 와서 목걸이를 받았다, keptHard: 선배에게 갔지만 붙잡았다, farewell: 보내 주었다
-  function visitEnd(s, outcome) {
-    s.arc.outcome = outcome;
-    event(s, outcome);
-    if (outcome === 'kept') { s.arc.collar = true; heart(s, +1, 'collar'); }
-    if (outcome === 'keptHard') heart(s, -1, 'keptHard');
-    if (outcome === 'farewell') { s.arc.gone = true; s.hidden = true; }
-    return s.arc;
+  // 내 저녁: 서서 삼각김밥(5분) 또는 차려 먹기(40분, 그날 밤 체력 +1). 주말에 같이 먹으면 마음 +1.
+  function eatBlock(s) { if (!homeTime(s)) return 'notHome'; if (s.myMeal) return 'ate'; if (s.phase === 'weekend' && s.meal === 'am') return 'early'; return null; }
+  function eat(s, kind) {
+    var why = eatBlock(s); if (why) return { ok: false, why: why };
+    kind = kind === 'cook' ? 'cook' : 'quick';
+    s.myMeal = kind; if (kind === 'cook') s.cooked = true;
+    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : T.quick) };
+    if (kind === 'cook' && s.phase === 'weekend' && !s.hidden) { heart(s, +1, 'mealTogether'); r.together = true; }
+    return r;
   }
-  function oldName(s) { return s.cat === '나비' ? '콩이' : '나비'; }
+  // 새벽 꾹꾹이: 받아 주면 마음 +1 체력 −1, 이불을 덮어쓰면 마음 −1
+  function kneadNight(s) { return KNEAD_NIGHTS.indexOf(s.day) >= 0 && s.door === 'open' && !s.hidden; }
+  function knead(s, pick) {
+    if (pick === 'pet') { heart(s, +1, 'kneadPet'); energy(s, -1); if (s.today.energyNext !== null) s.today.energyNext = s.energy; }
+    else heart(s, -1, 'kneadPush');
+    event(s, pick === 'pet' ? 'kneadPet' : 'kneadPush');
+    return { hearts: s.hearts, energy: s.energy };
+  }
+  // 4/17 동기들과 저녁: 가면 소개 계약 한 건, 대신 늦게 들어간다
+  function dinner(s, go) {
+    if (!day(s).dinner || s.out) return null;
+    s.out = go ? 'dinner' : 'home';
+    if (!go) return { go: false };
+    var pay = payFor(s, 'travel'), before = s.contracts;
+    s.contracts++;
+    s.results.push({ id: 'referral', day: s.day, need: 'travel', signed: true, pet: false, pay: pay, why: null, bonus: before >= GOAL, goal: before < GOAL && s.contracts >= GOAL });
+    if (before < GOAL && s.contracts >= GOAL) { s.goalDay = s.day; event(s, 'goal'); }
+    s.today.stickers.push('travel');
+    event(s, 'referral');
+    return { go: true, pay: pay };
+  }
+  // 4/23 밤: 발표 준비 중 자판 위에 앉은 고양이. 옮기면(work) 준비가 끝나고, 노트북을 덮으면(lid) 같이 논다.
+  function lastPrep(s, pick) {
+    s.lid = pick;
+    if (pick === 'work') { s.cards.forEach(function (id) { s.prepared[id] = true; }); heart(s, -1, 'moved'); event(s, 'moved'); }
+    else { s.played = true; heart(s, +1, 'lid'); event(s, 'lid'); }
+    return s.lid;
+  }
 
   // ---------- 저장 ----------
   function save(s) { return JSON.stringify(s); }
@@ -647,7 +693,8 @@ var Life = (function () {
       var s = typeof text === 'string' ? JSON.parse(text) : text;
       if (!s || s.v !== VERSION || typeof s.day !== 'number' || !s.today) return null;
       if (!s.seen) s.seen = {};
-      if (!s.arc) s.arc = { outcome: null, collar: false, gone: false };
+      if (!s.photos) s.photos = [];
+      if (s.myMeal === undefined) { s.myMeal = null; s.cooked = false; s.out = null; s.alarm = null; s.lid = null; }
       return s;
     } catch (e) { return null; }
   }
@@ -683,7 +730,9 @@ var Life = (function () {
     buy: buy, buyBlock: buyBlock, unbuy: unbuy, price: price, lateNight: lateNight, NIGHT_RATE: NIGHT_RATE, smellOf: smellOf,
     ENDINGS: ENDINGS, GRADE: GRADE,
     arriveHome: arriveHome, napFirst: napFirst, nap: nap, toBed: toBed, setDoor: setDoor, needsPOV: needsPOV, unplayed: unplayed, sleepGain: sleepGain, sleep: sleep, morning: morning,
-    evaluate: evaluate, ending: ending, bond: bond, choosesMe: choosesMe, visitEnd: visitEnd, oldName: oldName, BOND_NEED: BOND_NEED, CLEAN_FROM: CLEAN_FROM, DUST_FROM: DUST_FROM,
+    evaluate: evaluate, ending: ending, CLEAN_FROM: CLEAN_FROM, DUST_FROM: DUST_FROM, outLate: outLate,
+    photo: photo, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
+    ALARM_HEARTS: ALARM_HEARTS, KNEAD_NIGHTS: KNEAD_NIGHTS, PHOTO_GOOD: PHOTO_GOOD, PHOTO_FAMILY: PHOTO_FAMILY,
     save: save, load: load,
     hasBatchim: hasBatchim, nameForm: nameForm, josa: josa, clock: clock, won: won, cleanName: cleanName
   };

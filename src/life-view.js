@@ -235,11 +235,24 @@ var View = (function () {
     }
   }
   function bag(c, x, y, scale) { item(c, 'briefcase', x, y, scale || 1.15); }
+  // 옷에 붙은 고양이 털: 얼룩처럼 보이지 않게 가늘게 휜 털 가닥 몇 올 (크림색, 연한 주황, 흰색)
+  var HAIR = ['#f6ecd8', '#f0b878', '#fffaf0', '#e9a35e'];
+  function hair(c, x, y, i, px) {
+    var u = px || 1, n = 2 + (i % 2), col = HAIR[i % HAIR.length];
+    c.save(); c.lineCap = 'round'; c.lineWidth = .9 * u; c.strokeStyle = col; c.globalAlpha = .95;
+    for (var k = 0; k < n; k++) {
+      var a = ((i * 2.3 + k * 1.7) % 6.28), len = (5 + ((i + k) % 3) * 1.6) * u, bend = (k % 2 ? 1.6 : -1.6) * u;
+      var x0 = x + Math.cos(a + 1.6) * k * .9 * u, y0 = y + Math.sin(a + 1.6) * k * .9 * u;
+      var x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len;
+      c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2 - Math.sin(a) * bend, (y0 + y1) / 2 + Math.cos(a) * bend, x1, y1); c.stroke();
+    }
+    c.restore();
+  }
   function hangerSuit(c, x, y, fur, t) {
     item(c, 'suit', x, y, 1.55);
     if (fur > 0) {
       var spots = [[-10, -36], [6, -30], [-4, -22], [9, -14], [-12, -12], [2, -40], [-7, -6], [11, -26], [0, -16]];
-      for (var i = 0; i < Math.min(spots.length, fur * 3); i++) icon(c, 'fur', x + spots[i][0], y + spots[i][1], 1);
+      for (var i = 0; i < Math.min(spots.length, fur * 3); i++) hair(c, x + spots[i][0], y + spots[i][1], i);
     }
   }
   // 침대: 비어 있을 때와 누워 있을 때 모두 codex-v5 그림. awake면 눈을 뜨고 휴대폰을 보는 모습.
@@ -456,7 +469,7 @@ var View = (function () {
   return {
     W: W, H: H, FLOOR: FLOOR, L: L, CELL: CELL, r: r, box: box, poly: poly, disc: disc, text: text, img: img,
     bg: bg, sceneInto: sceneInto, cut: cut, tinted: tinted, person: person, seated: seated, portrait: portrait, cat: cat, item: item, icon: icon, shadow: shadow,
-    wallClock: wallClock, slotClock: slotClock, bowl: bowl, waterBowl: waterBowl, litterBox: litterBox, foodBag: foodBag, bag: bag, hangerSuit: hangerSuit,
+    wallClock: wallClock, slotClock: slotClock, bowl: bowl, waterBowl: waterBowl, litterBox: litterBox, foodBag: foodBag, bag: bag, hangerSuit: hangerSuit, hair: hair,
     bed: bed, roomDoor: roomDoor, entranceDoor: entranceDoor, windowView: windowView, toy: toy, card: card, brochure: brochure, bubble: bubble,
     priceTag: priceTag, catTower: catTower, feeder: feeder, robot: robot, autoToy: autoToy, chart: chart, charcoal: charcoal, cup: cup, lunchbox: lunchbox, sandBag: sandBag,
     broom: broom, mop: mop, floorDirt: floorDirt, dirtSpots: dirtSpots, commuter: commuter, BED: BED, HERO_PX: HERO_PX,

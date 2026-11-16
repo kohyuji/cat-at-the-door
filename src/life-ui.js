@@ -62,6 +62,7 @@ var UI = (function () {
     stamp: function () { noise(.18, .2, 160, 0, .6); tone(90, .25, 'square', .06, 60); },
     fanfare: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .16, 'square', .04, 0, i * .12); }); tone(1319, .5, 'triangle', .05, 0, .5); },
     mystery: function () { [392, 494, 587, 740, 880].forEach(function (f, i) { tone(f, .3, 'triangle', .04, 0, i * .14); }); },
+    shutter: function () { tone(1800, .03, 'square', .05); tone(900, .05, 'square', .04, 0, .05); },
     bell: function () { [1568, 2093, 1568, 2093].forEach(function (f, i) { tone(f, .22, 'triangle', .05, 0, i * .09); }); },
     gloom: function () { tone(196, .5, 'triangle', .05, 0); tone(165, .9, 'triangle', .05, 0, .45); }
   };

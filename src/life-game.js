@@ -287,6 +287,7 @@ var Game = (function () {
     var s = G.s, k = G.cat, note = s.today && s.ledger.length ? s.ledger[s.ledger.length - 1] : null;
     k.tx = null; k.visible = !s.hidden;
     if (s.hidden) { k.room = 'none'; return; }
+    if (s.alarm === 'cat' && Life.day(s).alarm) { k.room = 'bedroom'; k.x = 84; k.y = 262; k.pose = 'rub'; k.dir = -1; return; }
     if (s.door === 'open') { k.room = 'bedroom'; k.x = 150; k.y = 336; k.pose = 'groom'; }
     else { k.room = 'living'; k.x = 520; k.y = 336; k.pose = 'sit'; }
   }
@@ -381,8 +382,6 @@ var Game = (function () {
   }
   async function arriveHome() {
     var s = G.s;
-    // 4/23: 선배가 같이 왔다
-    if (Life.day(s).eve && !s.arc.outcome) { await Arc.visit(); checkpoint(); await Home.noticeNeeds(); return; }
     H.mode = 'evening'; H.inBed = false; H.curtain = 0; H.closeUp = null; H.catAct = null; H.searching = false; H.searched = {};
     Home.enter('living', { mode: 'evening', heroX: 70, catRoom: 'living', catX: 150 });
     G.hero.dir = 1;
@@ -406,7 +405,7 @@ var Game = (function () {
       await say([narr(Story.catLine('lockedHome', s.cat))]);
       H.searching = true;
     }
-    await Arc.rehearsal();
+    await Arc.homeBeats();
     await cleanIntro();
     await Home.noticeNeeds();
   }
@@ -473,6 +472,8 @@ var Game = (function () {
     await Engine.fade(1, .7);
     H.catAct = null; H.inBed = false;
     if (s.ended === 'emptyBowl') return true;
+    await Arc.knead();
+    H.inBed = false;
     await UI.receipt(s, t);
     G.wake = Life.morning(s);
     checkpoint();
@@ -543,9 +544,10 @@ var Game = (function () {
     var lines = wakeLines(s, note);
     G.wake = null;
     if (Life.tired(s) && !s.seen.tiredMorning) { s.seen.tiredMorning = true; lines.push(me('몸이 무겁다... 피곤하면 뭘 해도 오래 걸리는데.')); }
-    if (s.arc.gone) lines.push(me('아침에 밥 달라고 우는 소리가 없다. ...조용하다.'));
+    // 4/20 알람이 고장 난 아침
+    if (s.alarm && !s.seen.alarmSaid) { s.seen.alarmSaid = true; (s.alarm === 'cat' ? Story.BEAT.alarmCat(s) : Story.BEAT.alarmLate(s)).forEach(function (l) { lines.push(l); }); }
     if (lines.length) await say(lines);
-    if (s.hidden && !s.arc.gone) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
+    if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
     // 화면이 다 어두워진 뒤에 집을 나선다 (그 사이 창밖이 밤으로 바뀌어 보이지 않게)
@@ -553,19 +555,13 @@ var Game = (function () {
     Life.leaveHome(s);
     await Work.commute(false);
     await Work.workDay();
-    if (Life.day(s).group) await Work.groupEvening();
-    if (Life.day(s).final) { await evaluation(); return; }
+    if (Life.day(s).group) await (Life.day(s).overtime ? Work.overtime() : Work.groupEvening());
+    if (Life.day(s).final) { await evaluation(); await Arc.rainHome(); return; }
+    if (Life.day(s).dinner) await Arc.dinnerOffer();
     await Work.leaveOffice();
-    if (Life.day(s).eve && !s.arc.outcome) {
-      // 4/23: 선배와 같이 퇴근해서 곧장 집으로
-      Work.Wk.withPeer = true;
-      await Work.commute(true);
-      Work.Wk.withPeer = false;
-    } else {
-      await Work.commute(true);
-      var choice = await Work.walkHome();
-      if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
-    }
+    await Work.commute(true);
+    var choice = await Work.walkHome();
+    if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
     H.stormGuide = false;
     Life.arriveHome(s);
     checkpoint();
@@ -590,7 +586,6 @@ var Game = (function () {
       await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body }, '9:40');
       await say([me('네 시간에 5,000원... 사료값이 모자라면 해 볼 만하겠다.'), me('대신 몸은 고되고, ' + Life.josa(s.cat, 'subject') + ' 또 혼자 있겠지.')]);
     }
-    await Arc.weekendText(s);
     await cleanIntro();
     await evening();
   }
@@ -645,14 +640,13 @@ var Game = (function () {
     var close = key === 'both' || key === 'catStays' || key === 'soso' || key === 'family';
     H.room = 'living'; H.mode = 'evening'; H.inBed = false; H.closeUp = null; H.curtain = 0; H.held = null; H.stormGuide = false;
     G.hero.visible = true; G.hero.x = 130; G.hero.y = 334; G.hero.pose = null; G.hero.dir = 1;
-    G.cat.visible = key !== 'emptyBowl' && key !== 'farewell'; G.cat.room = 'living';
+    G.cat.visible = key !== 'emptyBowl'; G.cat.room = 'living';
     if (key === 'family') { G.hero.x = 430; G.hero.y = 262; G.hero.pose = 'sit'; G.hero.face = 1; G.cat.x = 455; G.cat.y = 238; G.cat.pose = 'purr'; G.cat.dir = -1; }
     else if (close) { G.cat.x = 190; G.cat.y = 336; G.cat.pose = 'purr'; G.cat.dir = -1; }
     else if (key === 'clumsy') { G.cat.x = 470; G.cat.y = 228; G.cat.pose = 'groom'; }
     else { G.cat.x = 500; G.cat.y = 228; G.cat.pose = 'sleep'; }
     s.wearing = key === 'family' ? 'hoodie' : 'suit';
     if (key === 'emptyBowl') { s.bowl = 'empty'; H.entranceOpen = 0; G.hero.visible = false; }
-    if (key === 'farewell') { s.bowl = 'empty'; H.entranceOpen = 0; G.hero.x = 120; G.hero.dir = -1; }
     Home.drawLiving(c);
     G.hero.face = undefined;
     // 등급마다 화면 위에 한 겹: 좋음과 숨은 엔딩은 하트가 오르고, 나쁨은 어둡게 가라앉는다
@@ -703,6 +697,12 @@ var Game = (function () {
       return '<div class="diary-day"><small>' + UI.esc(day.date) + '</small><span>' + UI.img('zzz', 1, d.together ? '' : 'off') + UI.img('bowl', 1, d.meals >= 2 || (d.meals >= 1 && (day.final)) ? '' : d.meals ? 'half' : 'off') + UI.img('mouse', 1, d.played ? '' : 'off') + '</span></div>';
     }).join('');
     $('diary').innerHTML = '<h3>' + UI.img('paw', 1) + ' ' + UI.esc(Life.josa(s.cat, 'of') + ' 일기') + '</h3><div class="diary-grid">' + days + '</div>';
+    // 휴대폰 사진첩: 고객 메모 캡처와 내가 찍은 고양이 사진이 날짜 순으로
+    var shots = Arc.album(s), albumEl = $('album');
+    if (!albumEl) { albumEl = document.createElement('section'); albumEl.id = 'album'; albumEl.className = 'album'; var books = $('diary').parentNode; books.parentNode.insertBefore(albumEl, books.nextSibling); }
+    albumEl.innerHTML = '<h3>' + UI.img('camera', 1) + ' ' + UI.esc('휴대폰 사진첩 · ' + (s.photos || []).length + '장') + '</h3><div class="album-grid">' +
+      shots.map(function (sh, i) { return '<figure><canvas width="72" height="72" data-i="' + i + '"></canvas><figcaption>' + UI.esc(Life.DAYS[sh.day].date) + '</figcaption></figure>'; }).join('') + '</div>';
+    Array.prototype.forEach.call(albumEl.querySelectorAll('canvas'), function (cv) { Arc.drawShot(cv, shots[+cv.getAttribute('data-i')]); });
     $('epilogueButton').onclick = function () {
       $('ending').hidden = true;
       UI.black(Story.epilogue(s)).then(function () { $('ending').hidden = false; endingLoop++; var ml = endingLoop; (function loop() { if (ml !== endingLoop || root.hidden) return; drawEnding(key); requestAnimationFrame(loop); }()); });

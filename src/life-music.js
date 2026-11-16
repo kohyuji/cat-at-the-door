@@ -109,7 +109,7 @@ var Music = (function () {
     if (end && !end.hidden) { var g = end.className.indexOf('grade-bad') >= 0; return g ? 'rain' : 'evening'; }
     var title = $('titleScreen');
     if (title && !title.hidden) return 'title';
-    if (typeof Arc !== 'undefined' && Arc.visiting()) return 'visit';
+    if (typeof Arc !== 'undefined' && G.s && Life.day(G.s).final && G.place === 'street') return 'rain';
     var p = G.place, H = typeof Home !== 'undefined' ? Home.H : {};
     if (G.pro && G.pro.active && (p === 'street' || p === 'shop' || H.pro)) return 'rain';
     if (p === 'bedroom' || p === 'living') {

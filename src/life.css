@@ -217,6 +217,12 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .diary-day span { display: flex; justify-content: center; gap: 2px; min-height: 18px; }
 .diary-day img { width: 16px; height: 16px; image-rendering: pixelated; }
 .diary-day img.off { opacity: .2; filter: grayscale(1); }
+.album { background: #fffdf7; border: 3px solid var(--ink); border-radius: 4px; padding: 12px 14px; font-size: 14px; max-width: 980px; margin: 16px auto 0; box-sizing: border-box; }
+.album h3 { margin: 0 0 8px; font-weight: 400; font-size: 17px; }
+.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.album figure { margin: 0; text-align: center; }
+.album canvas { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border: 2px solid var(--ink); border-radius: 3px; background: #eee; box-sizing: border-box; }
+.album figcaption { font-size: 12px; }
 .ending-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
 
 @media (max-width: 1180px) {

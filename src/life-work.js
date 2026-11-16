@@ -30,14 +30,13 @@ var Work = (function () {
     SEATS.forEach(function (st) { View.commuter(c, G, st[0], 306, st[1], st[2]); });
     View.person(c, G, G.hero.x, 344, G.s && G.s.wearing === 'suit' ? 'suit' : 'hoodie', 1, t, 'stand', 2.35);
     heroMarks(c, G.hero.x, 344);
-    Arc.drawTrainPeer(c);
     if (Wk.dark) View.nightTint(c, .35);
   }
   var SEATS = [[96, 0, false], [203, 1, false], [426, 2, true], [540, 3, true]];
   function commute(evening) {
     G.hero.x = 300; G.hero.tx = null; Wk.dark = !!evening;
     Engine.setScene({ draw: drawTrain, place: 'train' });
-    return Engine.fade(0, .35).then(function () { return Wk.withPeer ? say([{ who: 'narr', text: Story.ARC.d11Train }]) : Engine.sleep(1.4); }).then(function () { return Engine.fade(1, .35); });
+    return Engine.fade(0, .35).then(function () { return Engine.sleep(1.4); }).then(function () { return Engine.fade(1, .35); });
   }
 
   // ---------- 지점 ----------
@@ -302,7 +301,7 @@ var Work = (function () {
     var s = S(), p = Life.plan(s, id), st = Life.consult(p), k;
     k = Wk.consult = { id: id, p: p, st: st, left: p.timer, ready: false, gone: !!p.leaves, peer: !!p.tutorial, heroFrame: 0 };
     Engine.setScene({ draw: drawConsult, hot: hotConsult, tick: tickConsult, place: 'consult' });
-    var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
+    var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', photos: 'camera', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
     return Engine.fade(0, .35).then(function () {
       if (p.leaves) return say([me(Story.CAUSE[p.reasons[0].key] || Story.CAUSE.lateLeft)]).then(function () { return Life.finish(s, p, st); });
       return say([client(id, Story.CONSULT.greet), client(id, Story.stepLine(id, 'need', p.need).say)]).then(function () {
@@ -408,6 +407,40 @@ var Work = (function () {
         });
     });
   }
+  // 4/22 야근: 퇴근 시각, 내 자리에 다시 앉을지(남아서 한 건 더) 가방을 멜지(퇴근) 손으로 정한다
+  var DESK = { x: 418, y: 196, w: 140, h: 66 }; // 내 자리 (출구 옆 책상)
+  function overtime() {
+    var s = S(), id = Life.day(s).group, pick = null;
+    office();
+    Wk.lead = { x: 300, dir: 1 }; Wk.peer = { x: 150, dir: 1 };
+    G.hero.x = 470; G.hero.dir = -1;
+    workClock(Life.T.workEnd);
+    Engine.setScene({
+      place: 'office',
+      draw: function (c) { drawOffice(c); if (!pick) View.lampGlow(c, DESK.x + DESK.w / 2, DESK.y + 40, 80, .28 + Math.sin(G.t * 3) * .06); },
+      hot: function () {
+        if (pick) return [];
+        return [
+          { id: 'stay', x: DESK.x, y: DESK.y, w: DESK.w, h: DESK.h, pulse: true, tap: function () { return Engine.walkTo(DESK.x + DESK.w / 2).then(function () { pick = 'stay'; }); } },
+          { id: 'exit', x: EXIT.x, y: EXIT.y, w: EXIT.w, h: EXIT.h, pulse: true, tap: function () { return Engine.walkTo(590).then(function () { G.hero.pose = 'back'; pick = 'go'; }); } }
+        ];
+      }
+    });
+    return Engine.fade(0, .3).then(function () { return say(Story.BEAT.overtime(s)); }).then(function () {
+      return Engine.until(function () { return pick; });
+    }).then(function () {
+      G.hero.pose = null;
+      var stay = pick === 'stay';
+      Life.decideGroup(s, stay);
+      if (!stay) return Engine.fade(1, .3);
+      return Engine.fade(1, .4).then(function () { Wk.dark = true; office({ night: true }); workClock(1200); return consult(id); })
+        .then(function (res) {
+          if (!res.signed) return Engine.fade(1, .3);
+          return Engine.fade(1, .3).then(function () { office({ night: true }); return Engine.fade(0, .3); }).then(function () { return sticker(1); })
+            .then(function () { return res.goal ? goalParty() : null; });
+        });
+    });
+  }
   var EXIT = { x: 554, y: 66, w: 72, h: 174 };
   function leaveOffice() {
     var s = S(), first = Life.day(s).first, out = false, night = Wk.dark;
@@ -472,7 +505,6 @@ var Work = (function () {
     View.bg(c, G, st.winter ? 'streetWinter' : 'streetSpring');
     if (st.winter) PixelArt.rain(c, { x: 0, y: 0, w: 640, h: 360 }, t, 1);
     if (st.dusk) { c.fillStyle = 'rgba(255,150,90,.16)'; c.fillRect(0, 0, 640, 360); View.nightTint(c, .18); }
-    if (!st.winter) Arc.drawStreetPoster(c);
     if (st.night) { View.nightTint(c, .5); View.lampGlow(c, 508, 220, 120, .3); }
     if (st.draw) st.draw(c);
     else {
@@ -493,19 +525,16 @@ var Work = (function () {
     street({
       dusk: true,
       hot: function () {
-        var list = [], reading = Arc.posterUp(s) && !s.seen.arcPoster;
-        if (Arc.posterUp(s)) list.push(Arc.posterSpot());
-        if (reading) return list; // 처음 붙은 날은 포스터부터 읽는다
-        return list.concat([
+        return [
           { id: 'shopDoor', x: SHOPDOOR.x, y: SHOPDOOR.y, w: SHOPDOOR.w, h: SHOPDOOR.h, tap: function () { return Engine.walkTo(508).then(function () { choice = 'shop'; }); } },
           { id: 'home', x: 586, y: 180, w: 54, h: 180, tap: function () { return Engine.walkTo(630).then(function () { choice = 'home'; }); } }
-        ]);
+        ];
       },
       walk: function (p) { return Math.max(30, Math.min(610, p.x)); }
     });
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(300); }).then(function () {
-      if (first) { G.guide = { x: 508, y: 160, dir: 'down' }; return say([me('그 슈퍼다.')]).then(function () { return Arc.streetBeat(s); }); }
-      return Arc.streetBeat(s);
+      if (first) { G.guide = { x: 508, y: 160, dir: 'down' }; return say([me('그 슈퍼다.')]); }
+      return null;
     }).then(function () {
       return Engine.until(function () { return choice; });
     }).then(function () { G.guide = null; return Engine.fade(1, .3).then(function () { return choice; }); });
@@ -770,7 +799,7 @@ var Work = (function () {
     return Engine.fade(0, .35).then(function () { return Engine.walkTo(220); }).then(function () {
       var s = S();
       if (opts.intro) return say(opts.intro);
-      var told = !opts.pro && s && Arc.ownerLines(s);
+      var told = null;
       if (told) return say(told);
       if (!opts.pro && s && Life.onShelf(s, 'robot') && !s.seen.newStock) { s.seen.newStock = true; return say([me('새 물건이 들어왔네. 로봇청소기랑 자동 장난감?'), me('편하긴 하겠지만, 내가 직접 하는 것만은 못하겠지.')]); }
       if (jobOpen() && !s.seen.jobPoster) { s.seen.jobPoster = true; return say([me('저게 사장님이 말한 알바 공고구나.')]); }
@@ -783,5 +812,5 @@ var Work = (function () {
   }
 
   return { Wk: Wk, commute: commute, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
-    leaveOffice: leaveOffice, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT };
+    leaveOffice: leaveOffice, overtime: overtime, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT };
 }());

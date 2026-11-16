@@ -159,7 +159,7 @@ var Home = (function () {
     if (H.toy && H.toy.pounce) { View.cat(c, G, k.x, k.y, k.dir, G.t, 'jump', k.scale); return; }
     View.shadow(c, k.x, k.y + 1, 15);
     View.cat(c, G, k.x, k.y, k.dir, G.t, k.walking ? (k.run ? 'run' : 'walk') : k.pose, k.scale);
-    if (!k.walking) Arc.collarOn(c, k);
+    Arc.momentDraw(c, k);
   }
   function heroLook() { return H.pro ? 'hoodie' : (S() && S().wearing) || 'hoodie'; }
   function drawHero(c) {
@@ -179,7 +179,7 @@ var Home = (function () {
     }
   }
   var FUR = [[-10, 2], [6, 8], [-3, 18], [9, 24], [-12, 30], [3, 34], [-6, 12], [11, 14], [0, 26]];
-  function furOn(c, x, y, n, px) { for (var i = 0; i < Math.min(FUR.length, n * 3); i++) View.icon(c, 'fur', x + FUR[i][0], y + FUR[i][1], px || 1); }
+  function furOn(c, x, y, n, px) { for (var i = 0; i < Math.min(FUR.length, n * 3); i++) View.hair(c, x + FUR[i][0], y + FUR[i][1], i, px || 1); }
   function cleanTools() { var s = S(); return !!s && s.day >= Life.CLEAN_FROM; }
   function gone() { var s = S(); if (H.goneDay !== s.day) { H.gone = {}; H.goneDay = s.day; } return H.gone; }
   function drawLiving(c) {
@@ -217,6 +217,7 @@ var Home = (function () {
     // 사람과 고양이는 발 위치 순서로
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
+    actors.push({ y: 190, f: Arc.drawKitchen });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -298,12 +299,14 @@ var Home = (function () {
     var s = S(), t = G.t;
     c.fillStyle = 'rgba(20,18,26,.72)'; c.fillRect(0, 0, 640, 360);
     if (cu.kind === 'memo') { // 냉장고에 붙여 둔 종이 한 장
-      var note = Story.careNote(s.cat), x = 150, y = 24, w = 340, h = 312;
+      var note = Story.careNote(s.cat, s.day, cu.seenDay), n = note.rows.length, gap = n > 8 ? 26 : 32;
+      var x = 150, h = 74 + n * gap, y = Math.max(8, 180 - h / 2), w = 340;
       paper(c, x, y, w, h, '#fff6d8');
       View.r(c, x + w / 2 - 18, y - 6, 36, 12, 'rgba(224,138,108,.85)'); // 테이프
       View.text(c, note.title, x + w / 2, y + 30, 17, '#2f2a33');
       note.rows.forEach(function (r, i) {
-        var ry = y + 62 + i * 32;
+        var ry = y + 62 + i * gap;
+        if (r.fresh) { View.r(c, x + 10, ry - 15, w - 20, gap - 4, 'rgba(255,190,110,' + (.35 + Math.sin(t * 4) * .12).toFixed(2) + ')'); } // 오늘 새로 적은 줄
         View.icon(c, r.icon, x + 28, ry - 4, 2);
         View.text(c, r.text, x + 52, ry, 12, '#3b3540', 'left');
       });
@@ -735,7 +738,7 @@ var Home = (function () {
     list.push({ id: 'lDoor', x: P.lDoor.x, y: P.lDoor.y, w: P.lDoor.w, h: P.lDoor.h, tap: function () { return goRoom('bedroom'); } });
     if (!H.pro) {
       list.push({ id: 'entrance', x: P.entrance.x, y: P.entrance.y, w: P.entrance.w, h: P.entrance.h, chips: entranceChips(), tap: tapEntrance });
-      list.push({ id: 'memo', x: P.memo.x, y: P.memo.y, w: P.memo.w, h: P.memo.h, tap: openMemo });
+      list.push({ id: 'memo', x: P.memo.x, y: P.memo.y, w: P.memo.w, h: P.memo.h, tap: openMemo, pulse: Story.careFresh(s.day, s.seen.memoDay === undefined ? -1 : s.seen.memoDay) });
       list.push({ id: 'sofa', x: P.sofa.x, y: P.sofa.y, w: P.sofa.w, h: P.sofa.h, chips: Life.doBlock(s, 'rest') ? null : [cMin(Life.T.rest), cBolt(1)], tap: rest });
     }
     // 밥과 물: 끌어서 붓거나, 눌러서 바로
@@ -800,7 +803,29 @@ var Home = (function () {
     if (H.searching) list = list.concat(searchSpots('bedroom'));
     return list;
   }
-  function hot() { if (H.arcHot) return H.arcHot(); if (H.lock) return []; return H.room === 'bedroom' ? hotBedroom() : hotLiving(); }
+  function hot() {
+    if (H.arcHot) return H.arcHot(); if (H.lock) return [];
+    var list = H.room === 'bedroom' ? hotBedroom() : hotLiving();
+    if (H.closeUp || H.mode === 'night') return list;
+    // 반짝이는 순간에는 고양이 자리가 사진 자리로 바뀐다 (사료 봉지, 물병처럼 끄는 물건이 먼저 잡히게 같은 순서에 둔다)
+    var ph = G.cat.room === H.room ? Arc.photoSpot() : null;
+    list = list.concat(Arc.homeSpots(H.room));
+    if (ph) {
+      // 사진 순간은 맨 위에서 누르기를 받되, 끌기는 그 아래 물건(사료 봉지, 쓰다듬기)에 넘긴다.
+      var rest = list.filter(function (x) { return x.id !== 'cat'; }), cat = list.find(function (x) { return x.id === 'cat'; });
+      var under = function (d) {
+        var p = { x: d.x0, y: d.y0 };
+        for (var j = rest.length - 1; j >= 0; j--) { var r = rest[j]; if (!r.off && r.drag && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r; }
+        return cat && cat.drag ? cat : null;
+      };
+      ph.drag = { move: function (d) {
+        if (d.moved < 7) return; var u = under(d); if (!u) return;
+        d.spot = u; if (u.drag.start) u.drag.start(d); if (u.drag.move) u.drag.move(d);
+      } };
+      list.push(ph);
+    }
+    return list;
+  }
   function walkable(p) {
     if (H.mode === 'night' || H.closeUp || H.clean || H.arcHot) return null;
     return Math.max(H.room === 'living' ? 130 : 230, Math.min(H.room === 'living' ? 560 : 520, p.x));
@@ -913,8 +938,9 @@ var Home = (function () {
   function openMemo() {
     return heroGo(P.memo.x + P.memo.w / 2).then(function () {
       G.hero.pose = 'back'; UI.sfx('page');
-      H.closeUp = { kind: 'memo' };
-      var s = S(); s.seen.careMemo = true;
+      var s = S();
+      H.closeUp = { kind: 'memo', seenDay: s.seen.memoDay === undefined ? -1 : s.seen.memoDay };
+      s.seen.careMemo = true; s.seen.memoDay = s.day;
       return null;
     });
   }
@@ -965,7 +991,7 @@ var Home = (function () {
       if (r.found) {
         H.searching = false; UI.sfx('meow');
         var k = G.cat; k.room = 'bedroom'; k.visible = true; k.x = P.drawer.x + 20; k.y = 336; k.pose = 'sit';
-        return say([me(Story.catLine(r.late ? 'foundLate' : 'found', s.cat))].concat(s.arc.outcome ? [] : [me(Story.ARC.d9(s))]));
+        return say([me(Story.catLine(r.late ? 'foundLate' : 'found', s.cat))]);
       }
       return say([me(['여긴 없네.', '여기도 없어.', '어디 간 거지...'][Math.min(2, Object.keys(H.searched).length - 1)])]);
     });
@@ -1005,7 +1031,7 @@ var Home = (function () {
       H.meowHintT = G.t + 8 + Math.random() * 4;
     }
   }
-  function tick(dt) { catTick(dt); tickPour(); tickToy(); tickClean(); lateTick(); yawnTick(); eventTick(); flushLines(); if (H.extraTick) H.extraTick(dt); }
+  function tick(dt) { catTick(dt); tickPour(); tickToy(); tickClean(); lateTick(); yawnTick(); eventTick(); flushLines(); if (H.extraTick) H.extraTick(dt); Arc.tick(dt); }
   function enter(room, opts) {
     opts = opts || {};
     H.room = room; H.mode = opts.mode || H.mode; H.clean = null;

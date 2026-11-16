@@ -29,6 +29,7 @@ function homeRoutine(s, o) {
   if (s.pantry.sand && Life.sandLow(s)) Life.refill(s);
   Life.pet(s);
   for (const k of o.acts || ['play', 'prep', 'rest']) Life.act(s, k);
+  if (!o.noMeal) Life.eat(s, o.cook ? 'cook' : 'quick');
 }
 function sleep(s, o) {
   Life.toBed(s);
@@ -104,7 +105,7 @@ test('고객은 평일 열흘 동안 날마다 두 분(오전, 오후)과 저녁
   for (let d = 0; d < Life.DAYS.length; d++) if (Life.DAYS[d].kind === 'work') { weekdays++; assert.equal(Life.clientsOn(d).length, 2, Life.DAYS[d].date); }
   assert.equal(weekdays, 10);
   assert.equal(Life.clientsOn(9)[0], 'c10');
-  assert.equal(Life.CLIENTS.c10.mark, 'clock');
+  assert.equal(Life.CLIENTS.c10.mark, 'cat');
   assert.equal(Life.CLIENTS.c1.mark, 'sneeze');
   assert.equal(Life.CLIENTS.c4.mark, 'sneeze');
 });
@@ -188,7 +189,7 @@ test('지각하면 첫 고객은 기다리다 가 버리고, 다음 고객은 �
   s.day = 9;
   const b = Life.plan(s, 'c10');
   assert.equal(b.leaves, true);
-  assert.equal(Life.finish(s, b, Life.consult(b)).why, 'busyLeft');
+  assert.equal(Life.finish(s, b, Life.consult(b)).why, 'lateLeft');
 });
 
 test('정장의 털은 고객 메모에 따라 독도 되고 득도 된다', () => {
@@ -684,17 +685,20 @@ test('4/15 천둥 치는 밤에는 고양이가 숨고, 커튼을 쳐 주면 나
   assert.equal(Life.act(s, 'play').ok, true);
 });
 
-test('4/16 저녁 8시 단체 상담에 가면 늦게 들어오고 체력이 한 칸 더 준다', () => {
+test('4/22 야근: 남아서 저녁 8시 상담을 하면 늦게 들어오고, 고양이는 현관에서 기다리다 잠든다', () => {
   const s = Life.create('나', '보리');
-  s.day = 4; s.phase = 'work'; s.energy = 5;
-  assert.equal(play(s, 'c5').signed, true);
+  s.day = 10; s.phase = 'work'; s.energy = 5; s.hearts = 5;
+  assert.equal(Life.day(s).overtime, true);
+  assert.equal(play(s, 'c20').signed, true);
   Life.decideGroup(s, true);
   assert.equal(play(s, 'c6').signed, true);
   Life.leaveOffice(s);
   assert.equal(s.energy, 2);
-  assert.equal(s.wallet, 20000 + Life.ALLOWANCE + Life.PRODUCTS.home.pay + Life.PRODUCTS.group.pay);
+  assert.equal(s.wallet, 20000 + Life.ALLOWANCE + Life.PRODUCTS.car.pay + Life.PRODUCTS.group.pay);
   Life.arriveHome(s);
   assert.equal(s.minute, T.groupHome);
+  assert.equal(s.hearts, 2); // 혼자 있던 하루 −2, 기다리다 잠든 밤 −1
+  assert.ok(s.events.some(e => e.key === 'waitedAsleep'));
 });
 
 test('4/21 고양이를 못 찾고 출근하면 서랍 속에 하루 종일 갇혀 있다가 저녁에야 나온다', () => {
@@ -736,29 +740,29 @@ test('4/21 아침에는 고양이가 안 보이고, 서랍 속에서 찾는다',
   assert.equal(s.hidden, false);
 });
 
-test('엔딩은 하트와 계약 건수로 정해지고, 다 지켜 준 사람만 숨은 엔딩을 본다', () => {
+test('엔딩은 계약, 마음, 사진으로 정해지고, 다 지켜 준 사람만 숨은 엔딩을 본다', () => {
   const s = Life.create('나', '보리');
   const G = Life.GOAL;
-  const pick = (h, c) => { s.hearts = h; s.contracts = c; return Life.ending(s).key; };
-  assert.equal(pick(5, G), 'both');
+  const pick = (h, c, p) => { s.hearts = h; s.contracts = c; s.photos = Array.from({ length: p }, (_, i) => ({ day: 1 + (i % 10), pose: 'sit' })); return Life.ending(s).key; };
+  assert.equal(pick(5, G, 4), 'both');
+  assert.equal(pick(5, G, 3), 'soso');              // 사진이 모자라면 좋은 엔딩이 아니다
   s.events.push({ day: 3, key: 'curtain' });
-  assert.equal(pick(5, G), 'both');                 // 서랍 속 아침도 지켜 줘야
+  assert.equal(pick(5, G, 9), 'both');              // 서랍 속 아침도 지켜 줘야
   s.events.push({ day: 9, key: 'drawer' });
-  assert.equal(pick(5, G), 'both');                 // 선배가 준 방울 목걸이까지 걸어 줘야
-  s.arc.collar = true;
-  assert.equal(pick(5, G), 'family');
+  assert.equal(pick(5, G, 6), 'both');              // 사진첩도 가득해야
+  assert.equal(pick(5, G, 7), 'family');
   assert.equal(Life.ending(s).grade, 'hidden');
-  assert.equal(pick(4, G), 'both');                 // 마음이 하나라도 비면 아니다
+  assert.equal(pick(4, G, 9), 'both');              // 마음이 하나라도 비면 아니다
   s.missed = 1;
-  assert.equal(pick(5, G), 'both');                 // 한 끼라도 굶기면 아니다
+  assert.equal(pick(5, G, 9), 'both');              // 한 끼라도 굶기면 아니다
   s.missed = 0; s.events = [];
-  assert.equal(Life.ENDINGS.length, 9);
-  assert.deepEqual(Life.ENDINGS.map(k => Life.GRADE[k]), ['hidden', 'good', 'normal', 'normal', 'normal', 'normal', 'bad', 'bad', 'bad']);
-  assert.equal(pick(4, G - 1), 'catStays');
-  assert.equal(pick(3, G + 1), 'soso');
-  assert.equal(pick(2, 3), 'clumsy');
-  assert.equal(pick(1, G + 2), 'oneBody');
-  assert.equal(pick(0, 0), 'again');
+  assert.equal(Life.ENDINGS.length, 8);
+  assert.deepEqual(Life.ENDINGS.map(k => Life.GRADE[k]), ['hidden', 'good', 'normal', 'normal', 'normal', 'bad', 'bad', 'bad']);
+  assert.equal(pick(4, G - 1, 9), 'catStays');
+  assert.equal(pick(3, G + 1, 9), 'soso');
+  assert.equal(pick(2, 3, 9), 'clumsy');
+  assert.equal(pick(1, G + 2, 9), 'oneBody');
+  assert.equal(pick(0, 0, 0), 'again');
 });
 
 test('저장하고 다시 불러오면 같은 상태다', () => {
@@ -873,38 +877,65 @@ test('일은 하나씩 늘어난다: 첫 출근 날은 털만, 4/14부터 화장
   assert.equal(Life.sandLow(s), true, '모래는 4/15 무렵에야 갈 때가 된다');
 });
 
-test('선배의 고양이: 정이 쌓였으면 내게 오고 목걸이를 받는다. 보내 주면 엔딩이 바뀐다', () => {
+test('둘이라서: 사진, 내 저녁, 새벽 꾹꾹이, 4/17 저녁, 4/20 알람, 4/23 자판 위의 고양이', () => {
   const s = Life.create('나', '보리');
-  assert.equal(Life.oldName(s), '나비');
-  assert.equal(Life.oldName(Life.create('나', '나비')), '콩이');
-  s.hearts = 2;
-  assert.equal(Life.choosesMe(s), false);
-  s.events.push({ day: 3, key: 'curtain' }, { day: 9, key: 'drawer' });
-  assert.equal(Life.bond(s), 4);
-  assert.equal(Life.choosesMe(s), true);
-  Life.visitEnd(s, 'kept');
-  assert.equal(s.arc.collar, true);
-  assert.equal(s.hearts, 3);
-  const f = Life.create('나', '보리');
-  f.contracts = Life.GOAL; f.hearts = 5;
-  Life.visitEnd(f, 'farewell');
-  assert.equal(f.arc.gone, true);
-  assert.equal(Life.ending(f).key, 'farewell');
-  assert.equal(Life.ending(f).grade, 'normal');
-  // 고양이가 떠난 밤과 아침에는 돌봄 벌점이 없다
-  f.day = 11; f.phase = 'evening'; const h = f.hearts;
-  Life.toBed(f); Life.sleep(f); const m = Life.morning(f);
-  assert.equal(f.hearts, h); assert.equal(m.accident, false); assert.equal(f.hidden, true);
-  f.wearing = 'suit'; Life.leaveHome(f);
-  assert.equal(f.locked, false);
+  s.day = 1; s.phase = 'evening'; s.minute = T.homeArrive;
+  // 사진은 평일 두 장까지
+  assert.equal(Life.photo(s, 'sleep').ok, true);
+  assert.equal(Life.photo(s, 'groom').ok, true);
+  assert.equal(Life.photo(s, 'purr').why, 'cap');
+  // 차려 먹으면 그날 밤 체력이 한 칸 더 차고, 굶으면 한 칸 덜 찬다
+  const m = s.minute;
+  assert.equal(Life.eat(s, 'cook').ok, true);
+  assert.equal(s.minute, m + T.cook);
+  assert.equal(Life.eat(s, 'quick').why, 'ate');
+  s.energy = 1; Life.feed(s, 'dry'); Life.water(s); Life.act(s, 'play');
+  Life.toBed(s); Life.setDoor(s, false); Life.sleep(s, {});
+  assert.equal(s.energy, 5);
+  const h = Life.create('나', '보리'); h.day = 2; h.phase = 'evening'; h.minute = T.homeArrive; h.energy = 2;
+  Life.feed(h, 'dry'); Life.water(h); Life.act(h, 'play'); Life.toBed(h); Life.setDoor(h, true); Life.sleep(h, {});
+  assert.equal(h.energy, 4); // 11시 전 +3, 굶은 밤 −1 (놀이에 −0)
+  // 새벽 꾹꾹이: 같이 잔 밤 중 몇 번
+  assert.equal(Life.kneadNight(h), true);
+  const before = h.hearts;
+  Life.knead(h, 'pet');
+  assert.equal(h.hearts, Math.min(5, before + 1)); assert.equal(h.energy, 3);
+  Life.knead(h, 'push');
+  assert.equal(h.hearts, Math.min(5, before + 1) - 1);
+  // 4/17 동기들과 저녁: 소개 계약 한 건, 늦게 들어오고 오래 기다린다
+  const f = Life.create('나', '보리'); f.day = 5; f.phase = 'work'; f.hearts = 5;
+  assert.equal(Life.dinner(f, true).go, true);
+  assert.equal(f.contracts, 1);
+  Life.leaveOffice(f); Life.arriveHome(f);
+  assert.equal(f.minute, T.groupHome); assert.equal(f.hearts, 2);
+  // 4/20 알람: 마음이 가까우면 고양이가 깨운다
+  const a = Life.create('나', '보리'); a.day = 7; a.hearts = 4; a.phase = 'evening';
+  Life.toBed(a); Life.morning(a);
+  assert.equal(a.day, 8); assert.equal(a.alarm, 'cat'); assert.equal(a.minute, T.wake);
+  const b = Life.create('나', '보리'); b.day = 7; b.hearts = 1; b.phase = 'evening';
+  Life.toBed(b); Life.morning(b);
+  assert.equal(b.alarm, 'late'); assert.ok(b.minute + T.commute > T.assembly);
+  // 4/21 고양이를 키우는 고객: 사진이 두 장 넘으면 이야기가 풀린다
+  b.day = 9; b.photos = [{ day: 2 }, { day: 3 }];
+  assert.ok(Life.plan(b, 'c10').reasons.some(r => r.key === 'photos'));
+  // 4/23 자판 위의 고양이
+  const e = Life.create('나', '보리'); e.day = 11; e.phase = 'evening'; e.cards = ['c15', 'c21']; e.hearts = 3;
+  Life.lastPrep(e, 'work');
+  assert.equal(e.prepared.c15, true); assert.equal(e.hearts, 2);
+  const l = Life.create('나', '보리'); l.day = 11; l.phase = 'evening'; l.cards = ['c15', 'c21']; l.hearts = 3;
+  Life.lastPrep(l, 'lid');
+  assert.equal(l.hearts, 4); assert.equal(Life.doBlock(l, 'prep'), 'lid');
   global.Life = Life; const Story = require('../src/life-story.js');
-  assert.ok(Story.epilogue(f)[0].indexOf('나비') >= 0, '고양이 일기는 작년 겨울부터 시작한다');
+  assert.ok(Story.epilogue(e)[0].indexOf('우산') >= 0, '고양이 일기는 작년 겨울 비 오던 밤부터 시작한다');
+  assert.equal(Story.careNote('보리', 0).rows.length, 4);           // 첫날 메모는 네 줄
+  assert.ok(Story.careNote('보리', 4).rows.length > 8);             // 날마다 한 줄씩 늘어난다
+  assert.equal(Story.careFresh(2, 1), true); assert.equal(Story.careFresh(3, 2), false);
 });
 
-test('옛 저장에는 이야기 상태가 없어도 불러온다', () => {
-  const s = Life.create('나', '보리'); delete s.arc;
+test('옛 저장에는 새 상태가 없어도 불러온다', () => {
+  const s = Life.create('나', '보리'); delete s.photos; delete s.myMeal;
   const r = Life.load(JSON.stringify(s));
-  assert.deepEqual(r.arc, { outcome: null, collar: false, gone: false });
+  assert.deepEqual(r.photos, []); assert.equal(r.myMeal, null);
 });
 
 test('배경음악: 곡마다 32칸이고 장소마다 곡이 있다', () => {

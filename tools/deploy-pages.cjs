@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, '..');
 const liveUrl = 'https://kohyuji.github.io/cat-at-the-door/';
 const repository = 'kohyuji/cat-at-the-door';
 const sourceBranch = 'main';
-const keep = ['claude-v5', 'codex-v5', 'codex-v5-claude', 'v4.1', 'v6.3']; // 손대지 않는 폴더
+const keep = ['claude-v5', 'codex-v5', 'codex-v5-claude', 'v4.1', 'v6.3', 'v6.4']; // 손대지 않는 폴더
 const archive = 'v4.1'; // 예전 루트(v4.1)를 옮겨 두는 폴더
 const publishBranch = 'gh-pages';
 const kept = file => file === '.nojekyll' || keep.some(dir => file.startsWith(dir + '/'));
