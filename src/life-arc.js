@@ -12,6 +12,17 @@ var Arc = (function () {
 
   // ---------- 손짓 도우미 ----------
   function catWalk(x, opts) { var k = G.cat; Home.H.catAct = 'still'; k.pose = 'walk'; return Engine.catTo(x, opts || { y: 336 }).then(function () { k.pose = 'sit'; }); }
+  // 책상 위로 폴짝 (또는 바닥으로): 짧은 포물선
+  async function hop(x, y) {
+    var k = G.cat, x0 = k.x, y0 = k.y, t0 = G.t, dur = .45;
+    k.pose = 'jump'; k.dir = x >= x0 ? 1 : -1;
+    while (G.t - t0 < dur) {
+      var q = (G.t - t0) / dur;
+      k.x = x0 + (x - x0) * q; k.y = y0 + (y - y0) * q - Math.sin(q * Math.PI) * 34;
+      await Engine.sleep(.016);
+    }
+    k.x = x; k.y = y; k.pose = 'sit';
+  }
   function tapWait(spots) {
     var H = Home.H, pick = null, prev = H.arcHot;
     H.arcHot = function () { return spots.map(function (sp) { var o = {}; for (var k in sp) o[k] = sp[k]; o.tap = function () { pick = sp.id; return null; }; return o; }); };
@@ -207,13 +218,14 @@ var Arc = (function () {
     await Engine.fade(1, .3);
     H.closeUp = null;
     Home.enter('bedroom', { mode: 'evening', heroX: P.laptop.x - 6, catRoom: 'bedroom', catX: 470, catY: 336 });
-    G.hero.dir = 1; G.hero.pose = 'study';
+    G.hero.dir = 1; G.hero.pose = 'back';
     k.visible = !s.hidden;
     await Engine.fade(0, .3);
     await Engine.sleep(.8);
     if (s.hidden) { Life.lastPrep(s, 'work'); s.minute += Life.cost(s, Life.T.prep); G.hero.pose = null; return; }
     H.catAct = 'still'; k.pose = 'walk';
-    await Engine.catTo(P.laptop.x + 22, { y: P.laptop.y + 8 });
+    await Engine.catTo(P.laptop.x + 40, { y: 336 });
+    await hop(P.laptop.x + 14, P.laptop.y + 6);
     k.pose = 'sit'; k.dir = -1; UI.sfx('tap');
     await say(B().onKeys(s));
     if (!s.seen.prepHint) { s.seen.prepHint = true; G.outlineAll = true; setTimeout(function () { G.outlineAll = false; }, 2600); }
@@ -223,6 +235,7 @@ var Arc = (function () {
     ]);
     if (pick === 'liftCat') {
       Life.lastPrep(s, 'work');
+      await hop(P.laptop.x + 52, 336);
       await catWalk(470, { y: 336 });
       k.dir = 1; k.pose = 'sit';
       await say(B().prepWork(s));
@@ -231,6 +244,7 @@ var Arc = (function () {
       Life.lastPrep(s, 'lid');
       UI.sfx('page'); G.hero.pose = null;
       await say(B().prepLid(s));
+      await hop(P.laptop.x + 52, 336);
       await catWalk(400, { y: 336 });
       k.pose = 'purr'; UI.sfx('purr'); Engine.puff({ x: k.x, y: k.y - 50, icon: 'heart', px: 1, life: 1.2 });
       s.minute += Life.cost(s, Life.T.play); spent(Life.T.play, 400, 240);

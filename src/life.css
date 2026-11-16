@@ -272,3 +272,16 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 }
 .rotate-hint .rot { transform-origin: 40px 34px; animation: turn 2.6s ease-in-out infinite; }
 @keyframes turn { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(90deg); } 100% { transform: rotate(0deg); } }
+
+/* 개발자 모드 (?dev) */
+.dev-panel { margin-top: 14px; padding-top: 12px; border-top: 3px dashed var(--ink); display: grid; gap: 8px; text-align: left; }
+.dev-panel .dev-title { margin: 0; font-size: 15px; color: #b5532a; text-align: center; }
+.dev-panel label { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; font-size: 14px; }
+.dev-panel select, .dev-panel input { font: inherit; font-size: 14px; padding: 4px 6px; border: 2px solid var(--ink); border-radius: 4px; background: #fffaf0; min-width: 0; }
+.dev-panel .dev-small { margin: 0; font-size: 12px; opacity: .7; text-align: center; }
+.dev-bar { position: absolute; left: 6px; bottom: 6px; z-index: 60; display: flex; align-items: flex-end; gap: 6px; font-size: 12px; }
+.dev-bar button { font: inherit; font-size: 12px; padding: 4px 7px; border: 2px solid var(--ink); border-radius: 4px; background: #fffaf0; cursor: pointer; }
+.dev-bar .dev-toggle { background: #b5532a; color: #fff; opacity: .75; }
+.dev-bar-panel { display: flex; flex-wrap: wrap; gap: 4px; max-width: 420px; padding: 6px; background: rgba(251, 246, 234, .95); border: 2px solid var(--ink); border-radius: 6px; }
+.dev-bar-panel[hidden] { display: none; }
+.dev-stat { width: 100%; font-size: 12px; }
