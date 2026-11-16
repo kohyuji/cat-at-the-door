@@ -5822,9 +5822,9 @@ var Arc = (function () {
   // ---------- 손짓 도우미 ----------
   function catWalk(x, opts) { var k = G.cat; Home.H.catAct = 'still'; k.pose = 'walk'; return Engine.catTo(x, opts || { y: 336 }).then(function () { k.pose = 'sit'; }); }
   function tapWait(spots) {
-    var H = Home.H, pick = null;
+    var H = Home.H, pick = null, prev = H.arcHot;
     H.arcHot = function () { return spots.map(function (sp) { var o = {}; for (var k in sp) o[k] = sp[k]; o.tap = function () { pick = sp.id; return null; }; return o; }); };
-    return Engine.until(function () { return pick; }).then(function () { H.arcHot = null; return pick; });
+    return Engine.until(function () { return pick; }).then(function () { H.arcHot = prev || null; return pick; });
   }
   function spent(m, x, y) { if (m) Engine.puff({ x: x || G.hero.x, y: y || 220, icon: 'clock', text: '+' + m + '분', px: 1 }); }
 
@@ -6125,7 +6125,10 @@ var Arc = (function () {
 
   return {
     tick: tick, momentDraw: momentDraw, homeSpots: homeSpots, drawKitchen: drawKitchen, photoSpot: photoSpot,
-    knead: knead, officeLines: officeLines, clearOverlay: clearOverlay, dinnerOffer: dinnerOffer, homeBeats: homeBeats, lastPrep: lastPrep,
+    knead: knead, officeLines: officeLines, clearOverlay: clearOverlay, dinnerOffer: dinnerOffer, homeBeats: function () { // 장면이 끝날 때까지 다른 물건은 눌리지 않게 한다
+      var H = Home.H, none = function () { return []; }; H.arcHot = none; G.drag = null; H.held = null; G.hero.tx = null;
+      return homeBeats().then(function () { if (H.arcHot === none) H.arcHot = null; }, function (e) { if (H.arcHot === none) H.arcHot = null; throw e; });
+    }, lastPrep: lastPrep,
     rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
     moment: function () { return M.on ? { pose: M.pose, until: M.until } : null; }
   };
