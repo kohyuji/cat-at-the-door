@@ -391,6 +391,7 @@ var Game = (function () {
     var storm = Life.day(s).storm && s.hidden && !s.stormDone;
     if (storm) { UI.sfx('thunder'); G.flash = .9; }
     await Engine.walkTo(180);
+    await moneyBeats();
     var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
     if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
     if (lonely && lonely.key === 'alone' && !s.locked) await say([me(Story.catLine('alone', s.cat))]);
@@ -408,6 +409,67 @@ var Game = (function () {
     await Arc.homeBeats();
     await cleanIntro();
     await Home.noticeNeeds();
+  }
+  // 돈: 오늘 취소된 계약, 휴대폰으로 온 요금 안내, 오늘 낼 돈 (은행 앱에서 고른다)
+  // 휴대폰 시계는 지금 게임 시각을 12시간제로 보여 준다 (19:05 → 7:05, 메시지에는 '오후 7:05')
+  function phoneNow(add) {
+    var m = Math.round(G.s.minute + (add || 0)), h = Math.floor(m / 60) % 24, mm = m % 60;
+    return { clock: ((h % 12) || 12) + ':' + (mm < 10 ? '0' : '') + mm, label: (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + (mm < 10 ? '0' : '') + mm };
+  }
+  async function moneyBeats() {
+    var s = G.s, t = s.today, now = phoneNow();
+    for (var i = 0; i < t.cancels.length; i++) {
+      var x = t.cancels[i], name = (Story.CLIENT[x.id] || { name: '' }).name;
+      await UI.phoneWait({ from: '새솔지점 지점장', time: phoneNow(-25).label, preview: Story.CANCEL[x.why](name).slice(0, 24) + '...', body: Story.CANCEL[x.why](name) }, now.clock);
+      await say([narr('들어올 수수료에서 ' + Life.won(x.amount) + '이 빠졌다. 실적 그래프의 스티커도 하나 떨어진다.')]);
+    }
+    var notes = t.notes.filter(function (n) { return n.indexOf('bill:') === 0; });
+    for (var j = 0; j < notes.length; j++) {
+      var id = notes[j].slice(5), b = Life.bill(id), dd = Life.DAYS[b.due];
+      var m = Story.billNotice(id, dd.date + ' ' + dd.wd, b.amount); m.time = phoneNow(-8).label;
+      await UI.phoneWait(m, now.clock);
+      await say([me(dd.date + '... 냉장고 달력에 적어 두자.')]);
+    }
+    var due = Life.billDue(s);
+    while (due) {
+      var M = Story.MONEY, money = '\n\n통장 잔액 ' + Life.won(s.wallet) + '\n들어올 수수료 ' + Life.won(Life.pendingTotal(s)) + ' (5/8)';
+      var canCash = Life.canCash(s) && s.wallet + Life.CASH.amount >= due.amount;
+      if (due.auto && s.wallet >= due.amount) {
+        // 자동이체: 알아서 빠져나가고 알림만 온다
+        Life.payBill(s, due.id, 'pay'); UI.sfx('coin');
+        await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 출금] ' + Story.BILL[due.id].name, body: M.autoOut(due.id, due.amount, s.wallet) }, now.clock);
+      } else if (due.auto) {
+        var body = M.autoFail(due.id, due.amount) + money;
+        if (!canCash) {
+          await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body }, now.clock);
+          Life.lateBill(s, due.id); await say([narr(M.late)]);
+        } else {
+          var k = await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body, replies: [M.cash, M.leave] }, now.clock);
+          if (k === 0) { Life.payBill(s, due.id, 'cash'); UI.sfx('coin'); await say([narr(M.cashNote)]); }
+          else { Life.lateBill(s, due.id); await say([narr(M.late)]); }
+        }
+      } else {
+        // 월세: 집주인 계좌로 보낸다. 모자라면 미뤄 달라고 하거나 현금서비스를 받는다.
+        var opts = [], keys = [], short = s.wallet < due.amount;
+        if (!short) { opts.push(M.pay); keys.push('pay'); }
+        if (due.defer) { opts.push(M.defer); keys.push('defer'); }
+        if (canCash && short) { opts.push(M.cashSend); keys.push('cash'); }
+        var think = [narr(M.rentDay(due.amount, s.wallet, Life.pendingTotal(s)))];
+        if (canCash && short) think.push(narr(M.cashHint));
+        await say(think);
+        if (!keys.length) {
+          await UI.phoneWait({ from: Story.BILL[due.id].from, time: phoneNow(-30).label, preview: M.rentMsg, body: M.rentMsg }, now.clock);
+          Life.lateBill(s, due.id); await say([narr(M.late)]);
+        } else {
+          var pick = await UI.phoneWait({ from: Story.BILL[due.id].from, time: phoneNow(-30).label, preview: M.rentMsg, body: M.rentMsg, replies: opts }, now.clock);
+          var how = keys[pick] || keys[0], r = Life.payBill(s, due.id, how);
+          if (how === 'defer') await UI.phoneWait({ from: M.deferText.from, time: phoneNow(4).label, preview: M.deferText.body, body: M.deferText.body }, phoneNow(4).clock);
+          if (how === 'cash') await say([narr(M.cashNote)]);
+          if (r.ok && how !== 'defer') UI.sfx('coin');
+        }
+      }
+      due = Life.billDue(s);
+    }
   }
   // 바닥 청소는 털이 처음 쌓인 날(4/14), 대걸레는 먼지 발자국이 처음 생긴 날 알려 준다
   async function cleanIntro() {
@@ -584,7 +646,7 @@ var Game = (function () {
       s.seen.jobText = true;
       var m = Story.phone.job;
       await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body }, '9:40');
-      await say([me('네 시간에 5,000원... 사료값이 모자라면 해 볼 만하겠다.'), me('대신 몸은 고되고, ' + Life.josa(s.cat, 'subject') + ' 또 혼자 있겠지.')]);
+      await say([me('네 시간에 41,280원... 이번 달 낼 돈을 생각하면 해 볼 만하겠다.'), me('대신 몸은 고되고, ' + Life.josa(s.cat, 'subject') + ' 또 혼자 있겠지.')]);
     }
     await cleanIntro();
     await evening();
@@ -619,8 +681,21 @@ var Game = (function () {
     await Engine.sleep(1.6);
     Work.Wk.chart = null;
     Life.evaluate(s);
+    await payStatement(s);
     checkpoint();
     await Engine.fade(1, .6);
+  }
+
+  // 5/8: 수수료 지급명세서 (종이 그림이 오기 전까지는 휴대폰 문자로 보여 준다)
+  async function payStatement(s) {
+    var p = s.paid; if (!p) return;
+    var body = Story.statement(s, p).map(function (l) { return l.label + '  ' + (l.amount < 0 ? '−' : '') + Life.won(Math.abs(l.amount)); }).join('\n') + '\n\n입금 ' + Life.won(p.net);
+    UI.sfx('coin');
+    await UI.phoneWait({ from: '늘봄손해보험', time: '오후 5:30', preview: '[수수료 지급명세서] 4월 실적', body: '[수수료 지급명세서] 4월 실적\n\n' + body }, '5:30');
+    if (!p.out.length) return;
+    // 미뤄 둔 돈을 갚는다
+    var outs = p.out.map(function (o) { return (o.key === 'loan' ? '카드 현금서비스 상환 (이자 ' + Life.won(o.interest) + ' 포함)' : Story.BILL[o.bill].name + (o.late ? ' (연체료 포함)' : '')) + '  −' + Life.won(o.amount); }).join('\n');
+    await UI.phoneWait({ from: '은행', time: '오후 5:42', preview: '미뤄 둔 돈을 보냈다', body: outs + '\n\n통장 잔액 ' + Life.won(p.wallet) }, '5:42');
   }
 
   // ---------- 엔딩 ----------
@@ -776,5 +851,5 @@ var Game = (function () {
     return ready.then(fn);
   }
   return { checkpoint: checkpoint, loadSave: loadSave, KEY: KEY, mainLoop: mainLoop, startGame: startGame, hudAll: hudAll, endingScreen: endingScreen, testStart: testStart,
-    steps: { prologue: prologue, rainyStreet: rainyStreet, proShelf: proShelf, proHome: proHome, montage: montage, dayZero: dayZero, morning: morning, evening: evening, night: night, catPOV: catPOV, arriveHome: arriveHome, weekend: weekend, goShop: goShop } };
+    steps: { prologue: prologue, rainyStreet: rainyStreet, proShelf: proShelf, proHome: proHome, montage: montage, dayZero: dayZero, morning: morning, evening: evening, night: night, catPOV: catPOV, arriveHome: arriveHome, weekend: weekend, goShop: goShop, evaluation: evaluation } };
 }());

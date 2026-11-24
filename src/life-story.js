@@ -12,21 +12,21 @@ var Story = (function () {
         body: '[한빛상사] 안녕하세요 ' + me + ' 님, 한빛상사 인사팀입니다.\n\n신입사원 채용에 지원해 주셔서 감사합니다. 아쉽게도 이번에는 함께하지 못하게 되었습니다.\n\n앞으로 하시는 일에 좋은 결과가 있기를 바랍니다.' };
     },
     offer: function (me) {
-      return { from: '늘봄손해보험', time: '오후 4:10', preview: '[늘봄손해보험] ' + me + ' 님, 합격을 축하드립니다...',
-        body: '[늘봄손해보험] ' + me + ' 님, 수습 설계사 최종 합격을 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n수습 기간은 4월 24일(금)까지입니다. 이 기간에 계약 ' + Life.GOAL + '건을 채우면 정식 설계사로 위촉됩니다.\n\n활동비는 출근한 날마다, 계약 수당은 계약할 때마다 바로 드립니다.' };
+      return { from: '늘봄손해보험', time: '오후 4:10', preview: '[늘봄손해보험] ' + me + ' 님, 위촉이 확정되었습니다...',
+        body: '[늘봄손해보험] ' + me + ' 님, 보험설계사 위촉이 확정되었습니다. 축하드립니다.\n\n4월 13일(월) 오전 9시까지 새솔지점으로 출근해 주세요.\n\n설계사는 회사 직원이 아니라 위촉 계약을 맺은 개인사업자라 기본급이 없습니다. 이번 달 계약 수수료는 5월 8일(금)에 한 번에 지급됩니다.\n\n첫 달에 계약 ' + Life.GOAL + '건을 채우시면 신입 정착지원금도 함께 드립니다.' };
     },
     job: { from: '행복슈퍼 사장님', time: '오전 9:40', preview: '주말에 진열 좀 도와줄 사람 찾아요...',
-      body: '주말에 진열 좀 도와줄 사람 찾아요. 토요일, 일요일 둘 다 돼요.\n\n오후 3시 전에 가게로 오면 네 시간, 5,000원 드릴게요. 상자를 나르는 일이라 좀 고돼요.\n\n가게 벽에 공고 붙여 놨어요.' },
+      body: '주말에 진열 좀 도와줄 사람 찾아요. 토요일, 일요일 둘 다 돼요.\n\n오후 3시 전에 가게로 오면 네 시간, 시급 10,320원으로 41,280원 드릴게요. 상자를 나르는 일이라 좀 고돼요.\n\n가게 벽에 공고 붙여 놨어요.' },
     // 첫 출근 전날 밤, 지점장님이 보내는 문자: 이 일이 무슨 일인지
     boss: function (me) {
       return { from: '새솔지점 지점장', time: '오후 7:20', preview: me + ' 씨, 내일부터 같이 일할 지점장이에요...',
-        body: me + ' 씨, 내일부터 같이 일할 새솔지점 지점장이에요.\n\n우리 일은 고객님 이야기를 잘 듣고, 그분께 꼭 맞는 보험 상품을 찾아 권해 드리는 거예요. 이가 시린 분께는 치아보험, 첫 차를 산 분께는 자동차보험처럼요.\n\n내일 9시 조회에서 봬요. 집에서 지하철로 50분이니 8시 10분에는 나오세요.' };
+        body: me + ' 씨, 내일부터 같이 일할 새솔지점 지점장이에요.\n\n우리 일은 고객님 이야기를 잘 듣고, 그분께 필요한 보장을 찾아 권해 드리는 거예요. 차로 출퇴근을 시작한 분께는 운전자보험, 처음 혼자 사는 분께는 화재보험처럼요.\n\n내일 9시 조회에서 봬요. 집에서 지하철로 50분이니 8시 10분에는 나오세요.' };
     },
     group: { from: '윤순자 사장님', time: '오후 3:20', body: '설계사님, 우리 식당 직원들 단체보험 좀 알아보려고요. 가게 일 끝나는 저녁 8시에만 시간이 되는데, 오늘 지점으로 가도 될까요?', yes: '8시에 뵐게요', no: '다음에 뵐게요' }
   };
 
-  var PRODUCT = { dental: '치아보험', car: '자동차보험', travel: '여행자보험', home: '화재보험', pet: '펫보험', group: '단체보험' };
-  var SHORT = { dental: '치아', car: '자동차', travel: '여행자', home: '화재', pet: '펫', group: '단체', price: '요금표', contract: '계약서' };
+  var PRODUCT = { dental: '치아보험', car: '운전자보험', travel: '여행자보험', home: '화재보험', pet: '펫보험', group: '단체상해보험' };
+  var SHORT = { dental: '치아', car: '운전자', travel: '여행자', home: '화재', pet: '펫', group: '단체', price: '요금표', contract: '계약서' };
   var ITEM = { dry: '건사료', wet: '습식 사료', sand: '모래', toy: '쥐돌이', tower: '캣타워', feeder: '자동 급식기', roller: '돌돌이', coffee: '커피', lunch: '도시락', charcoal: '번개탄', robot: '로봇청소기', autoToy: '자동 장난감' };
   // 슈퍼 진열대에 마우스를 대거나 한 번 누르면 뜨는 설명. 줄마다 한 문장.
   var ITEM_DESC = {
@@ -92,7 +92,8 @@ var Story = (function () {
   };
   var LOST = {
     busyLeft: '늦어서 그냥 가셨다', lateLeft: '늦어서 기다리다 가셨다', sneeze: '정장의 털에 재채기를 하셨다', late: '늦어서 기분이 상하셨다',
-    fur: '정장의 털이 거슬리셨다', yawn: '하품을 참지 못했다', mistake: '엉뚱한 안내서를 건넸다', slow: '너무 오래 기다리시게 했다',
+    fur: '정장의 털이 거슬리셨다', yawn: '하품을 참지 못했다', mistake: '설계를 여러 번 잘못 보여 드렸다', slow: '너무 오래 기다리시게 했다',
+    wrongProduct: '걱정과 다른 보험을 권했다', missing: '걱정하신 보장을 빠뜨렸다', mood: '마음이 움직이지 않으셨다', declined: '솔직하게 말씀드리고 이번엔 가입하지 않았다', later: '나중에 다시 오신다고 했다',
     smell: '옷에 밴 화장실 냄새', stink: '옷에 잔뜩 밴 화장실 냄새'
   };
   var HEART = {
@@ -169,25 +170,28 @@ var Story = (function () {
     0: [{ who: 'me', text: '드디어 내일 첫 출근이다.' }, { who: 'me', text: '노트북이랑 충전기부터 챙겨 두자.' }],
     1: [{ who: 'me', text: '7시 40분. 지하철로 50분 걸리니까 8시 10분에는 나가야 9시 조회에 안 늦어.' }, { who: 'me', text: '늦으면 오전 고객님은 기다리다 그냥 가 버린대. 서두르자.' }],
     6: [{ who: 'me', text: '토요일이다. 오늘은 하루가 길어.' }],
-    11: [{ who: 'me', text: '내일이 마감이다.' }],
-    12: [{ who: 'me', text: '오늘이 수습 마지막 날이다.' }]
+    25: [{ who: 'me', text: '내일이 첫 달 마감이다.' }],
+    26: [{ who: 'me', text: '오늘이 마감이고, 수수료 들어오는 날이다.' }]
   };
 
   function assembly(s, late) {
     var lines = [], d = s.day, cl = Life.clientsOn(d), me = s.me;
     if (late) lines.push({ who: 'lead', text: me + ' 씨, 오전 고객님은 기다리다 가셨어요. 오후 고객님은 놓치지 마요.' });
     if (d === 1) {
-      lines.push({ who: 'lead', text: '오늘부터 함께할 수습 설계사 ' + me + ' 씨예요.' });
+      lines.push({ who: 'lead', text: '오늘부터 함께할 신입 설계사 ' + me + ' 씨예요.' });
       lines.push({ who: 'lead', text: '설계사는 고객님 이야기를 듣고, 그분께 꼭 맞는 보험을 권해 드리는 사람이에요.', board: true });
-      lines.push({ who: 'lead', text: '치아, 자동차, 여행자, 화재. 고객님이 무엇을 걱정하시는지 들으면 어떤 안내서를 드릴지 보여요.', board: true });
-      lines.push({ who: 'lead', text: '수습은 4월 24일까지예요. 저 실적 그래프에서 목표선 ' + Life.GOAL + '건을 넘기면 정식 설계사가 돼요.', chart: true });
-      lines.push({ who: 'lead', text: '고객님은 매일 오전 10시와 오후 2시에 한 분씩 오세요. 조회에 늦으면 오전 고객님은 그냥 가세요.' });
-      lines.push({ who: 'lead', text: '고객님들은 원하는 걸 바로 말씀 안 하세요. 사는 이야기 속에 답이 있어요. 처음 상담은 선배랑 같이 해요.' });
+      lines.push({ who: 'lead', text: '첫 주는 치아보험과 화재보험부터 해요. 여행자, 운전자, 펫보험은 하나씩 늘려 갈 거예요.', board: true });
+      lines.push({ who: 'lead', text: '첫 달 마감은 5월 8일이에요. 저 실적 그래프에서 기준선 ' + Life.GOAL + '건을 넘기면 정착지원금이 나와요.', chart: true });
+      lines.push({ who: 'lead', text: '오늘은 오전, 오후에 한 분씩이고, 내일부터는 하루 한 분이에요. 조회에 늦으면 첫 고객님은 그냥 가세요.' });
+      lines.push({ who: 'lead', text: '첫 주는 선배가 옆에 앉아서 같이 봐 줄 거예요.' });
     } else if (Life.day(s).final) {
-      lines.push({ who: 'lead', text: '오늘이 마감이에요. 상담 끝나고 실적 그래프 앞에서 봐요.' });
+      lines.push({ who: 'lead', text: '오늘이 첫 달 마감이에요. 상담 끝나고 실적 그래프 앞에서 봐요.' });
     } else if (!late) {
       lines.push({ who: 'lead', text: '좋은 아침이에요. ' + me + ' 씨 오늘 고객은 ' + (cl.length === 2 ? '두 분' : '한 분') + '이에요.' });
     }
+    if (s.seen.bossTalk === d) bossTalk(s).forEach(function (l) { lines.push(l); });
+    var nu = { 2: 'travel', 3: 'car', 4: 'pet' }[d];
+    if (nu) lines.push({ who: 'lead', text: '오늘부터 ' + PRODUCT[nu] + ' 안내서도 책상에 놓아 둘게요.', board: true });
     // 옷에 화장실 냄새가 배어 온 날: 지점장님이 먼저 알아채고 선배가 귓속말로 알려 준다
     if (s.smell > 1) {
       lines.push({ who: 'lead', text: '...잠깐, 이거 무슨 냄새죠? ' + me + ' 씨 쪽에서 나는 것 같은데.', sniff: true });
@@ -220,85 +224,158 @@ var Story = (function () {
     lines.push({ who: 'peer', text: '지하철역 앞 슈퍼에 돌돌이 3,000원이면 있어요. 출근 전에 꼭 한 번 굴려요.' });
     return lines;
   }
-  var TUTORIAL = [
-    { who: 'peer', text: '고객님 말씀을 잘 들어 보세요. 아래 안내서 중에 맞는 걸 눌러 잡고, 고객님 쪽으로 끌어다 드리면 돼요.' },
-    { who: 'peer', text: '그다음은 요금표, 마지막이 계약서예요. 엉뚱한 걸 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.' }
-  ];
-  // 고객이 처음에 하는 말. 원하는 상품을 바로 말하지 않고 사는 이야기를 한다.
-  // say: 처음 하는 말, bubble: 말풍선에 남는 짧은 말, clue: 엉뚱한 안내서를 받은 뒤 조금 더 분명하게 하는 말
-  var CLIENT_HINT = {
-    c1: { say: '요즘 아이스크림을 못 먹어요. 한 입만 베어 물어도 머리끝까지 찡해서요.', bubble: '아이스크림이 무서워요', clue: '어금니가 시큰거려요. 치료비가 얼마나 나올지 걱정이에요.' },
-    c16: { say: '이사 온 집이 꽤 낡았어요. 콘센트에서 가끔 탁탁 소리가 나요.', bubble: '콘센트에서 탁탁', clue: '혹시 불이라도 날까 봐 밤에 잠이 안 와요.' },
-    c2: { say: '딸이 사는 프랑스에 처음 가 봐요. 비행기만 열두 시간이래요.', bubble: '비행기 열두 시간', clue: '거기서 아프기라도 하면 병원비가 그렇게 비싸다던데요.' },
-    c17: { say: '겨울에 전기장판을 켜고 자요. 어제 보니 이불 한쪽이 누렇게 그을렸더라고요.', bubble: '이불이 그을렸어요', clue: '자다가 집에 불이라도 나면 어쩌나 싶어서요.' },
-    c3: { say: '회사가 멀리 이사 가서, 이제 매일 고속도로를 타야 해요.', bubble: '매일 고속도로', clue: '새로 뽑은 차로 다니는데 아직 운전이 서툴러서요.' },
-    c4: { say: '아들이 교정을 시작했는데, 저도 요즘 잇몸이 자꾸 부어요.', bubble: '잇몸이 부어요', clue: '둘이 치과 다니는 돈이 만만치 않아서요.' },
-    c5: { say: '가게 바로 위층에 살아요. 밤늦게까지 튀김 기름을 쓰거든요.', bubble: '밤늦게 튀김 기름', clue: '주방에서 불이 번질까 봐 늘 마음이 쓰여요.' },
-    c18: { say: '어제 주차장에서 옆 차 문을 살짝 긁었어요. 손이 아직도 떨려요.', bubble: '옆 차를 긁었어요', clue: '운전할 때마다 또 사고 날까 봐 조마조마해요.' },
-    c6: { say: '우리 식당 식구가 일곱이에요. 주방 일이라 다들 자주 데고 베여요.', bubble: '식당 식구 일곱', clue: '직원들 다 같이 들 수 있는 게 있으면 좋겠어요.' },
-    c7: { say: '고양이가 가스레인지 위로 자꾸 올라가요. 지난주엔 불 켜는 손잡이를 밟았어요.', bubble: '가스레인지 위 고양이', clue: '집 비운 사이에 불이라도 날까 봐요.' },
-    c8: { say: '다음 주에 동남아 공장으로 출장이 갑자기 잡혔어요. 점심시간에 잠깐 나왔어요.', bubble: '갑자기 해외 출장', clue: '현지에서 다치거나 아프면 어떡하나 해서요.' },
-    c9: { say: '아이 학원 데려다주느라 하루에 운전만 세 시간을 해요.', bubble: '하루 운전 세 시간', clue: '운전 시간이 길다 보니 사고가 제일 무서워요.' },
-    c19: { say: '신혼여행으로 하와이에 가요. 고양이는 친정에 맡기고요.', bubble: '하와이 신혼여행', clue: '여행 가서 다치면 보상이 되나 궁금해서요.' },
-    c10: { say: '어제 딱딱한 땅콩을 씹다가 이가 깨졌어요. 점심시간이라 빨리 가야 해요.', bubble: '땅콩을 씹다가', clue: '이 치료비가 얼마나 나올지 겁나서요.' },
-    c11: { say: '할머니가 혼자 사시는 시골집이 나무로 지어졌어요. 겨울엔 아궁이를 때세요.', bubble: '나무 집, 아궁이', clue: '불이 날까 봐 걱정이에요.' },
-    c12: { say: '계모임 친구들이랑 칠순 기념으로 일본에 가요. 다들 무릎이 시원찮아서...', bubble: '칠순 기념 일본', clue: '나이가 있으니 여행 가서 아플까 봐요.' },
-    c20: { say: '택배 일을 시작했어요. 하루 종일 길 위에 있어요. 오래는 못 있어요.', bubble: '하루 종일 길 위', clue: '차로 일하니까 사고 나면 큰일이에요.' },
-    c13: { say: '요즘 사탕을 달고 살았더니 밤마다 이가 욱신거려요.', bubble: '밤마다 욱신', clue: '치과 가야 하는데 돈이 걱정이에요.' },
-    c14: { say: '다음 달부터 아내랑 번갈아 차로 출퇴근해요. 저는 장롱 면허예요.', bubble: '장롱 면허', clue: '아직 운전이 서툴러서 사고가 날까 봐요.' },
-    c15: { say: '아이들이 촛불을 너무 좋아해요. 생일만 되면 온 집에 초를 켜요.', bubble: '온 집에 촛불', clue: '혹시 불이 날까 봐 걱정이에요.' },
-    c21: { say: '커피를 하루 다섯 잔씩 마셨더니, 찬물만 닿아도 이가 찌릿해요.', bubble: '찬물만 닿아도 찌릿', clue: '치과 치료비가 무서워서 미루고 있어요.' }
+  // ---------- 상담 ----------
+  // 보장 항목 이름
+  var COVER = {
+    fill: '때우는 치료', implant: '임플란트', gum: '잇몸 치료',
+    settle: '형사합의금', fine: '벌금', lawyer: '변호사 비용', injury: '내가 다친 치료비',
+    med: '현지 병원비', luggage: '짐 분실', delay: '비행기 지연',
+    fire: '불난 집 수리', liab: '남에게 입힌 피해', theft: '도둑',
+    surgery: '수술비', clinic: '통원 치료비', bite: '남을 문 사고',
+    hospital: '입원 일당'
   };
-  // 요금, 펫보험, 계약 차례에 하는 말 (고객마다 조금씩 다르게)
-  var STEP_LINES = {
-    price: [
-      { say: '그래서, 한 달에 얼마나 들어요?', bubble: '한 달에 얼마?' },
-      { say: '좋긴 한데... 매달 나가는 돈이 부담돼서요.', bubble: '매달 나가는 돈' },
-      { say: '비싸면 곤란해요. 월급이 빠듯하거든요.', bubble: '비싸면 곤란해요' },
-      { say: '보험료부터 들어 보고 정할게요.', bubble: '보험료부터' }
-    ],
-    contract: [
-      { say: '좋아요. 그걸로 할게요.', bubble: '그걸로 할게요' },
-      { say: '마음에 드네요. 어디에 이름을 쓰면 되죠?', bubble: '어디에 이름을?' },
-      { say: '그 정도면 괜찮네요. 진행해 주세요.', bubble: '진행해 주세요' },
-      { say: '더 고민할 것 없겠어요.', bubble: '고민할 것 없어요' }
-    ],
-    pet: [{ say: '어머, 소매에 고양이 털이네요? 우리 애도 아프면 병원비가 장난 아닌데...', bubble: '우리 애도...' }]
+  // 단체보험은 같은 이름이 다른 뜻이라 따로 둔다
+  var COVER_GROUP = { injury: '일하다 다친 치료비', hospital: '입원 일당', surgery: '수술비' };
+  function coverName(product, item) { return product === 'group' ? COVER_GROUP[item] : COVER[item]; }
+
+  // 고객이 하는 말. life: 사는 이야기, worry: 걱정, budget: 한 달 예산, hook: 지금 들어야 할 이유
+  // yes: 청약서 질문 중 '예'라고 답하는 줄과 그때 하는 말
+  var TALK = {
+    c1: { life: '아버지가 쉰도 안 돼서 틀니를 하셨어요.', worry: '저도 그렇게 될까 봐요. 이가 빠지면 임플란트가 그렇게 비싸다면서요.', budget: '한 달에 3만 원 안쪽이면 좋겠어요.' },
+    c16: { life: '독립해서 처음 혼자 살아요. 오래된 빌라 2층이에요.', worry: '친구가 집에서 물이 새서 아래층 천장 수리비를 물어 줬대요. 저도 그럴까 봐요.', budget: '만 원대면 들고 싶어요.' },
+    c2: { life: '딸이 프랑스에 살아요. 처음으로 3주 다녀오려고요.', worry: '거기서 아프면 병원비가 많이 나온다던데요.', budget: '한 번 내는 거면 4만 원까지는 괜찮아요.' },
+    c3: { life: '회사가 멀리 이사 가서, 이제 차로 출퇴근해요.', worry: '자동차보험은 들었는데, 사고로 사람이 다치면 합의금은 따로 들 수 있다고 해서요.', budget: '한 달에 만 원대면 돼요.' },
+    c10: { life: '고양이가 이제 세 살이에요.', worry: '나이 들면 병원비가 많이 든다고 해서요. 수술이라도 하면 몇백이라던데.', budget: '3만 원대까지는 생각하고 있어요.' },
+    c7: { life: '고양이가 전기레인지 위에 자꾸 올라가요. 지난주엔 버튼을 밟아서 불이 켜졌어요.', worry: '집 비운 사이에 불이 날까 봐요. 세탁기 호스도 오래돼서 아래층에 물이 샐까 봐 걱정이고요.', budget: '만 오천 원 안쪽이요.' },
+    c8: { life: '점심시간에 잠깐 나왔어요. 다음 주에 베트남 출장이 갑자기 잡혔어요.', worry: '거기서 아프거나 다치면 병원은 어떻게 하나 싶어서요.', budget: '한 번 내는 거면 2만 원 안쪽이요.' },
+    c9: { life: '아이 학원 데려다주느라 하루에 운전만 두 시간이에요.', worry: '학원 앞이 어린이보호구역이라, 사고 나면 합의금에 벌금까지 나온다고 들었어요.', budget: '2만 원은 안 넘었으면 해요. 하나하나 다 설명해 주세요.' },
+    c4: { life: '아들이 교정을 시작했어요. 교정은 보험이 안 된다더라고요.', worry: '저라도 들어 두려고요. 이 때우는 게 한 번 할 때마다 부담돼서요.', budget: '3만 원 안에서요.', yes: { line: 0, say: '아, 작년 가을에 어금니 하나 때웠어요.' } },
+    c11: { life: '할머니가 시골에서 혼자 사세요. 오래된 집이에요.', worry: '겨울에 난로를 때시는데 불이 날까 봐요.', budget: '할머니 집이라 제가 낼 거예요. 만 원 정도요.' },
+    c12: { life: '계모임 친구들이랑 칠순 기념으로 일본에 가요.', worry: '나이가 있으니 가서 아플까 봐요.', budget: '한 번 내는 거면 3만 원까지요. 꼼꼼히 봐 주세요.', yes: { line: 0, say: '작년 겨울부터 무릎 때문에 정형외과에 다녀요.' } },
+    c13: { life: '치아보험은 3년 전에 하나 들어 놨어요. 이거요.', worry: '아버지가 이번에 임플란트를 하셨는데, 제 건 때우는 것만 되더라고요.', budget: '지금 내는 것 말고, 더 내는 건 2만 5천 원까지요.' },
+    c14: { life: '장롱면허예요. 운전대 잡은 지 10년도 넘었어요.', worry: '사람이라도 다치게 하면 어쩌나 싶어요.', budget: '만 원대면요.', hook: '다음 주부터 아내랑 번갈아 차로 출퇴근하기로 했어요.' },
+    c15: { life: '아이들 생일마다 초를 잔뜩 켜요.', worry: '불도 걱정이고, 애들이 놀다가 남의 집 물건을 깨뜨릴까 봐도요.', budget: '만 2천 원이 최대예요. 다른 데서도 알아보고 왔어요.' },
+    c6: { life: '식당 식구가 저까지 일곱이에요.', worry: '주방 일이라 데고 베이는 일이 잦아요. 입원이라도 하면 그동안 일당도 못 받고요.', budget: '한 달에 8만 원까지는 낼게요.' },
+    c17: { life: '보호소에서 일곱 살 강아지를 데려왔어요.', worry: '나이가 있어서 병원 갈 일이 많을 것 같아요.', budget: '4만 원까지요.', yes: { line: 0, say: '지난달에 피부병으로 병원에 다녔어요.' } },
+    c18: { life: '점심시간이라 빨리 가 봐야 해요. 주말마다 캠핑 가느라 장거리 운전을 해요.', worry: '멀리 가다 사고 나면 상대방 합의금도 그렇고, 제가 다치는 것도 걱정이에요.', budget: '2만 원 안쪽이요.' },
+    c19: { life: '신혼여행으로 하와이에 가요. 고양이는 친정에 맡기고요.', worry: '가서 아프면 병원비가 엄청나다던데, 짐 잃어버리는 것도 걱정이에요.', budget: '한 번 내는 거면 5만 원 정도요.' },
+    c20: { life: '회사 건강검진을 받았는데요.', worry: '잇몸이 안 좋다고 치료받으래요. 잇몸 치료가 되는 보험이 있을까 해서요.', budget: '3만 원까지요.', yes: { line: 1, say: '검진에서 치주염이라고 나왔어요.' } },
+    r1: { life: '민혁 씨 소개로 왔어요. 필요한 것만 권해 주신다고 해서요.', worry: '이사한 집 아래층이 가게예요. 물이라도 새면 큰일이래요.', budget: '만 원대요.' },
+    c21: { life: '저는 아직 이가 멀쩡해요.', worry: '그래도 때우는 거랑 임플란트 같은 큰 치료가 다 됐으면 해요.', budget: '3만 원까지요.', hook: '어머니가 이가 약하셔서 일찍부터 고생하셨거든요.' },
+    r2: { life: '도윤 씨가 소개해 줬어요. 솔직하게 말해 주는 분이라고요.', worry: '처음 차를 샀는데 매일 어린이집 앞을 지나가요. 사고 나면 벌금도 크다고 해서요.', budget: '2만 원 안쪽이요.' }
   };
-  var STEP_CLUE = {
-    price: { say: '아뇨, 그것보다... 돈이 얼마나 드는지가 궁금해요.', bubble: '얼마예요?' },
-    contract: { say: '설명은 충분해요. 이제 서명할 종이를 주세요.', bubble: '서명할 종이' },
-    pet: { say: '우리 고양이 이야기예요. 고양이도 보험이 되나요?', bubble: '고양이도 보험?' }
+  // 청약서의 알릴 의무 질문 (상품마다 세 줄)
+  var QUESTIONS = {
+    dental: ['최근 1년 안에 충치 치료나 진단을 받은 적이 있다', '최근 5년 안에 잇몸 질환으로 치료나 진단을 받은 적이 있다', '지금 틀니를 쓰고 있다'],
+    car: ['영업용(택시, 화물차 등)으로 운전한다', '최근 1년 안에 면허가 정지되거나 취소된 적이 있다', '오토바이를 탄다'],
+    travel: ['최근 3개월 안에 병원에서 진찰이나 검사를 받은 적이 있다', '여행 중 스쿠버다이빙 같은 위험한 활동을 할 예정이다', '여행 금지 국가에 간다'],
+    home: ['건물 안에서 음식점이나 공장을 운영한다', '최근 1년 안에 불이나 물이 새는 사고가 있었다', '집이 오래 비어 있다'],
+    pet: ['최근 1년 안에 병으로 동물병원 치료를 받은 적이 있다', '수술을 받은 적이 있다', '동물등록을 하지 않았다'],
+    group: ['높은 곳이나 화학 약품을 다루는 일을 하는 직원이 있다', '직원 중 지금 치료 중인 사람이 있다', '직원이 자주 바뀐다']
   };
-  function clientNo(id) { return +String(id).replace(/\D/g, '') || 0; }
-  // 고객 id와 지금 차례(need, price, pet, contract)로 할 말을 고른다. clue면 더 분명한 말.
-  function stepLine(id, step, need, clue) {
-    if (step === 'need') {
-      var h = CLIENT_HINT[id] || { say: HINT[need].say, bubble: HINT[need].bubble, clue: HINT[need].say };
-      return clue ? { say: h.clue, bubble: HINT[need].bubble } : { say: h.say, bubble: h.bubble };
-    }
-    if (clue) return STEP_CLUE[step];
-    var list = STEP_LINES[step];
-    return list[clientNo(id) % list.length];
-  }
-  // 엉뚱한 안내서를 처음 받았을 때 (상품마다 조금 다르게)
-  var WRONG = ['음... 제가 말씀드린 건 그게 아닌데요.', '아, 그건 저랑은 상관없는 것 같아요.', '그게 아니라요...'];
-  var HINT = {
-    dental: { say: '요즘 찬물만 마셔도 이가 시려서요. 치과 가기가 겁나요.', bubble: '이가 시려요' },
-    car: { say: '운전이 아직 무서워서요. 사고 나면 어쩌죠?', bubble: '사고가 걱정돼요' },
-    travel: { say: '해외여행 가서 아프면 어쩌죠?', bubble: '여행 가서 아프면' },
-    home: { say: '집이 오래돼서요. 겨울마다 불 날까 봐 걱정이에요.', bubble: '불 날까 걱정' },
-    group: { say: '우리 식당 직원들 다 같이 들 수 있는 거 있을까요?', bubble: '직원 다 같이' }
+  // 상품설명서에서 꼭 짚어야 하는 굵은 칸 세 개
+  var EXPLAIN = {
+    dental: ['가입하고 처음 90일은 때우는 치료도 보장되지 않아요.', '임플란트 같은 큰 치료는 1년 안에는 절반만 나와요.', '교정이나 미용 치료는 보장되지 않아요.'],
+    car: ['음주나 무면허 운전 사고는 보장되지 않아요.', '형사합의금은 다친 정도에 따라 나오는 한도가 달라요.', '중간에 해지하면 낸 돈보다 훨씬 적게 돌려받아요.'],
+    travel: ['여행 전부터 앓던 병은 보장이 안 될 수 있어요.', '위험한 레저 활동 중 사고는 빠져요.', '현지 병원 영수증과 진단서를 꼭 챙겨 오셔야 해요.'],
+    home: ['일부러 낸 불은 보장되지 않아요.', '남에게 입힌 피해는 한 건마다 고객님이 먼저 내는 돈(자기부담금)이 있어요.', '중간에 해지하면 낸 돈보다 훨씬 적게 돌려받아요.'],
+    pet: ['가입하고 처음 30일 안에 생긴 병은 보장되지 않아요.', '치료비의 일부는 고객님이 내셔야 해요.', '타고난 병이나 가입 전 병은 빠져요.'],
+    group: ['일부러 다치거나 싸워서 다친 건 보장되지 않아요.', '직원이 바뀌면 명단을 꼭 알려 주셔야 해요.', '중간에 해지하면 낸 돈보다 훨씬 적게 돌려받아요.']
   };
-  var MARK_NOTE = { sneeze: '고양이 털 알레르기가 있으심', cat: '고양이를 키우심. 고양이 이야기 좋아하심', clock: '시간이 없으신 분. 늦으면 바로 가심', none: '' };
-  var CONSULT = {
+  var DESIGN = {
+    pickFirst: '어떤 보험이 맞을지부터 골라 볼게요.',
+    wrongProduct: ['음... 제가 말씀드린 건 그게 아닌데요.', '아, 그건 저랑은 상관없는 것 같아요.'],
+    missing: function (product, item) { return '그럼 ' + coverName(product, item) + '은요? 그게 제일 걱정인데요.'; },
+    over: function (pr) { return '한 달에 ' + Life.won(pr) + '이요? 생각보다 비싸네요...'; },
+    overOnce: function (pr) { return Life.won(pr) + '이면 그냥 여행 경비에 보탤래요.'; },
+    overPush: '음... 좋다고 하시니까, 일단 해 볼게요.',
+    ok: '네, 이 정도면 좋네요.',
+    switchAsk: '이거 해지하고 새로 드는 게 나을까요?',
+    switched: '그럼 예전 건 해지하고 이걸로 할게요.',
+    kept: '아, 예전 건 그대로 두고 비어 있는 것만 채우는 거군요.'
+  };
+  var APPLY = {
+    intro: '청약서예요. 질문에 하나씩 답해 주세요.',
+    no: ['아니요.', '아니요, 없어요.', '그것도 아니요.'],
+    tell: '그대로 적기',
+    hide: '이건 안 적으셔도 돼요',
+    toldExclusion: { dental: '말씀해 주셔서 다행이에요. 그 치아는 보장에서 잠시 빠지지만, 나머지는 그대로예요.', travel: '말씀해 주셔서 다행이에요. 무릎 치료는 보장에서 빠지고, 나머지는 그대로예요.', pet: '말씀해 주셔서 다행이에요. 피부병은 보장에서 빠지지만, 다른 병은 그대로예요.' },
+    toldRefuse: '솔직히 말씀드리면, 지금은 잇몸 보장을 넣을 수가 없어요. 치료부터 받으시는 게 맞아요.',
+    clientThanks: '그렇게 말해 주는 사람은 처음이에요. 주변에 보험 알아보는 사람 있으면 소개할게요.',
+    clientHid: '아, 그래도 돼요? 그럼 아니요로 할게요.'
+  };
+  var SIGN = {
+    explainIntro: '설명서에서 굵게 된 곳은 꼭 짚어 드려야 해요.',
+    copies: '약관이랑 청약서 부본이에요. 집에서 한 번 더 보세요.',
     signed: '여기 서명할게요.',
-    lost: '음... 생각해 볼게요.',
-    wrong: '이건 제가 찾는 게 아닌데요.',
-    wrongAgain: '...제 이야기를 잘 안 들으신 것 같네요.',
-    slow: '음...',
-    greet: '안녕하세요.'
+    lost: '음... 조금 더 생각해 볼게요.',
+    delay: { c14: '근데 운전 좀 익숙해지면 그때 들게요.', c21: '근데 아직 멀쩡하니까 나중에 들어도 되지 않을까요?' },
+    persuade: { c14: '다음 주부터 출퇴근하신다고 하셨죠. 운전을 시작하는 첫날부터 보장이 있어야 해요.', c21: '어머니가 이가 약하셨다고 하셨죠. 치아보험은 이가 건강할 때만 들 수 있고, 들고 나서도 처음 몇 달은 보장이 안 돼요.' },
+    persuaded: { c14: '...그러네요. 첫 출근 날부터 되게 해 주세요.', c21: '그럼 멀쩡할 때 들어 둘게요.' },
+    later: '그럼 나중에 다시 올게요.',
+    rushed: '...설명은 집에 가서 읽어 볼게요.'
   };
+  var TUTORIAL = {
+    listen: [{ who: 'peer', text: '고객님 말씀 중에 중요한 말은 눌러서 상담 노트에 적어 두세요. 세 줄까지 적을 수 있어요.' }],
+    design: [{ who: 'peer', text: '맞는 안내서를 태블릿으로 끌어 오고, 걱정하신 보장을 켜세요. 보험료가 예산을 넘지 않게요.' }],
+    apply: [{ who: 'peer', text: '청약서는 제가 옆에서 같이 볼게요. 고객님이 예라고 하시는 건 꼭 그대로 적어야 해요.' }],
+    explain: [{ who: 'peer', text: '서명 전에 굵은 칸 세 개를 짚어 드리고, 약관이랑 부본을 건네요. 건너뛰면 나중에 취소될 수 있어요.' }]
+  };
+  // 계약이 취소될 때 오는 연락 (지점장)
+  var CANCEL = {
+    hide: function (n) { return n + ' 고객님이 해피콜에서, 설계사가 청약서에 알릴 사항을 안 적어도 된다고 했다고 답하셨대요. 계약은 취소됐어요. 내일 아침에 저 좀 봐요.'; },
+    unexplained: function (n) { return n + ' 고객님이 해피콜에서 설명을 제대로 못 들었다고 하셔서, 청약을 철회하셨어요.'; },
+    switch: function (n) { return n + ' 고객님 계약이 승환 점검에 걸렸어요. 예전 보험을 다시 살리고 새 계약은 취소하셨대요.'; },
+    over: function (n) { return n + ' 고객님이 보험료가 부담된다고 청약을 철회하셨어요.'; }
+  };
+  var CANCEL_SHORT = { hide: '알릴 의무를 넘겨서 해피콜에서 취소', unexplained: '설명을 건너뛰어서 철회', switch: '갈아타게 해서 승환 점검에서 취소', over: '예산을 넘겨서 청약철회' };
+  function bossTalk(s) {
+    return [
+      { who: 'lead', text: s.me + ' 씨, 청약서에 알릴 사항을 안 적으면 어떻게 되는지 알아요?' },
+      { who: 'lead', text: '고객님이 나중에 보험금을 청구하면 보험사가 진료 기록을 확인해요. 그때 드러나면 보험금이 안 나오고 계약이 해지될 수 있어요. 제일 손해 보는 건 고객님이에요.' },
+      { who: 'lead', text: '실적 급한 거 알아요. 그래도 그건 하면 안 돼요.' }
+    ];
+  }
+  // 요금 안내
+  var BILL = {
+    phone: { name: '휴대폰 요금', from: '통신사' },
+    rent: { name: '월세와 관리비', from: '집주인' },
+    loan: { name: '학자금 대출 상환', from: '한국장학재단' }
+  };
+  // 고지는 휴대폰으로 온다: 통신사와 장학재단은 안내 문자, 월세는 집주인 문자
+  function billNotice(id, due, amount) {
+    var body = {
+      phone: '[휴대폰 요금 안내]\n4월 청구 요금 ' + Life.won(amount) + '\n납부 마감일 ' + due,
+      rent: '4월 월세와 관리비 ' + Life.won(amount) + ' ' + due + '까지 입금 부탁드립니다.',
+      loan: '[학자금 대출 상환 안내]\n이번 달 상환액 ' + Life.won(amount) + '\n납입일 ' + due
+    }[id];
+    return { from: BILL[id].from, preview: body.replace(/\n/g, ' ').slice(0, 26), body: body };
+  }
+  // 휴대폰 요금과 학자금은 납부일에 통장에서 자동이체로 빠져나가고, 잔액이 모자라면 출금되지 않는다.
+  // 월세는 집주인 계좌로 직접 보낸다.
+  var MONEY = {
+    autoOut: function (id, amount, left) { return '[자동이체 출금]\n' + BILL[id].name + ' ' + Life.won(amount) + '\n잔액 ' + Life.won(left); },
+    autoFail: function (id, amount) { return '[자동이체 미출금]\n잔액이 부족해 ' + BILL[id].name + ' ' + Life.won(amount) + '이 출금되지 않았습니다.'; },
+    rentDay: function (amount, wallet, pending) { return '오늘은 월세 날이다. 월세와 관리비 ' + Life.won(amount) + ', 통장에는 ' + Life.won(wallet) + '. 수수료 ' + Life.won(pending) + '은 5/8에야 들어온다.'; },
+    rentMsg: '오늘 월세 날이에요. 확인 부탁드립니다.',
+    cashHint: '모자란 돈은 카드 현금서비스로 당겨 올 수 있다. 대신 이자가 붙는다.',
+    pay: '지금 보내 드릴게요.',
+    defer: '죄송한데 5/8까지만 기다려 주실 수 있을까요?',
+    cashSend: '오늘 안으로 보내 드릴게요.',
+    cash: '현금서비스를 받아 넣는다',
+    leave: '그냥 둔다',
+    deferText: { from: '집주인', body: '네, 8일까지는 기다릴게요. 그 뒤로는 어렵습니다.' },
+    cashNote: '카드 현금서비스로 30만 원을 받았다. 다음 카드값에 이자까지 붙어서 나간다.',
+    late: '이대로면 연체다. 5/8에 연체료를 더해 내야 한다.'
+  };
+  function statement(s, p) {
+    var l = [{ label: '4월 계약 수수료', amount: p.gross }];
+    if (p.settle) l.push({ label: '신입 정착지원금', amount: p.settle });
+    l.push({ label: '사업소득세 3.3%', amount: -p.tax });
+    return l;
+  }
+  var MARK_NOTE = { sneeze: '고양이 털 알레르기가 있으심', cat: '고양이를 키우심. 고양이 이야기 좋아하심', clock: '점심시간에 짬 내서 오시는 분. 오래 걸리면 안 됨', doubt: '꼼꼼하게 따져 보시는 분. 설명을 다 들으셔야 함', none: '' };
+  var CONSULT = { greet: '안녕하세요.', slow: '음... 시간이 좀 걸리네요.', lost: '음... 생각해 볼게요.' };
   function leaveOffice(s, first) {
     var lines = [];
     if (first) {
@@ -312,15 +389,17 @@ var Story = (function () {
   function officeTip(s, who) {
     var left = Math.max(0, Life.GOAL - s.contracts), tips = [];
     if (who === 'lead') {
-      if (s.contracts >= Life.GOAL) tips.push('목표는 채웠어요. 남은 날 계약은 수당을 1.5배로 쳐 줘요.');
-      else tips.push('지금 ' + s.contracts + '건이에요. 24일까지 ' + left + '건 남았어요.');
+      if (s.contracts >= Life.GOAL) tips.push('기준 실적은 채웠어요. 정착지원금은 5월 8일 수수료랑 같이 들어가요.');
+      else tips.push('지금 ' + s.contracts + '건이에요. 5월 8일까지 ' + left + '건 남았어요.');
+      tips.push('수수료는 계약이 유지돼야 받아요. 무리하게 권한 계약은 금방 취소돼요.');
       tips.push('고객 메모는 집 노트북으로 보냈어요. 읽어 보면 어떤 상품을 찾는지 미리 알 수 있어요.');
-      tips.push('피곤하면 안내서 글씨가 눈에 안 들어와요. 일찍 자는 것도 일이에요.');
+      tips.push('피곤하면 하품이 나와요. 일찍 자는 것도 일이에요.');
     } else {
       if (s.fur > 0 && !s.owned.roller) tips.push('소매에 아직 털 있어요. 돌돌이는 역 앞 슈퍼에 있어요.');
       if (s.smell > 0 || (s.today && s.today.notes && s.today.notes.indexOf('smell') >= 0)) tips.push('내일은 고양이 화장실 꼭 치우고 나와요. 냄새는 고객님이 제일 먼저 알아요.');
-      tips.push('고객님은 원하는 걸 바로 말씀 안 하세요. 무엇이 걱정인지 들어 보면 맞는 안내서가 보여요. 메일을 읽고 오면 더 쉽고요.');
-      tips.push('엉뚱한 안내서를 드리면 기분이 상하시고, 두 번이면 생각해 보겠다고 하세요.');
+      tips.push('고객님 말씀 중에 걱정이랑 예산은 꼭 노트에 적어요. 설계할 때 그거 보고 해요.');
+      tips.push('청약서에 예라고 하신 건 그대로 적어요. 해피콜에서 다 물어봐요.');
+      tips.push('이미 보험이 있는 분께는 비어 있는 보장만 채워 드려요. 갈아타게 하면 승환 점검에 걸려요.');
       tips.push('고양이 키우는 고객님한테는 털이 오히려 반가운 얘깃거리예요.');
       tips.push('저녁에 늦게 자면 다음 날 상담 때 하품 나와요. 저도 그랬어요.');
     }
@@ -330,9 +409,9 @@ var Story = (function () {
   }
   function goalReached(s) {
     return [
-      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 수습 목표 ' + Life.GOAL + '건 달성!' },
+      { who: 'lead', text: s.me + ' 씨! 방금 계약으로 ' + s.contracts + '건이에요. 첫 달 기준 ' + Life.GOAL + '건 달성!' },
       { who: 'peer', text: '와, 벌써요? 축하해요!' },
-      { who: 'lead', text: '정식 위촉은 확정이에요. 24일까지 남은 계약은 수당을 1.5배로 드릴게요.' }
+      { who: 'lead', text: '정착지원금은 5월 8일에 수수료랑 같이 들어가요. 그때까지 계약이 취소되지 않게 잘 챙겨요.' }
     ];
   }
   // 집 냉장고에 붙여 둔 돌봄 메모. 검은 화면이 아니라 종이 한 장으로 보여 준다.
@@ -364,15 +443,15 @@ var Story = (function () {
   function evaluation(s) {
     var c = s.contracts, pass = c >= Life.GOAL;
     return pass ? [
-      { who: 'lead', text: '12일 동안 ' + c + '건. 목표선을 넘겼네요.' },
-      { who: 'lead', text: '축하해요, ' + s.me + ' 씨. 다음 달부터 정식 설계사예요.' }
+      { who: 'lead', text: '첫 달 ' + c + '건. 기준선을 넘겼네요.' },
+      { who: 'lead', text: '축하해요, ' + s.me + ' 씨. 정착지원금도 오늘 같이 들어가요.' }
     ] : [
-      { who: 'lead', text: '12일 동안 ' + c + '건이에요. 목표선까지 ' + (Life.GOAL - c) + '건 남았네요.' },
-      { who: 'lead', text: '수습을 한 달 더 해 봐요. 다음엔 될 거예요.' }
+      { who: 'lead', text: '첫 달 ' + c + '건이에요. 기준선까지 ' + (Life.GOAL - c) + '건 모자라서 정착지원금은 이번엔 안 나와요.' },
+      { who: 'lead', text: '수수료는 계약한 만큼 들어가요. 다음 달에 다시 해 봐요.' }
     ];
   }
 
-  // ---------- 둘이라서: 열이틀의 사건 ----------
+  // ---------- 둘이라서: 한 달의 사건 ----------
   // 기(4/13~15) 둘이라 무겁다, 승(4/16~20) 쌓이다가 풀린다, 전(4/21~23) 잘될수록 멀어진다, 결(4/24) 다시 비.
   // 사건은 꼭 일어나고, 플레이어의 손이 그 결과만 바꾼다. 설명하는 말은 줄이고 장면과 손짓으로 보여 준다.
   var BEAT = {
@@ -393,7 +472,7 @@ var Story = (function () {
     momAfter: function (s) { return [{ who: 'narr', text: '몇 번을 썼다 지우고, 그 한 줄만 보냈다.' }, { who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' }]; },
     alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'bare') + '.' }]; },
     alarmLate: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다.' }, { who: 'me', text: '8시 20분...?! 늦었다!' }]; },
-    overtime: function (s) { return [{ who: 'lead', text: '평가 전이니까요. 남을 사람은 남아서 한 건 더 해 봐요.' }, { who: 'me', text: '(집에서 ' + j(s.cat, 'subject') + ' 기다릴 텐데.)' }]; },
+    overtime: function (s) { return [{ who: 'lead', text: '첫 달 마감 전이니까요. 남을 사람은 남아서 한 건 더 해 봐요.' }, { who: 'me', text: '(집에서 ' + j(s.cat, 'subject') + ' 기다릴 텐데.)' }]; },
     waitedAsleep: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관 매트 위에서 웅크린 채 잠들어 있었다.' }]; },
     lateHome: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관에서 한참 기다린 얼굴이다.' }]; },
     prep: function (s) { return [{ who: 'me', text: '내일 발표 준비만 하고 자자.' }]; },
@@ -410,12 +489,12 @@ var Story = (function () {
   var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님' };
 
   var ENDING = {
-    family: { title: '우리 집', body: function (s) { return ['정식 설계사가 되었다.', '첫 수당으로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
-    both: { title: '두 몸을 건사했다', body: function (s) { return ['정식 설계사가 되었다.', '현관을 열면 오늘도 ' + j(s.cat, 'subject') + ' 앉아 있다.']; } },
-    catStays: { title: function (s) { return '실적은 아직, ' + j(s.cat, 'topic') + ' 곁에'; }, body: function (s) { return ['수습은 한 달 늘었다.', '그래도 밤마다 ' + j(s.cat, 'subject') + ' 내 옆에서 잔다.']; } },
-    soso: { title: '그럭저럭 둘이서', body: function (s) { return ['정식 설계사가 되었다.', j(s.cat, 'topic') + ' 가끔 나를 모른 척한다. 그래도 저녁이면 현관에 와 있다.']; } },
-    clumsy: { title: '둘 다 아직 서툴다', body: function (s) { return ['수습은 한 달 늘었다.', j(s.cat, 'with') + ' 나는 아직 서로에게 서툴다.']; } },
-    oneBody: { title: '한 몸만 건사했다', body: function (s) { return ['정식 설계사가 되었다.', '집에 오면 ' + j(s.cat, 'subject') + ' 더 이상 현관에 나와 있지 않다.']; } },
+    family: { title: '우리 집', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '첫 수수료로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
+    both: { title: '두 몸을 건사했다', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '현관을 열면 오늘도 ' + j(s.cat, 'subject') + ' 앉아 있다.']; } },
+    catStays: { title: function (s) { return '실적은 아직, ' + j(s.cat, 'topic') + ' 곁에'; }, body: function (s) { return ['첫 달 실적은 모자랐다.', '그래도 밤마다 ' + j(s.cat, 'subject') + ' 내 옆에서 잔다.']; } },
+    soso: { title: '그럭저럭 둘이서', body: function (s) { return ['첫 달 기준 실적을 채웠다.', j(s.cat, 'topic') + ' 가끔 나를 모른 척한다. 그래도 저녁이면 현관에 와 있다.']; } },
+    clumsy: { title: '둘 다 아직 서툴다', body: function (s) { return ['첫 달 실적은 모자랐다.', j(s.cat, 'with') + ' 나는 아직 서로에게 서툴다.']; } },
+    oneBody: { title: '한 몸만 건사했다', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '집에 오면 ' + j(s.cat, 'subject') + ' 더 이상 현관에 나와 있지 않다.']; } },
     again: { title: '다시 처음부터', body: function (s) { return ['일도, ' + j(s.cat, 'with') + '의 하루도 잘 풀리지 않았다.', '이건 게임이니까, 처음부터 다시 해 볼 수 있다.']; } },
     emptyBowl: { title: '빈 밥그릇', body: function (s) { return ['밥그릇이 너무 자주 비어 있었다.', '어느 날 아침, ' + j(s.cat, 'subject') + ' 열린 창틈으로 나가 슈퍼 앞으로 돌아갔다. 슈퍼 사장님이 밥을 챙겨 준다고 한다.', '이건 게임이니까, 처음부터 다시 해 볼 수 있다.']; } }
   };
@@ -430,11 +509,11 @@ var Story = (function () {
   // 아직 못 본 엔딩 칸에 보이는 귀띔
   var ENDING_HINT = {
     family: '천둥 치던 밤, 서랍 속 아침, 그리고 가득 찬 사진첩...',
-    both: '목표 ' + Life.GOAL + '건, 마음 네 칸, 사진 ' + Life.PHOTO_GOOD + '장 이상',
-    soso: '목표 ' + Life.GOAL + '건, 그런데 마음이나 사진이 조금 모자라면',
+    both: '기준 ' + Life.GOAL + '건, 마음 네 칸, 사진 ' + Life.PHOTO_GOOD + '장 이상',
+    soso: '기준 ' + Life.GOAL + '건, 그런데 마음이나 사진이 조금 모자라면',
     catStays: '실적은 모자라도 마음은 네 칸 이상',
     clumsy: '실적도 마음도 조금씩 모자라면',
-    oneBody: '목표는 채웠지만 마음이 한 칸 이하',
+    oneBody: '기준은 채웠지만 마음이 한 칸 이하',
     again: '일도 고양이도 잘 안 풀리면',
     emptyBowl: '밥그릇이 너무 자주 비면'
   };
@@ -503,9 +582,9 @@ var Story = (function () {
 
   return {
     opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
-    HINT: HINT, MARK_NOTE: MARK_NOTE, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
+    MARK_NOTE: MARK_NOTE, COVER: COVER, coverName: coverName, TALK: TALK, QUESTIONS: QUESTIONS, EXPLAIN: EXPLAIN, DESIGN: DESIGN, APPLY: APPLY, SIGN: SIGN, CANCEL: CANCEL, CANCEL_SHORT: CANCEL_SHORT, bossTalk: bossTalk, BILL: BILL, billNotice: billNotice, MONEY: MONEY, statement: statement, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
-    assembly: assembly, senior: senior, seniorSmell: seniorSmell, stepLine: stepLine, CLIENT_HINT: CLIENT_HINT, WRONG: WRONG, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
+    assembly: assembly, senior: senior, seniorSmell: seniorSmell, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
     evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());

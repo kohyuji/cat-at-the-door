@@ -214,6 +214,8 @@ var Home = (function () {
     View.bowl(c, P.bowl.x, P.bowl.y, s.bowl, s.bowlKind, t);
     View.waterBowl(c, P.water.x, P.water.y, s.water ? (s.phase === 'morning' ? 1 : .55) : 0);
     if (held !== 'bottle') View.item(c, 'waterBottle', P.bottle.x, P.bottle.y, 1.1);
+    // 손에 익은 돌봄: 남은 일이 있으면 그릇 위에 반짝임
+    if (!H.pro && H.mode !== 'night' && Life.habitReady(s) && (!s.fed[s.meal] || !s.water || (s.litter.poop > 0 && s.litter.sand > 0))) View.icon(c, 'sparkle', P.bowl.x, P.bowl.y - 30 + Math.sin(t * 4) * 2, 1);
     // 사람과 고양이는 발 위치 순서로
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
@@ -300,7 +302,8 @@ var Home = (function () {
     c.fillStyle = 'rgba(20,18,26,.72)'; c.fillRect(0, 0, 640, 360);
     if (cu.kind === 'memo') { // 냉장고에 붙여 둔 종이 한 장
       var note = Story.careNote(s.cat, s.day, cu.seenDay), n = note.rows.length, gap = n > 8 ? 26 : 32;
-      var x = 150, h = 74 + n * gap, y = Math.max(8, 180 - h / 2), w = 340;
+      var x = 14, h = 74 + n * gap, y = Math.max(8, 180 - h / 2), w = 354;
+      drawCalendar(c, s);
       paper(c, x, y, w, h, '#fff6d8');
       View.r(c, x + w / 2 - 18, y - 6, 36, 12, 'rgba(224,138,108,.85)'); // 테이프
       View.text(c, note.title, x + w / 2, y + 30, 17, '#2f2a33');
@@ -325,12 +328,32 @@ var Home = (function () {
         if (i) View.r(c, mx + colW * i, top, 1, mh - 56, '#c8cedb');
         View.text(c, Story.CLIENT[id].name + ' 고객님', cx, top + 14, 15, '#2f2a33');
         if (!open) { View.icon(c, 'mail', cx, top + 100 + Math.sin(t * 4) * 2, 4); return; }
-        View.icon(c, info.need === 'dental' ? 'tooth' : info.need, cx, top + 70, 3);
-        View.text(c, Story.PRODUCT[info.need], cx, top + 112, 14, '#c0392b');
-        wrapText(c, '“' + Story.stepLine(id, 'need', info.need).say + '”', cx, top + 140, colW - 30, 12, '#3b3540');
-        if (info.mark !== 'none') { View.icon(c, info.mark === 'cat' ? 'paw' : info.mark, cx - (colW - 40) / 2 + 8, top + 214, 1); wrapText(c, Story.MARK_NOTE[info.mark], cx + 10, top + 218, colW - 50, 11, '#7a3b30'); }
+        View.icon(c, info.product === 'dental' ? 'tooth' : info.product, cx, top + 70, 3);
+        View.text(c, Story.PRODUCT[info.product], cx, top + 112, 14, '#c0392b');
+        wrapText(c, '“' + (Story.TALK[id] || {}).worry + '”', cx, top + 140, colW - 30, 12, '#3b3540');
+        if (info.mark !== 'none') { View.icon(c, info.mark === 'cat' ? 'paw' : info.mark === 'doubt' ? 'note' : info.mark, cx - (colW - 40) / 2 + 8, top + 222, 1); wrapText(c, Story.MARK_NOTE[info.mark], cx + 10, top + 226, colW - 50, 11, '#7a3b30'); }
       });
     }
+  }
+  // 냉장고 달력: 낼 돈과 들어올 돈 (지금은 종이에 글로 적는다)
+  function drawCalendar(c, s) {
+    var rows = [];
+    Life.billsUp(s).forEach(function (b) { rows.push({ date: Life.DAYS[b.due].date, text: Story.BILL[b.id].name + ' ' + Life.won(b.amount), red: b.due - s.day <= 1 }); });
+    Life.BILLS.forEach(function (b) {
+      if (s.bills[b.id] === 'deferred') rows.push({ date: '5/8', text: Story.BILL[b.id].name + ' (집주인과 약속)', red: false });
+      if (s.bills[b.id] === 'late') rows.push({ date: '5/8', text: Story.BILL[b.id].name + ' 연체', red: true });
+    });
+    if (s.loan) rows.push({ date: '5/8', text: '현금서비스 갚기', red: true });
+    rows.push({ date: '5/8', text: '수수료 들어오는 날', red: false });
+    var x = 384, y = 40, w = 244, h = 90 + rows.length * 26;
+    paper(c, x, y, w, h, '#f4f1ea');
+    View.r(c, x + w / 2 - 18, y - 6, 36, 12, 'rgba(120,160,200,.85)');
+    View.text(c, '달력', x + w / 2, y + 26, 15, '#2f2a33');
+    rows.forEach(function (r, i) {
+      View.text(c, r.date, x + 16, y + 56 + i * 26, 12, r.red ? '#c0392b' : '#2f2a33', 'left');
+      View.text(c, r.text, x + 62, y + 56 + i * 26, 11, '#3b3540', 'left');
+    });
+    View.text(c, '들어올 수수료 ' + Life.won(Life.pendingTotal(s)), x + w / 2, y + h - 18, 11, '#2e7d4f');
   }
   function wrapText(c, text, x, y, w, size, col) {
     c.font = size + "px 'NeoDunggeunmo', monospace";
@@ -436,6 +459,17 @@ var Home = (function () {
       if (H.onCare) H.onCare('scoop');
       return sandTalk();
     });
+  }
+  // 손에 익은 돌봄: 밥, 물, 화장실 중 남은 것을 이어서 한다
+  function habitCare() {
+    var s = S(), first = !s.seen.habitCare;
+    s.seen.habitCare = true;
+    var pr = first ? say([narr('이제 손에 익었다. 밥, 물, 화장실을 한 번에 챙긴다.')]) : Promise.resolve();
+    return pr.then(function () {
+      if (!Life.feedBlock(s, s.food.dry > 0 || !s.food.wet ? 'dry' : 'wet')) return feedCommit(s.food.dry > 0 || !s.food.wet ? 'dry' : 'wet');
+      return null;
+    }).then(function () { return s.water ? null : waterCommit(); })
+      .then(function () { return s.litter.poop > 0 && s.litter.sand > 0 ? doScoop() : null; });
   }
   function sandTalkAgain() { var s = S(); delete H.said[s.day + ':sand' + s.litter.sand]; return sandTalk(); }
   function scoopDrag() {
@@ -743,7 +777,7 @@ var Home = (function () {
     }
     // 밥과 물: 끌어서 붓거나, 눌러서 바로
     var bowlR = rect(P.bowl.x - 24, P.bowl.y - 56, 48, 60), waterR = rect(P.water.x - 24, P.water.y - 56, 48, 60);
-    list.push({ id: 'bowl', x: bowlR.x + 4, y: P.bowl.y - 22, w: 40, h: 24, tap: feedTap(s.food.dry > 0 || !s.food.wet ? 'dry' : 'wet') });
+    list.push({ id: 'bowl', x: bowlR.x + 4, y: P.bowl.y - 22, w: 40, h: 24, tap: !H.pro && Life.habitReady(s) ? habitCare : feedTap(s.food.dry > 0 || !s.food.wet ? 'dry' : 'wet') });
     list.push({ id: 'waterBowl', x: waterR.x + 4, y: P.water.y - 22, w: 40, h: 24, tap: function () { return waterCommit(); } });
     catSpot(list, 'living', 200); // 고양이는 그릇보다 먼저 잡히고, 사료 봉지·물병보다는 나중에 잡힌다
     list.push({ id: 'food', x: P.food.x - 17, y: P.food.y - 36, w: 34, h: 38, chips: cost([cMin(Life.T.feed)]), tap: feedTap('dry'),

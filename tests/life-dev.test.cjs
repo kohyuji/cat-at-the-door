@@ -19,9 +19,9 @@ test('개발자 모드는 어느 날 아침이든 퇴근 후 저녁이든 바로
 });
 
 test('개발자 모드의 플레이 방식은 그날까지의 상태를 다르게 남긴다', () => {
-  const bal = Dev.simulate('나', '땅콩', 'balance', 12, 'morning');
-  const work = Dev.simulate('나', '땅콩', 'work', 12, 'morning');
-  const cat = Dev.simulate('나', '땅콩', 'cat', 12, 'morning');
+  const bal = Dev.simulate('나', '땅콩', 'balance', 26, 'morning');
+  const work = Dev.simulate('나', '땅콩', 'work', 26, 'morning');
+  const cat = Dev.simulate('나', '땅콩', 'cat', 26, 'morning');
   assert.ok(work.contracts > cat.contracts);
   assert.ok(bal.photos.length > 0 && work.photos.length === 0);
   assert.ok(bal.hearts > work.hearts);

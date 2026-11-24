@@ -9,16 +9,51 @@ var Dev = (function () {
   var STYLES = {
     balance: { label: '일도 고양이도', door: true, play: true, photos: true, prep: true, cook: 'weekend', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' },
     work: { label: '일만', door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
+    greedy: { label: '실적만 (무리하게 권함)', greedy: true, door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
     cat: { label: '고양이만', door: true, play: true, photos: true, prep: false, cook: 'always', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' }
   };
 
   var flip = 0;
+  // 봇 상담: 맞는 상품과 꼭 필요한 보장, 예산 안에서 가장 많이. greedy면 예산을 넘기고 알릴 의무를 넘긴다.
+  function bestCovers(p) {
+    var items = Life.PRODUCTS[p.product].items, base = Life.PRODUCTS[p.product].base, on = {};
+    p.needs.forEach(function (k) { on[k] = true; }); if (base) on[base] = true;
+    var cost = function () { return Object.keys(on).reduce(function (t, k) { return t + items[k]; }, 0); };
+    Object.keys(items).forEach(function (k) {
+      if (on[k] || (p.existing && p.existing.indexOf(k) >= 0)) return;
+      on[k] = true; if (cost() > p.budget) delete on[k];
+    });
+    return on;
+  }
   function consult(s, id, st) {
-    var p = Life.plan(s, id), c = Life.consult(p);
-    // 메일을 안 읽었으면 두 번에 한 번은 첫 안내서를 틀린다
-    if (!p.prepared && !st.prep && (flip++ % 2 === 0)) Life.answer(p, c, 'nothing');
-    while (!c.done) Life.answer(p, c, Life.wants(p, c));
+    var p = Life.plan(s, id), c = Life.consult(p), greedy = st.greedy;
+    if (c.done) return Life.finish(s, p, c);
+    p.facts.forEach(function (f) { if (f !== 'life') Life.note(p, c, f); });
+    Life.listened(p, c);
+    if (!p.prepared && !st.prep && (flip++ % 3 === 0)) Life.pickProduct(p, c, p.product === 'home' ? 'dental' : 'home');
+    if (c.done) return Life.finish(s, p, c);
+    Life.pickProduct(p, c, p.product);
+    var want = greedy ? Life.PRODUCTS[p.product].items : bestCovers(p);
+    Object.keys(want).forEach(function (k) { if (!c.covers[k]) Life.toggle(p, c, k); });
+    var r = Life.submitDesign(p, c, greedy);
+    if (!r.ok && !c.done) { c.covers = {}; Life.pickProduct(p, c, p.product); var b = bestCovers(p); Object.keys(b).forEach(function (k) { if (!c.covers[k]) Life.toggle(p, c, k); }); Life.submitDesign(p, c); }
+    if (c.done) return Life.finish(s, p, c);
+    Life.apply(p, c, !greedy);
+    if (c.done) return Life.finish(s, p, c);
+    [0, 1, 2].forEach(function (i) { Life.explain(p, c, i); }); Life.hand(p, c);
+    if (Life.needsPersuade(p, c)) Life.persuade(p, c);
+    if (!c.done) Life.sign(p, c);
     return Life.finish(s, p, c);
+  }
+  function bills(s) {
+    var due = Life.billDue(s);
+    while (due) {
+      if (s.wallet >= due.amount) Life.payBill(s, due.id, 'pay');
+      else if (due.defer) Life.payBill(s, due.id, 'defer');
+      else if (Life.canCash(s)) Life.payBill(s, due.id, 'cash');
+      else Life.lateBill(s, due.id);
+      due = Life.billDue(s);
+    }
   }
   function shopping(s) {
     var list = [];
@@ -43,7 +78,7 @@ var Dev = (function () {
     care(s, st);
     if (st.play) Life.act(s, 'play');
     photos(s, st);
-    if (s.day === 11 && Life.day(s).kind === 'work' && !s.lid) Life.lastPrep(s, st.lastPrep);
+    if (Life.day(s).eve && !s.lid) Life.lastPrep(s, st.lastPrep);
     if (st.prep) Life.act(s, 'prep');
     if (s.day > 0) Life.eat(s, st.cook === 'always' || (st.cook === 'weekend' && s.phase === 'weekend') ? 'cook' : 'quick');
   }
@@ -58,13 +93,14 @@ var Dev = (function () {
     if (s.fur && s.owned.roller) Life.roll(s);
     Life.feed(s, 'dry'); Life.scoop(s); Life.water(s);
     Life.leaveHome(s);
-    Life.clientsOn(s.day).forEach(function (id) { consult(s, id, st); });
+    Life.clientsOn(s.day, s).forEach(function (id) { consult(s, id, st); });
     var d = Life.day(s);
     if (d.group) { var go = d.overtime ? st.overtime : st.play === false; Life.decideGroup(s, go); if (go) consult(s, 'c6', st); }
     if (d.dinner) Life.dinner(s, st.dinner);
     Life.leaveOffice(s);
     shopping(s).forEach(function (k) { Life.buy(s, k); });
     Life.arriveHome(s);
+    bills(s);
   }
   function weekend(s, st) {
     care(s, st);
@@ -79,7 +115,7 @@ var Dev = (function () {
     Life.eat(s, st.cook === 'never' ? 'quick' : 'cook');
   }
 
-  // day: 0~12, when: 'morning'(평일 아침, 주말 낮) | 'evening'(퇴근 후)
+  // day: 0~26, when: 'morning'(평일 아침, 주말 낮) | 'evening'(퇴근 후)
   function simulate(me, cat, styleKey, day, when) {
     var st = STYLES[styleKey] || STYLES.balance, s = Life.create(me, cat);
     flip = 0;
@@ -91,6 +127,7 @@ var Dev = (function () {
       if (s.day === day && (when === 'morning' || off || d.final)) break;
       if (off) { weekend(s, st); sleep(s, st); continue; }
       weekday(s, st);
+      if (d.final) { Life.evaluate(s); break; }
       if (s.day === day) break; // 퇴근해서 집에 막 들어온 저녁
       home(s, st); sleep(s, st);
     }
@@ -117,7 +154,7 @@ var Dev = (function () {
     if (d.storm) return ' (천둥)';
     if (d.mom) return ' (엄마 문자)';
     if (d.overtime) return ' (야근)';
-    if (i === 11) return ' (노트북 고양이)';
+    if (d.eve) return ' (노트북 고양이)';
     if (d.hide) return ' (숨은 고양이)';
     return '';
   }

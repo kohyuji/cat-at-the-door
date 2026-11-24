@@ -323,11 +323,11 @@ var View = (function () {
     box(c, 0, 0, w, h, '#fffaf0', INK, 2);
     r(c, 2, 2, w - 4, 10 * scale, info.mark === 'sneeze' ? '#9fd8c9' : info.mark === 'cat' ? '#f6c48e' : info.mark === 'clock' ? '#c9d3ef' : '#e7dfcf');
     if (flipped) {
-      icon(c, info.need, w / 2, h * .52, Math.max(1, Math.round(1.6 * scale)));
-      text(c, Story.PRODUCT[info.need], w / 2, h - 7 * scale, Math.round(8 * scale));
+      icon(c, info.product === 'dental' ? 'tooth' : info.product, w / 2, h * .52, Math.max(1, Math.round(1.6 * scale)));
+      text(c, Story.PRODUCT[info.product], w / 2, h - 7 * scale, Math.round(8 * scale));
     } else {
       portrait(c, G, cl.look, 5 * scale, 13 * scale, w - 10 * scale, (w - 10 * scale) * 1.15, cl.tint);
-      if (info.mark !== 'none') { box(c, w - 18 * scale, h - 18 * scale, 16 * scale, 16 * scale, '#fffaf0', INK, 1.5); icon(c, info.mark === 'cat' ? 'pet' : info.mark, w - 10 * scale, h - 10 * scale, Math.max(.75, .75 * scale)); }
+      if (info.mark !== 'none') { box(c, w - 18 * scale, h - 18 * scale, 16 * scale, 16 * scale, '#fffaf0', INK, 1.5); icon(c, info.mark === 'cat' ? 'pet' : info.mark === 'doubt' ? 'note' : info.mark, w - 10 * scale, h - 10 * scale, Math.max(.75, .75 * scale)); }
     }
     c.restore();
   }
@@ -376,7 +376,7 @@ var View = (function () {
     var names = ['나', '선배', '동기A', '동기B'], others = [17, 9, 11];
     var day = s ? s.day : 0, vals = [s ? s.contracts : 0].concat(others.map(function (v) { return Math.min(v, Math.round(v * Math.min(1, (day + 1) / 12))); }));
     var top = y + (big ? 34 : 9), bottom = y + h - (big ? 26 : 8), max = 20, bw = (w - (big ? 60 : 16)) / 4;
-    if (big) text(c, '수습 실적', x + w / 2, y + 16, 16);
+    if (big) text(c, '첫 달 실적', x + w / 2, y + 16, 16);
     var gy = bottom - (bottom - top) * Life.GOAL / max;
     for (var i = 0; i < 4; i++) {
       var bx = x + (big ? 40 : 10) + i * bw, v = vals[i], bh = (bottom - top) * Math.min(v, max) / max;

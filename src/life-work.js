@@ -189,178 +189,373 @@ var Work = (function () {
   }
 
   // ---------- 상담 ----------
-  var TRAY_BASE = ['dental', 'car', 'travel', 'home', 'pet', 'price', 'contract'];
-  function trayKinds(p) { var k = TRAY_BASE.slice(); if (p.evening) k.splice(5, 0, 'group'); return k; }
-  function trayPos(kinds, i) { var n = kinds.length, gap = Math.min(64, 520 / n); return { x: 320 - (n - 1) * gap / 2 + i * gap, y: 312 }; }
-  var DROP = { x: 330, y: 20, w: 250, h: 250 };
-  function drawConsult(c) {
-    var k = Wk.consult, s = S(), t = G.t;
-    View.bg(c, G, 'office');
-    officeClock(c, s.minute);
-    if (k.p.evening || Wk.dark) View.nightTint(c, .45);
-    c.fillStyle = 'rgba(30,26,34,.35)'; c.fillRect(0, 0, 640, 360);
-    // 탁자와 두 사람 (옆모습)
+  // 듣기는 옆에서 본 상담 자리, 설계부터 서명까지는 위에서 내려다본 책상 한 화면이다.
+  // 상담 노트, 태블릿, 설명서, 증권 같은 그림은 아직 없어서 회색 상자에 이름만 적어 둔다.
+  var NOTE_BOX = { x: 14, y: 64, w: 156, h: 214 };
+  var TAB = { x: 184, y: 26, w: 286, h: 238 };
+  var FACE = { x: 486, y: 12, w: 140, h: 104 };
+  var COPIES = { x: 498, y: 236, w: 116, h: 56 };
+  var POLICY = { x: 24, y: 290, w: 140, h: 56 };
+  function ph(c, x, y, w, h, label, fill) {
+    View.box(c, x, y, w, h, fill || '#c9c6c0', '#55505a', 2);
+    if (label) View.text(c, label, x + 8, y + 12, 10, '#55505a', 'left');
+  }
+  function wrapLines(c, text, maxW, size) {
+    c.font = size + "px 'NeoDunggeunmo', monospace";
+    var out = [], cur = '';
+    String(text).split(' ').forEach(function (word) {
+      var t = cur ? cur + ' ' + word : word;
+      if (c.measureText(t).width <= maxW || !cur) cur = t; else { out.push(cur); cur = word; }
+    });
+    if (cur) out.push(cur);
+    return out;
+  }
+  function wrap(c, text, x, y, maxW, size, col, lh, align) {
+    var ls = wrapLines(c, text, maxW, size);
+    ls.forEach(function (l, i) { View.text(c, l, x, y + i * (lh || size + 5), size, col, align || 'left'); });
+    return ls.length * (lh || size + 5);
+  }
+  function talkOf(id) { return Story.TALK[id] || {}; }
+  function factText(id, f) { return talkOf(id)[f] || ''; }
+  // 고객님이 지금 하는 말 (말풍선)
+  function setBubble(k, text) { k.bubble = text; k.bubbleAt = G.t; }
+  function clientSays(k, text) { setBubble(k, text); return say([client(k.id, text)]); }
+
+  // 듣기 화면의 말 줄 (위치는 그릴 때마다 다시 잰다)
+  function listenRows(c, k) {
+    var y = 18, rows = [];
+    k.p.facts.forEach(function (f, i) {
+      if (i >= k.shown) return;
+      var ls = wrapLines(c, factText(k.id, f), 270, 11), h = 12 + ls.length * 15;
+      rows.push({ f: f, x: 340, y: y, w: 290, h: h, lines: ls });
+      y += h + 6;
+    });
+    return rows;
+  }
+  function drawListen(c, k, t) {
+    var s = S();
     View.seated(c, G, 196, 262, 'suit', k.heroFrame || 0, 2.5, null, false);
-    if (s.fur > 0 && k.p.fur) Home.furOn(c, 198, 262 - 84, s.fur, 1); // 무릎 위 정장 소매와 가슴께
+    if (s.fur > 0 && k.p.fur) Home.furOn(c, 198, 262 - 84, s.fur, 1);
     if (k.p.smell) Home.stinkLines(c, 204, 150, k.p.smell + 1, t);
     if (k.peer) View.person(c, G, 110, 268, 'peer', 1, t, 'stand', 2.2);
     var cl = Story.CLIENT[k.id];
     if (!k.gone) View.seated(c, G, 446 + (k.shake ? Math.sin(t * 40) * 3 : 0), 262, cl.look, 0, 2.5, cl.tint, false);
-    View.box(c, 250, 206, 140, 10, '#b98a5f', '#5b4636', 2); View.r(c, 262, 216, 8, 46, '#5b4636'); View.r(c, 370, 216, 8, 46, '#5b4636');
-    // 앞 책상 (안내서 자리)
-    View.box(c, 40, 270, 560, 96, '#c99b6c', '#5b4636', 3); View.r(c, 46, 274, 548, 5, '#ddb487');
-    if (!k.gone && !k.st.done) {
-      // 말풍선: 고객님이 지금 하는 말 (무엇을 원하는지 그림으로 보여 주지 않는다)
-      var line = Story.stepLine(k.id, k.p.steps[k.st.step], k.p.need, k.st.clue === k.st.step);
-      var bb = speechBubble(c, line.bubble, k.blink, k.st.clue === k.st.step);
-      if (k.p.timer) { // 남은 시간
-        var left = Math.max(0, k.left / k.p.timer), tx = bb.x + bb.w - 4, ty = bb.y + 4;
-        View.disc(c, tx, ty, 11, '#2f2a33'); View.disc(c, tx, ty, 9, '#fffaf0');
-        c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(tx, ty); c.arc(tx, ty, 8, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
-      }
-    }
+    View.box(c, 250, 206, 140, 10, '#b98a5f', '#5b4636', 2);
+    View.box(c, 40, 270, 560, 96, '#c99b6c', '#5b4636', 3);
+    // 상담 노트 (왼쪽 위)
+    ph(c, 14, 14, 210, 120, '상담 노트', '#e9e4d8');
+    k.st.notes.forEach(function (f, i) { wrap(c, '· ' + factText(k.id, f), 22, 36 + i * 32, 196, 10, '#2f2a33', 13); });
+    listenRows(c, k).forEach(function (r) {
+      var on = k.st.notes.indexOf(r.f) >= 0;
+      View.box(c, r.x, r.y, r.w, r.h, on ? '#ffe3b0' : '#fffaf0', '#2f2a33', 2);
+      r.lines.forEach(function (l, i) { View.text(c, l, r.x + 10, r.y + 12 + i * 15, 11, '#2f2a33', 'left'); });
+      if (on) View.box(c, r.x - 8, r.y + 4, 6, r.h - 8, '#ff8a3d', '#5b4636', 1);
+    });
+    if (k.shown >= k.p.facts.length) { View.box(c, 540, 226, 84, 34, '#ffb05a', '#2f2a33', 2); View.text(c, '다 들었어요', 582, 243, 11, '#2f2a33'); }
     if (!k.gone) PixelIcons.mood(c, 514, 140, k.st.mood, 11);
-    // 안내서 묶음
-    var kinds = trayKinds(k.p);
-    kinds.forEach(function (kind, i) {
-      if (k.held && k.held.kind === kind) return;
-      var pos = trayPos(kinds, i), top = k.p.prepared && kind === k.p.need;
-      View.brochure(c, kind, pos.x, pos.y - (top ? 10 : 0), .95, { blur: k.p.blur || k.p.blink, t: t, top: top });
-    });
-    // 처음 하는 상담: 놓을 곳(고객님 쪽)을 점선으로, 지금 낼 안내서를 통통 튀게
-    if (k.guide && k.ready && !k.st.done && !k.gone) {
-      var a = .55 + .45 * Math.sin(t * 5);
-      c.save(); c.strokeStyle = 'rgba(255,138,61,' + a + ')'; c.lineWidth = 3; c.setLineDash([8, 5]); c.lineDashOffset = -t * 24;
-      c.strokeRect(DROP.x + 60, DROP.y + 100, 150, 160); c.restore();
-      if (k.held) View.arrow(c, 446, DROP.y + 96, t, 'down');
-      var wk = Life.wants(k.p, k.st), ki = kinds.indexOf(wk);
-      if (ki >= 0 && !(k.held && k.held.kind === wk)) { var gp = trayPos(kinds, ki); View.outline(c, { x: gp.x - 24, y: gp.y - 32 - Math.abs(Math.sin(t * 4)) * 6, w: 48, h: 62 }, t); }
-    }
-    if (k.held) View.brochure(c, k.held.kind, k.held.x, k.held.y, 1.05, { lift: true, blur: k.p.blur || k.p.blink, t: t });
-    // 체력 0: 하품하느라 눈앞이 깜빡인다
-    if (k.p.blink) { var ph = (t % 3.6); if (ph < .35) { c.fillStyle = 'rgba(10,8,14,' + (ph < .17 ? ph / .17 : (.35 - ph) / .18) * .92 + ')'; c.fillRect(0, 0, 640, 360); } }
   }
-  // 고객님 머리 위 말풍선. 짧은 말을 한두 줄로 감싸고, 아래쪽 끝(꼬리)은 고객님 쪽에 둔다.
-  function speechBubble(c, text, blink, clue) {
-    c.font = "13px 'NeoDunggeunmo', monospace";
-    var maxW = 150, lines = [], cur = '';
-    String(text).split(' ').forEach(function (word) {
-      var tryLine = cur ? cur + ' ' + word : word;
-      if (c.measureText(tryLine).width <= maxW || !cur) cur = tryLine; else { lines.push(cur); cur = word; }
+  function hotListen(k) {
+    var cvs = document.createElement('canvas').getContext('2d');
+    var hot = listenRows(cvs, k).map(function (r) {
+      return { id: 'f-' + r.f, x: r.x, y: r.y, w: r.w, h: r.h, glow: true, tap: function () { var res = Life.note(k.p, k.st, r.f); UI.sfx(res.ok ? 'page' : 'bad'); return null; } };
     });
-    if (cur) lines.push(cur);
-    var w = 0; lines.forEach(function (l) { w = Math.max(w, c.measureText(l).width); });
-    w = Math.max(92, Math.min(190, w + 30)); var h = Math.max(56, 26 + lines.length * 19);
-    var bx = 450 - w / 2, by = 114 - h;
-    View.bubble(c, bx, by, w, h, 448);
-    if (clue) View.box(c, bx + 6, by + 6, 6, 6, '#ffb05a', '#5b4636', 1); // 다시 말해 준 말
-    lines.forEach(function (l, i) { View.text(c, l, 450, by + h / 2 + 4 + (i - (lines.length - 1) / 2) * 19, 13, blink ? 'rgba(47,42,51,.4)' : '#2f2a33'); });
-    return { x: bx, y: by, w: w, h: h };
+    if (k.shown >= k.p.facts.length) hot.push({ id: 'listened', x: 540, y: 226, w: 84, h: 34, pulse: true, tap: function () { k.next = true; return null; } });
+    return hot;
+  }
+
+  // 위에서 본 책상
+  function drawDesk(c, k, t) {
+    var s = S(), p = k.p, st = k.st;
+    c.fillStyle = '#a77d57'; c.fillRect(0, 0, 640, 360);
+    View.text(c, '상담 책상 (위에서 본 모습)', 320, 352, 9, 'rgba(47,42,51,.5)');
+    // 고객님 얼굴과 말풍선
+    ph(c, FACE.x, FACE.y, FACE.w, FACE.h, '', '#d7d3cc');
+    var cl = Story.CLIENT[k.id];
+    View.portrait(c, G, cl.look, FACE.x + 22 + (k.shake ? Math.sin(t * 40) * 3 : 0), FACE.y + 2, FACE.w - 44, FACE.h - 4, cl.tint);
+    PixelIcons.mood(c, FACE.x + FACE.w - 14, FACE.y + 14, st.mood, 8);
+    if (k.bubble) {
+      var ls = wrapLines(c, k.bubble, 136, 10), bh = 12 + ls.length * 13;
+      View.box(c, 478, 122, 156, bh, '#fffaf0', '#2f2a33', 2);
+      ls.forEach(function (l, i) { View.text(c, l, 486, 132 + i * 13, 10, '#2f2a33', 'left'); });
+    }
+    if (p.timer && !st.done) {
+      var left = Math.max(0, k.left / p.timer), tx = FACE.x + 12, ty = FACE.y + 14;
+      View.disc(c, tx, ty, 10, '#2f2a33'); View.disc(c, tx, ty, 8, '#fffaf0');
+      c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(tx, ty); c.arc(tx, ty, 7, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
+    }
+    // 상담 노트
+    ph(c, NOTE_BOX.x, NOTE_BOX.y, NOTE_BOX.w, NOTE_BOX.h, '상담 노트', '#e9e4d8');
+    var ny = NOTE_BOX.y + 28;
+    st.notes.forEach(function (f) { ny += wrap(c, '· ' + factText(k.id, f), NOTE_BOX.x + 8, ny, NOTE_BOX.w - 16, 10, '#2f2a33', 13) + 6; });
+    if (!st.notes.length) View.text(c, '(적은 게 없다)', NOTE_BOX.x + NOTE_BOX.w / 2, NOTE_BOX.y + 60, 10, '#8a8490');
+    // 고객이 들고 온 증권
+    if (p.existing) {
+      ph(c, POLICY.x, POLICY.y, POLICY.w, POLICY.h, '기존 보험증권', '#e6e0f0');
+      View.text(c, p.existing.map(function (x) { return Story.coverName(p.product, x); }).join(', ') + '만 보장', POLICY.x + 8, POLICY.y + 36, 10, '#2f2a33', 'left');
+    }
+    // 태블릿
+    ph(c, TAB.x, TAB.y, TAB.w, TAB.h, st.stage === 'design' ? '가입설계서' : st.stage === 'apply' ? '청약서' : '상품설명서', '#e8edf0');
+    if (st.stage === 'design') drawDesign(c, k, t);
+    else if (st.stage === 'apply') drawApply(c, k, t);
+    else if (st.stage === 'explain') drawExplain(c, k, t);
+    if (k.held) View.brochure(c, k.held.kind, k.held.x, k.held.y, 1.05, { lift: true, t: t });
+    if (k.choices) k.choices.forEach(function (ch) {
+      View.box(c, ch.x, ch.y, ch.w, ch.h, ch.hot ? '#ffb05a' : '#fffaf0', '#2f2a33', 2);
+      View.text(c, ch.text, ch.x + ch.w / 2, ch.y + ch.h / 2, 11, '#2f2a33');
+    });
+    if (p.blink) { var phs = (t % 3.6); if (phs < .35) { c.fillStyle = 'rgba(10,8,14,' + (phs < .17 ? phs / .17 : (.35 - phs) / .18) * .92 + ')'; c.fillRect(0, 0, 640, 360); } }
+  }
+  function trayPos(kinds, i) { var n = kinds.length, gap = Math.min(64, 300 / n); return { x: 327 - (n - 1) * gap / 2 + i * gap, y: 308 }; }
+  function coverRows(k) {
+    return k.p.items.map(function (item, i) { return { item: item, x: TAB.x + 12, y: TAB.y + 28 + i * 34, w: TAB.w - 24, h: 28 }; });
+  }
+  var SHOW = { x: TAB.x + TAB.w - 92, y: TAB.y + TAB.h - 40, w: 82, h: 30 };
+  function drawDesign(c, k, t) {
+    var p = k.p, st = k.st;
+    p.kinds.forEach(function (kind, i) {
+      if (k.held && k.held.kind === kind) return;
+      var pos = trayPos(p.kinds, i), top = p.prepared && kind === p.product;
+      View.brochure(c, kind, pos.x, pos.y - (top ? 8 : 0), .9, { blur: p.blur || p.blink, t: t, top: top });
+    });
+    if (!st.product) { wrap(c, '안내서를 여기로 끌어 오세요', TAB.x + 30, TAB.y + 110, TAB.w - 60, 12, '#55505a'); return; }
+    View.text(c, Story.PRODUCT[st.product], TAB.x + TAB.w - 12, TAB.y + 12, 10, '#2f2a33', 'right');
+    var items = Life.PRODUCTS[st.product].items, base = Life.PRODUCTS[st.product].base;
+    coverRows(k).forEach(function (r) {
+      var on = !!st.covers[r.item];
+      View.box(c, r.x, r.y, r.w, r.h, '#fffaf0', '#8a8490', 1);
+      View.text(c, Story.coverName(st.product, r.item), r.x + 8, r.y + r.h / 2, 11, '#2f2a33', 'left');
+      View.text(c, '+' + Life.won(items[r.item]), r.x + r.w - 64, r.y + r.h / 2, 10, '#55505a', 'right');
+      // 켜고 끄는 스위치
+      View.box(c, r.x + r.w - 52, r.y + 6, 42, 16, on ? '#7fc98f' : '#cfcac2', '#2f2a33', 2);
+      View.box(c, r.x + r.w - 52 + (on ? 24 : 2), r.y + 8, 16, 12, '#fffaf0', '#2f2a33', 1);
+      if (r.item === base) View.text(c, '기본', r.x + r.w - 31, r.y - 3, 8, '#55505a');
+    });
+    var pr = Life.premium(p, st), over = pr > p.budget;
+    View.text(c, (Life.PRODUCTS[st.product].once ? '한 번 ' : '한 달 ') + Life.won(pr), TAB.x + 14, SHOW.y + 15, 14, over && k.seenBudget ? '#c0392b' : '#2f2a33', 'left');
+    View.box(c, SHOW.x, SHOW.y, SHOW.w, SHOW.h, '#ffb05a', '#2f2a33', 2); View.text(c, '보여 드리기', SHOW.x + SHOW.w / 2, SHOW.y + 15, 11, '#2f2a33');
+  }
+  function qRows(k) { return [0, 1, 2].map(function (i) { return { i: i, x: TAB.x + 12, y: TAB.y + 30 + i * 52, w: TAB.w - 24, h: 46 }; }); }
+  function drawApply(c, k, t) {
+    var qs = Story.QUESTIONS[k.p.product];
+    qRows(k).forEach(function (r) {
+      View.box(c, r.x, r.y, r.w, r.h, '#fffaf0', '#8a8490', 1);
+      wrap(c, qs[r.i], r.x + 8, r.y + 12, r.w - 80, 10, '#2f2a33', 13);
+      var a = k.answers[r.i];
+      View.box(c, r.x + r.w - 64, r.y + 14, 26, 18, a === 'yes' ? '#ffb05a' : '#fffaf0', '#2f2a33', 1); View.text(c, '예', r.x + r.w - 51, r.y + 23, 10, '#2f2a33');
+      View.box(c, r.x + r.w - 34, r.y + 14, 26, 18, a === 'no' ? '#9fd8c9' : '#fffaf0', '#2f2a33', 1); View.text(c, '아니오', r.x + r.w - 21, r.y + 23, 8, '#2f2a33');
+    });
+    var sy = TAB.y + TAB.h - 34;
+    View.box(c, TAB.x + 12, sy, TAB.w - 24, 26, '#f3f0e6', '#8a8490', 1); View.text(c, '서명', TAB.x + 22, sy + 13, 10, '#8a8490', 'left');
+  }
+  function pointRows(k) { return [0, 1, 2].map(function (i) { return { i: i, x: TAB.x + 12, y: TAB.y + 30 + i * 50, w: TAB.w - 24, h: 44 }; }); }
+  var SIGN_BOX = { x: TAB.x + 12, y: TAB.y + TAB.h - 34, w: TAB.w - 24, h: 26 };
+  function drawExplain(c, k, t) {
+    var pts = Story.EXPLAIN[k.p.product], st = k.st;
+    pointRows(k).forEach(function (r) {
+      var done = st.explained.indexOf(r.i) >= 0;
+      View.box(c, r.x, r.y, r.w, r.h, done ? '#d8efd9' : '#fffaf0', '#2f2a33', done ? 1 : 3);
+      wrap(c, pts[r.i], r.x + 8, r.y + 12, r.w - 20, 10, '#2f2a33', 13);
+    });
+    ph(c, COPIES.x, COPIES.y, COPIES.w, COPIES.h, '약관과 부본', st.copies ? '#d8efd9' : '#e6e0f0');
+    View.box(c, SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h, '#f3f0e6', '#2f2a33', 2);
+    View.text(c, st.signed ? '서명됨' : '여기에 서명', SIGN_BOX.x + SIGN_BOX.w / 2, SIGN_BOX.y + 13, 11, st.signed ? '#2e7d4f' : '#2f2a33');
+  }
+  function hotDesk(k) {
+    var p = k.p, st = k.st, hot = [];
+    if (k.choices) return k.choices.map(function (ch, i) {
+      return { id: 'ch-' + i, x: ch.x, y: ch.y, w: ch.w, h: ch.h, pulse: true, tap: function () { k.choices = null; k.pick = i; return null; } };
+    });
+    if (k.wait) return [];
+    if (st.stage === 'design') {
+      p.kinds.forEach(function (kind, i) {
+        var pos = trayPos(p.kinds, i);
+        hot.push({ id: 'b-' + kind, x: pos.x - 22, y: pos.y - 28, w: 44, h: 56, glow: true,
+          tap: function () { UI.sfx('tap'); k.drop = kind; return null; },
+          drag: {
+            start: function (d) { k.held = { kind: kind, x: d.x, y: d.y }; UI.sfx('page'); },
+            move: function (d) { if (k.held) { k.held.x = d.x; k.held.y = d.y; } },
+            end: function (d) { var h = k.held; k.held = null; if (h && inside(d, TAB)) k.drop = kind; return null; },
+            cancel: function () { k.held = null; }
+          } });
+      });
+      if (st.product) {
+        coverRows(k).forEach(function (r) {
+          if (r.item === Life.PRODUCTS[st.product].base) return;
+          hot.push({ id: 'cv-' + r.item, x: r.x, y: r.y, w: r.w, h: r.h, glow: true, tap: function () { Life.toggle(p, st, r.item); UI.sfx('tap'); return null; } });
+        });
+        hot.push({ id: 'show', x: SHOW.x, y: SHOW.y, w: SHOW.w, h: SHOW.h, pulse: true, tap: function () { k.submit = true; return null; } });
+      }
+    } else if (st.stage === 'explain') {
+      pointRows(k).forEach(function (r) {
+        if (st.explained.indexOf(r.i) >= 0) return;
+        hot.push({ id: 'pt-' + r.i, x: r.x, y: r.y, w: r.w, h: r.h, pulse: true, tap: function () { k.point = r.i; return null; } });
+      });
+      if (!st.copies) hot.push({ id: 'copies', x: COPIES.x, y: COPIES.y, w: COPIES.w, h: COPIES.h, pulse: true, tap: function () { Life.hand(p, st); UI.sfx('page'); setBubble(k, Story.SIGN.copies); return null; } });
+      hot.push({ id: 'sign', x: SIGN_BOX.x, y: SIGN_BOX.y, w: SIGN_BOX.w, h: SIGN_BOX.h, glow: true, pulse: st.explained.length >= 3 && st.copies, tap: function () { k.signTap = true; return null; } });
+    }
+    return hot;
+  }
+  function drawConsult(c) {
+    var k = Wk.consult, s = S(), t = G.t;
+    if (k.view === 'listen') {
+      View.bg(c, G, 'office'); officeClock(c, s.minute);
+      if (k.p.evening || Wk.dark) View.nightTint(c, .45);
+      c.fillStyle = 'rgba(30,26,34,.35)'; c.fillRect(0, 0, 640, 360);
+      drawListen(c, k, t);
+    } else drawDesk(c, k, t);
   }
   function hotConsult() {
     var k = Wk.consult; if (!k || k.st.done || k.gone || !k.ready) return [];
-    var kinds = trayKinds(k.p);
-    return kinds.map(function (kind, i) {
-      var pos = trayPos(kinds, i);
-      return {
-        id: 'b-' + kind, x: pos.x - 24, y: pos.y - 32, w: 48, h: 62, glow: true,
-        // 누르기만 하면 안 된다: 끌어다 주는 손을 다시 보여 준다
-        tap: function () { cardHand(); UI.sfx('tap'); return null; },
-        drag: {
-          start: function (d) { k.held = { kind: kind, x: d.x, y: d.y }; UI.sfx('page'); if (G.hand && G.hand.tutorial) { k.hand = G.hand; G.hand = null; } },
-          move: function (d) { if (k.held) { k.held.x = d.x; k.held.y = d.y; } },
-          end: function (d) {
-            var h = k.held; k.held = null;
-            if (!h || !inside(d, DROP)) { if (k.guide) cardHand(); return null; }
-            k.drop = kind;
-            return null;
-          },
-          cancel: function () { k.held = null; if (k.guide) cardHand(); }
-        }
-      };
-    });
+    return k.view === 'listen' ? hotListen(k) : hotDesk(k);
   }
   function tickConsult(dt) {
     var k = Wk.consult; if (!k || !k.ready || k.st.done) return;
-    if (UI.busy() || G.drag) return;
+    if (UI.busy() || G.drag || k.wait || k.choices) return;
     if (k.p.timer) { k.left -= dt; if (k.left <= 0) { k.left = k.p.timer; k.timeout = true; } }
     if (k.p.blink && (G.t % 3.6) < .02) UI.sfx('yawn');
   }
-  // 지금 낼 안내서에서 고객님 쪽으로 끌어 주는 손
-  function cardHand() {
-    var k = Wk.consult; if (!k || k.st.done) return;
-    var kinds = trayKinds(k.p), i = kinds.indexOf(Life.wants(k.p, k.st)); if (i < 0) return;
-    var pos = trayPos(kinds, i);
-    var kind = kinds[i];
-    G.hand = { x: pos.x, y: pos.y - 6, tx: 450, ty: 160, period: 2.2, t0: G.t, tutorial: true,
-      carry: function (c, x, y) { c.save(); c.globalAlpha = .8; View.brochure(c, kind, x, y + 6, .95, { t: G.t }); c.restore(); } };
-    if (!k.guide) setTimeout(function () { if (G.hand && G.hand.tutorial && Wk.consult === k && !k.guide) G.hand = null; }, 4400);
+  // 두세 개 중 하나를 고르는 단추 (책상 아래쪽)
+  function choose(k, list) {
+    var w = Math.min(190, 560 / list.length - 10), x0 = 320 - (list.length * (w + 10) - 10) / 2;
+    k.pick = null;
+    k.choices = list.map(function (text, i) { return { text: text, x: x0 + i * (w + 10), y: 270, w: w, h: 30 }; });
+    return Engine.until(function () { return k.pick !== null; }).then(function () { var i = k.pick; k.pick = null; return i; });
   }
+  function bad(k) { UI.sfx('bad'); k.shake = true; setTimeout(function () { k.shake = false; }, 600); }
   function consult(id, opts) {
-    opts = opts || {};
     var s = S(), p = Life.plan(s, id), st = Life.consult(p), k;
-    k = Wk.consult = { id: id, p: p, st: st, left: p.timer, ready: false, gone: !!p.leaves, peer: !!p.tutorial, heroFrame: 0 };
+    k = Wk.consult = { id: id, p: p, st: st, left: p.timer, ready: false, gone: !!p.leaves, peer: !!p.tutorial, heroFrame: 0, view: 'listen', shown: 0, answers: [] };
     Engine.setScene({ draw: drawConsult, hot: hotConsult, tick: tickConsult, place: 'consult' });
-    var CAUSE_ICON = { late: 'clock', sneeze: 'sneeze', catLover: 'heart', fur: 'fur', photos: 'camera', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
+    var CAUSE_ICON = { sneeze: 'sneeze', catLover: 'heart', fur: 'fur', photos: 'camera', prepared: 'mail', yawn: 'zzz', smell: 'stink', stink: 'stink' };
+    function wait(fn) { return Engine.until(function () { return fn() || k.timeout || st.done; }).then(function () { if (k.timeout && !st.done) { k.timeout = false; Life.timeout(p, st); bad(k); return clientSays(k, Story.CONSULT.slow).then(function () { return st.done ? null : wait(fn); }); } return null; }); }
     return Engine.fade(0, .35).then(function () {
       if (p.leaves) return say([me(Story.CAUSE[p.reasons[0].key] || Story.CAUSE.lateLeft)]).then(function () { return Life.finish(s, p, st); });
-      return say([client(id, Story.CONSULT.greet), client(id, Story.stepLine(id, 'need', p.need).say)]).then(function () {
-        // 시작할 때 생기는 일과 그 이유를 한 줄씩
+      return say([client(id, Story.CONSULT.greet)]).then(function () {
         return p.reasons.reduce(function (pr, r) {
           return pr.then(function () {
             var ic = CAUSE_ICON[r.key];
             if (r.key === 'sneeze') UI.sfx('sneeze');
             if (r.key === 'yawn') { UI.sfx('yawn'); Engine.puff({ x: 210, y: 150, icon: ic, px: 2, life: 1.6 }); }
-            else if (r.key === 'smell' || r.key === 'stink') { // 고객님이 몸을 뒤로 빼며 코를 찡그린다
-              UI.sfx('bad'); k.shake = true; setTimeout(function () { k.shake = false; }, 700);
-              Engine.puff({ x: 300, y: 170, icon: 'stink', px: 2, life: 1.6, rise: 30 }); Engine.puff({ x: 456, y: 140, icon: 'bang', px: 2, life: 1.4 });
-            }
+            else if (r.key === 'smell' || r.key === 'stink') { bad(k); Engine.puff({ x: 300, y: 170, icon: 'stink', px: 2, life: 1.6, rise: 30 }); }
             else Engine.puff({ x: 456, y: 150, icon: ic, px: 2, life: 1.6 });
             return say([me(Story.CAUSE[r.key === 'sneeze' && !s.seen.furLost ? 'sneezeFirst' : r.key])]);
           });
         }, Promise.resolve());
-      }).then(function () {
-        if (!p.tutorial) return null;
-        return say(Story.TUTORIAL).then(function () { k.guide = true; k.ready = true; cardHand(); });
-      }).then(function () { k.ready = true; k.left = p.timer; return loop(); });
+      }).then(function () { return p.tutorial && !s.seen.tutListen ? (s.seen.tutListen = true, say(Story.TUTORIAL.listen)) : null; })
+        .then(listen).then(design).then(applyStep).then(explainStep).then(done);
     });
-    function loop() {
-      return Engine.until(function () { return k.drop || k.timeout; }).then(function () {
-        if (k.timeout) {
-          k.timeout = false;
-          Life.timeout(p, st);
-          UI.sfx('bad');
-          return say([client(id, Story.CONSULT.slow)]).then(next);
-        }
-        var kind = k.drop; k.drop = null;
-        var r = Life.answer(p, st, kind);
-        k.left = p.timer;
-        if (!r.ok && !r.done) { // 처음 틀리면: 고개를 갸웃하고, 조금 더 분명하게 다시 말해 준다
-          UI.sfx('bad'); k.shake = true;
-          Engine.puff({ x: 470, y: 130, icon: 'bang', px: 2, life: 1.2 });
-          return Engine.sleep(.35).then(function () {
-            k.shake = false;
-            var step = p.steps[st.step];
-            return say([client(id, Story.WRONG[(parseInt(id.slice(1), 10) || 0) % Story.WRONG.length]), client(id, Story.stepLine(id, step, p.need, true).say)]);
-          }).then(function () { if (k.guide) cardHand(); return next(); });
-        }
-        if (!r.ok) {
-          UI.sfx('bad'); k.shake = true;
-          return Engine.sleep(.35).then(function () { k.shake = false; return say([client(id, Story.CONSULT.wrongAgain), client(id, Story.CONSULT.lost)]); })
-            .then(function () { k.gone = true; return done(); });
-        }
-        UI.sfx('good'); k.heroFrame = 1;
-        setTimeout(function () { k.heroFrame = 0; }, 500);
-        if (!r.done) { if (k.guide) cardHand(); return next(); }
-        if (r.signed) return say([client(id, Story.CONSULT.signed)]).then(done);
-        return say([client(id, Story.CONSULT.lost)]).then(function () { k.gone = true; return done(); });
+    // 1. 듣기: 고객님이 한 줄씩 말하고, 적어 둘 말을 누른다
+    function listen() {
+      k.ready = true; k.left = p.timer;
+      return p.facts.reduce(function (pr) { return pr.then(function () { k.shown++; UI.sfx('page'); return Engine.sleep(.8); }); }, Promise.resolve())
+        .then(function () { return wait(function () { return k.next; }); })
+        .then(function () { k.next = false; Life.listened(p, st); });
+    }
+    // 2. 설계하기
+    function design() {
+      if (st.done) return null;
+      k.view = 'desk'; k.left = p.timer;
+      setBubble(k, p.existing ? Story.DESIGN.switchAsk : Story.DESIGN.pickFirst);
+      var intro = p.tutorial && !s.seen.tutDesign ? (s.seen.tutDesign = true, say(Story.TUTORIAL.design)) : Promise.resolve();
+      if (p.existing) intro = intro.then(function () { return clientSays(k, Story.DESIGN.switchAsk); });
+      return intro.then(loop);
+      function loop() {
+        if (st.done) return null;
+        return wait(function () { return k.drop || k.submit; }).then(function () {
+          if (st.done) return null;
+          if (k.drop) {
+            var kind = k.drop; k.drop = null;
+            var r = Life.pickProduct(p, st, kind);
+            if (r.ok) { UI.sfx('good'); k.left = p.timer; return loop(); }
+            bad(k);
+            return clientSays(k, Story.DESIGN.wrongProduct[Math.min(st.wrong - 1, 1)]).then(loop);
+          }
+          k.submit = false;
+          var res = Life.submitDesign(p, st);
+          if (res.over) {
+            k.seenBudget = true;
+            return clientSays(k, Story.DESIGN.over(res.premium)).then(function () { return choose(k, ['보장을 줄여 보기', '이대로 권하기']); }).then(function (i) {
+              if (i === 0) return loop();
+              var f = Life.submitDesign(p, st, true);
+              if (f.overRefused) { bad(k); return clientSays(k, Story.DESIGN.overOnce(Life.premium(p, st))).then(loop); }
+              return clientSays(k, Story.DESIGN.overPush).then(afterDesign);
+            });
+          }
+          if (res.missing) { bad(k); return clientSays(k, Story.DESIGN.missing(p.product, res.missing)).then(loop); }
+          if (!res.ok) return st.done ? null : loop();
+          UI.sfx('good');
+          return clientSays(k, p.existing ? (res.switched ? Story.DESIGN.switched : Story.DESIGN.kept) : Story.DESIGN.ok).then(afterDesign);
+        });
+      }
+      function afterDesign() { return null; }
+    }
+    // 3. 청약서 쓰기: 고객님이 한 줄씩 답한다
+    function applyStep() {
+      if (st.done) return null;
+      var yes = talkOf(id).yes, line = yes ? yes.line : -1;
+      setBubble(k, Story.APPLY.intro);
+      var pr = p.tutorial && !s.seen.tutApply ? (s.seen.tutApply = true, say(Story.TUTORIAL.apply)) : Promise.resolve();
+      k.wait = true;
+      return pr.then(function () {
+        return [0, 1, 2].reduce(function (q, i) {
+          return q.then(function () {
+            if (i === line) { k.answers[i] = 'yes'; return clientSays(k, yes.say); }
+            k.answers[i] = 'no'; setBubble(k, Story.APPLY.no[i]); UI.sfx('tap'); return Engine.sleep(.6);
+          });
+        }, Promise.resolve());
+      }).then(function () {
+        k.wait = false;
+        if (line < 0) { Life.apply(p, st, true); return null; }
+        return choose(k, [Story.APPLY.tell, Story.APPLY.hide]).then(function (i) {
+          var honest = i === 0, r = Life.apply(p, st, honest);
+          if (!honest) { k.answers[line] = 'no'; return clientSays(k, Story.APPLY.clientHid); }
+          if (r.outcome === 'declined') return say([me(Story.APPLY.toldRefuse)]).then(function () { return clientSays(k, Story.APPLY.clientThanks); });
+          UI.sfx('good');
+          return say([me(Story.APPLY.toldExclusion[p.product] || Story.APPLY.toldExclusion.dental)]);
+        });
       });
     }
-    function next() { return st.done ? done() : loop(); }
+    // 4. 설명하고 서명받기
+    function explainStep() {
+      if (st.done) return null;
+      setBubble(k, '');
+      var pr = p.tutorial && !s.seen.tutExplain ? (s.seen.tutExplain = true, say(Story.TUTORIAL.explain)) : Promise.resolve();
+      return pr.then(function () {
+        // 손에 익은 뒤에는 설명서를 한 번 짚으면 세 칸을 이어서 설명한다
+        return loop();
+      });
+      function loop() {
+        if (st.done) return null;
+        return wait(function () { return k.point !== undefined && k.point !== null || k.signTap; }).then(function () {
+          if (st.done) return null;
+          if (k.point !== undefined && k.point !== null) {
+            var i = k.point; k.point = null;
+            if (p.quick) { [0, 1, 2].forEach(function (n) { Life.explain(p, st, n); }); Life.hand(p, st); UI.sfx('page'); setBubble(k, '네, 알겠어요.'); return loop(); }
+            Life.explain(p, st, i); UI.sfx('page');
+            return say([me(Story.EXPLAIN[p.product][i])]).then(loop);
+          }
+          k.signTap = false;
+          if (Life.needsPersuade(p, st)) {
+            return clientSays(k, Story.SIGN.delay[id]).then(function () {
+              var hook = st.notes.indexOf('hook') >= 0;
+              return choose(k, hook ? ['상담 노트를 다시 보여 드리기', '다음에 뵙기'] : ['다음에 뵙기']).then(function (i) {
+                if (hook && i === 0) { Life.persuade(p, st); return say([me(Story.SIGN.persuade[id])]).then(function () { return clientSays(k, Story.SIGN.persuaded[id]); }).then(loop); }
+                st.notes = st.notes.filter(function (f) { return f !== 'hook'; }); Life.persuade(p, st);
+                return clientSays(k, Story.SIGN.later);
+              });
+            });
+          }
+          var rushed = st.explained.length < 3 || !st.copies;
+          var r = Life.sign(p, st);
+          if (r.signed) { UI.sfx('good'); return clientSays(k, rushed && p.mark === 'doubt' ? Story.SIGN.rushed : Story.SIGN.signed); }
+          bad(k); return clientSays(k, Story.SIGN.lost).then(function () { k.gone = true; });
+        });
+      }
+    }
     function done() {
-      G.hand = null; k.guide = false;
+      G.hand = null; k.choices = null;
       var res = Life.finish(s, p, st);
-      if (!res.signed) return say([me(Story.CAUSE.lost)]).then(function () { return res; });
+      if (!res.signed && res.why !== 'declined' && res.why !== 'later') return say([me(Story.CAUSE.lost)]).then(function () { return res; });
       return res;
     }
   }
@@ -370,7 +565,7 @@ var Work = (function () {
   var CONSULT_AT = [600, 840, 960];
   function workClock(m) { var s = S(); if (s && s.phase === 'work') s.minute = Math.max(s.minute, m); }
   function workDay() {
-    var s = S(), ids = Life.clientsOn(s.day), results = [];
+    var s = S(), ids = Life.clientsOn(s.day, s), results = [];
     return Engine.fade(1, .3).then(assembly).then(function () {
       return ids.reduce(function (pr, id, i) {
         return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
@@ -380,7 +575,7 @@ var Work = (function () {
           if (furLost || smellLost) return Engine.fade(1, .3).then(function () { return furLost ? seniorLesson(res.why === 'sneeze', i < ids.length - 1) : null; })
             .then(function () { return smellLost ? smellLesson(i < ids.length - 1) : null; }).then(function () { return Engine.fade(1, .3); });
           if (!res.signed) return Engine.fade(1, .3);
-          return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(res.pet ? 2 : 1); })
+          return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(1); })
             .then(function () { return res.goal ? goalParty() : null; });
         });
       }, Promise.resolve());

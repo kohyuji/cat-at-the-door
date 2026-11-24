@@ -331,10 +331,17 @@ var UI = (function () {
     var d = Life.DAYS[t.day], h = '';
     h += '<h3>' + esc(d.date + ' (' + d.wd + ')') + '</h3><div class="sub">' + esc(s.me) + ' · ' + esc(s.cat) + '</div>';
     var earned = t.earned.map(function (e) {
-      return e.key === 'allowance' ? line('활동비', wonSigned(e.amount), 'plus') : e.key === 'job' ? line('슈퍼 알바', wonSigned(e.amount), 'plus', '진열 정리 4시간') : line(Story.PRODUCT[e.need] + (e.pet ? ' + ' + Story.PRODUCT.pet : ''), wonSigned(e.amount), 'plus', clientName(e.id) + (e.bonus ? ' · 성과급 ×' + Life.BONUS : ''));
-    }).join('') + t.lost.map(function (l) { return line(clientName(l.id), '0원', 'minus', Story.LOST[l.why]); }).join('');
-    h += sec('coin', '번 돈', earned);
-    h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
+      if (e.key === 'job') return line('슈퍼 알바', wonSigned(e.amount), 'plus', '진열 정리 4시간');
+      if (e.key === 'cash') return line('현금서비스', wonSigned(e.amount), 'minus', '5/8에 이자와 함께 갚는다');
+      return '';
+    }).join('');
+    h += sec('coin', '들어온 돈', earned);
+    var pend = t.earned.filter(function (e) { return e.key === 'pending'; }).map(function (e) { return line(Story.PRODUCT[e.product], wonSigned(e.amount), 'plus', e.id === 'referral' ? '동기 소개' : clientName(e.id)); }).join('')
+      + t.cancels.map(function (x) { return line(clientName(x.id), wonSigned(-x.amount), 'minus', Story.CANCEL_SHORT[x.why]); }).join('')
+      + t.lost.map(function (l) { return line(clientName(l.id), '0원', 'minus', Story.LOST[l.why]); }).join('');
+    if (pend) pend += line('5/8에 들어올 수수료', Life.won(Life.pendingTotal(s)), '');
+    h += sec('sticker', '들어올 수수료', pend);
+    h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(sp.item === 'bill' ? Story.BILL[sp.bill].name : Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
     h += sec('heart', Life.josa(s.cat, 'of') + ' 마음', t.hearts.map(function (x) { return line(Story.HEART[x.key], sign(x.delta), x.delta > 0 ? 'plus' : 'minus'); }).join('') +
       '<div class="r-stickers">' + (function () { var o = ''; for (var i = 0; i < Life.MAX; i++) o += img(i < s.hearts ? 'heart' : 'heartEmpty', 1); return o; }()) + '</div>');
     var en = '', next = t.energyNext == null ? s.energy : t.energyNext; for (var k = 0; k < Life.MAX; k++) en += img('bolt', 1, k < next ? '' : 'off');
@@ -346,7 +353,7 @@ var UI = (function () {
     h += sec('bolt', '내일 아침 체력', slept + '<div class="r-stickers">' + en + '</div>');
     var st = t.stickers.map(function () { return img('sticker', 1); }).join('');
     h += sec('sticker', '실적', '<div class="r-line"><span class="r-stickers">' + st + '</span><b>' + esc((t.total == null ? s.contracts : t.total) + ' / ' + Life.GOAL + '건') + '</b></div>');
-    h += '<div class="r-sec r-total"><span>' + img('coin', 1) + ' 지갑</span><span>' + esc(Life.won(s.wallet)) + '</span></div>';
+    h += '<div class="r-sec r-total"><span>' + img('coin', 1) + ' 통장 잔액</span><span>' + esc(Life.won(s.wallet)) + '</span></div>';
     return h;
   }
   function receipt(s, t) {

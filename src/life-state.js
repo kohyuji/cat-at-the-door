@@ -5,11 +5,13 @@
 var Life = (function () {
   'use strict';
 
-  var VERSION = 2;
-  var GOAL = 12;           // 수습 평가 목표 계약 건수 (평일마다 고객 두 분, 저녁 단체 하나)
-  var ALLOWANCE = 2000;    // 출근한 날 활동비
-  var BONUS = 1.5;         // 목표를 채운 뒤의 계약 수당 배율 (성과급)
+  var VERSION = 3;
+  var GOAL = 12;           // 위촉 첫 달 기준 실적(계약 건수). 채우면 정착지원금이 나온다.
   var MAX = 5;             // 체력, 하트 칸 수
+  var START_WALLET = 380000;
+  var SETTLE = 500000;     // 신입 정착지원금 (기준 실적을 채운 달에만)
+  var TAX = 0.033;         // 사업소득세 3.3% (설계사는 회사 직원이 아니라 위촉된 개인사업자)
+  var CASH = { amount: 300000, rate: 0.18 }; // 현금서비스(단기카드대출): 연 18%로 계산
 
   // 시계 (분)
   var T = {
@@ -22,10 +24,18 @@ var Life = (function () {
   };
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
+  // 상품과 보장 항목. 숫자는 그 항목을 넣었을 때 늘어나는 한 달 보험료(원).
+  // 여행자보험은 여행 한 번에 한 번 내는 보험료, 단체보험은 직원 일곱 명을 더한 값이다.
+  // rate: 보험료의 몇 배를 수수료로 받는지 (실제로는 회사와 상품마다 다르고, 첫해 수수료는 월 보험료의 12배를 넘지 못한다)
   var PRODUCTS = {
-    dental: { pay: 4500 }, pet: { pay: 4000 }, car: { pay: 4000 },
-    home: { pay: 3000 }, travel: { pay: 2500 }, group: { pay: 15000 }
+    dental: { rate: 2, items: { fill: 9000, implant: 14000, gum: 5000 } },
+    car: { rate: 2, items: { settle: 8000, fine: 3000, lawyer: 4000, injury: 9000 } },
+    travel: { rate: 0.4, once: true, items: { med: 18000, luggage: 6000, delay: 4000 } },
+    home: { rate: 2, base: 'fire', items: { fire: 7000, liab: 2000, theft: 4000 } }, // 일상배상과 도난은 화재보험에 붙이는 특약이라 화재 보장이 기본
+    pet: { rate: 2, items: { surgery: 16000, clinic: 14000, bite: 2000 } },
+    group: { rate: 1, items: { injury: 42000, hospital: 28000, surgery: 21000 } }
   };
+  var UNLOCK = { dental: 1, home: 1, travel: 2, car: 3, pet: 4 }; // 이날부터 상담 책상에 안내서가 놓인다
 
   var SHOP = {
     dry: { price: 12000 }, sand: { price: 8000 }, wet: { price: 15000 }, toy: { price: 3500 },
@@ -35,10 +45,11 @@ var Life = (function () {
     robot: { price: 24000, once: true, from: 5 }, autoToy: { price: 16000, once: true, from: 5 }
   };
   var AUTO_TOY_NIGHTS = 5;  // 자동 장난감은 혼자 노는 밤 다섯 번이면 닳는다
-  var JOB = { pay: 5000, minutes: 240, energy: 3, lastStart: 900 }; // 주말 슈퍼 알바
+  var JOB = { pay: 41280, minutes: 240, energy: 3, lastStart: 900 }; // 주말 슈퍼 알바 (2026년 최저시급 10,320원 × 4시간)
   var DRY_MEALS = 8, WET_MEALS = 6, SAND_DAYS = 4, TOY_PLAYS = 4;
   var CLEAN_FROM = 2, DUST_FROM = 4; // 바닥 청소와 화장실은 4/14부터, 먼지 발자국은 4/16부터
 
+  // 위촉 첫 달: 4/12(일) 저녁부터 5/8(금)까지. 5/5 어린이날은 쉰다.
   var DAYS = [
     { date: '4/12', wd: '일', kind: 'eve' },
     { date: '4/13', wd: '월', kind: 'work', first: true },
@@ -50,39 +61,64 @@ var Life = (function () {
     { date: '4/19', wd: '일', kind: 'off' },
     { date: '4/20', wd: '월', kind: 'work', alarm: true },
     { date: '4/21', wd: '화', kind: 'work', hide: true },
-    { date: '4/22', wd: '수', kind: 'work', group: 'c6', overtime: true },
-    { date: '4/23', wd: '목', kind: 'work', eve: true },
-    { date: '4/24', wd: '금', kind: 'work', final: true }
+    { date: '4/22', wd: '수', kind: 'work' },
+    { date: '4/23', wd: '목', kind: 'work' },
+    { date: '4/24', wd: '금', kind: 'work' },
+    { date: '4/25', wd: '토', kind: 'off' },
+    { date: '4/26', wd: '일', kind: 'off' },
+    { date: '4/27', wd: '월', kind: 'work' },
+    { date: '4/28', wd: '화', kind: 'work' },
+    { date: '4/29', wd: '수', kind: 'work', group: 'c6', overtime: true },
+    { date: '4/30', wd: '목', kind: 'work' },
+    { date: '5/1', wd: '금', kind: 'work' },
+    { date: '5/2', wd: '토', kind: 'off' },
+    { date: '5/3', wd: '일', kind: 'off' },
+    { date: '5/4', wd: '월', kind: 'work' },
+    { date: '5/5', wd: '화', kind: 'off', holiday: '어린이날' },
+    { date: '5/6', wd: '수', kind: 'work' },
+    { date: '5/7', wd: '목', kind: 'work', eve: true },
+    { date: '5/8', wd: '금', kind: 'work', final: true }
+  ];
+  function week(d) { return d <= 7 ? 1 : d <= 14 ? 2 : d <= 21 ? 3 : 4; }
+
+  // 날짜가 정해진 요금. notice 날 저녁에 휴대폰으로 안내가 오고, due 날 저녁에 낸다.
+  var BILLS = [
+    { id: 'phone', notice: 1, due: 3, amount: 55000, auto: true, lateFee: 1100 },
+    { id: 'rent', notice: 12, due: 15, amount: 480000, defer: true, lateFee: 0 },
+    { id: 'loan', notice: 15, due: 18, amount: 120000, auto: true, lateFee: 300 }
   ];
 
-  // 고객 15명. need는 원하는 상품, mark는 고객 메모에 적힌 특징.
-  // 첫 고객(c1)은 털 알레르기가 있다: 첫날 아침 정장에 붙은 털 때문에 반드시 계약을 놓친다.
-  // 첫날은 두 명: 늦어서 첫 고객을 놓쳐도 오후 고객과 상담을 배운다.
-  // 평일마다 오전 10시와 오후 2시에 한 분씩. 늦어서 오전 고객을 놓쳐도 오후 고객은 만난다.
+  // 고객. 평일마다 한 분 (첫날만 두 분). 대사는 Story.TALK에 있다.
+  // needs: 꼭 넣어야 하는 보장, budget: 한 달에 낼 수 있는 보험료
+  // mark: sneeze(털 알레르기) cat(고양이를 키움) clock(시간이 없음) doubt(꼼꼼히 따짐)
+  // ask: disclose(알릴 사실이 있음) refuse(알리면 가입이 어려움) switch(이미 든 보험이 있음) delay(나중에 들겠다고 함)
   var CLIENTS = {
-    c1: { day: 1, need: 'dental', mark: 'sneeze' },
-    c16: { day: 1, need: 'home', mark: 'none' },
-    c2: { day: 2, need: 'travel', mark: 'none' },
-    c17: { day: 2, need: 'home', mark: 'none' },
-    c3: { day: 3, need: 'car', mark: 'none' },
-    c4: { day: 3, need: 'dental', mark: 'sneeze' },
-    c5: { day: 4, need: 'home', mark: 'none' },
-    c18: { day: 4, need: 'car', mark: 'sneeze' },
-    c6: { day: 10, need: 'group', mark: 'none', evening: true }, // 4/22 야근: 남아서 한 건 더
-    c7: { day: 5, need: 'home', mark: 'cat' },
-    c8: { day: 5, need: 'travel', mark: 'clock' },
-    c9: { day: 8, need: 'car', mark: 'none' },
-    c19: { day: 8, need: 'travel', mark: 'cat' },
-    c10: { day: 9, need: 'dental', mark: 'cat' }, // 4/21 고양이를 키우는 고객
-    c11: { day: 9, need: 'home', mark: 'none' },
-    c12: { day: 10, need: 'travel', mark: 'sneeze' },
-    c20: { day: 10, need: 'car', mark: 'clock' },
-    c13: { day: 11, need: 'dental', mark: 'cat' },
-    c14: { day: 11, need: 'car', mark: 'none' },
-    c15: { day: 12, need: 'home', mark: 'none' },
-    c21: { day: 12, need: 'dental', mark: 'none' }
+    c1: { day: 1, product: 'dental', budget: 30000, needs: ['implant'], mark: 'sneeze' },
+    c16: { day: 1, product: 'home', budget: 15000, needs: ['liab'], mark: 'none' },
+    c2: { day: 2, product: 'travel', budget: 40000, needs: ['med'], mark: 'none' },
+    c3: { day: 3, product: 'car', budget: 15000, needs: ['settle'], mark: 'none' },
+    c10: { day: 4, product: 'pet', budget: 35000, needs: ['surgery'], mark: 'cat' },
+    c7: { day: 5, product: 'home', budget: 15000, needs: ['fire', 'liab'], mark: 'cat' },
+    c8: { day: 8, product: 'travel', budget: 20000, needs: ['med'], mark: 'clock' },
+    c9: { day: 9, product: 'car', budget: 20000, needs: ['settle', 'fine'], mark: 'doubt' },
+    c4: { day: 10, product: 'dental', budget: 30000, needs: ['fill'], mark: 'sneeze', ask: 'disclose' },
+    c11: { day: 11, product: 'home', budget: 10000, needs: ['fire'], mark: 'none' },
+    c12: { day: 12, product: 'travel', budget: 30000, needs: ['med'], mark: 'doubt', history: true },
+    c13: { day: 15, product: 'dental', budget: 25000, needs: ['implant'], mark: 'none', ask: 'switch', existing: { covers: ['fill'] } },
+    c14: { day: 16, product: 'car', budget: 15000, needs: ['settle'], mark: 'none', ask: 'delay', persuade: 'start' },
+    c15: { day: 17, product: 'home', budget: 12000, needs: ['fire', 'liab'], mark: 'doubt' },
+    c6: { day: 17, product: 'group', budget: 80000, needs: ['injury', 'hospital'], mark: 'none', evening: true },
+    c17: { day: 18, product: 'pet', budget: 40000, needs: ['clinic'], mark: 'none', ask: 'disclose' },
+    c18: { day: 19, product: 'car', budget: 20000, needs: ['settle', 'injury'], mark: 'clock' },
+    c19: { day: 22, product: 'travel', budget: 50000, needs: ['med', 'luggage'], mark: 'cat' },
+    c20: { day: 24, product: 'dental', budget: 30000, needs: ['gum'], mark: 'none', ask: 'refuse' },
+    r1: { day: 25, product: 'home', budget: 15000, needs: ['liab'], mark: 'none', ref: 'c13' },
+    c21: { day: 25, product: 'dental', budget: 30000, needs: ['fill', 'implant'], mark: 'none', ask: 'delay', persuade: 'family' },
+    r2: { day: 26, product: 'car', budget: 20000, needs: ['settle', 'fine'], mark: 'none', ref: 'c20' }
   };
-  var CLIENT_IDS = Object.keys(CLIENTS); // 순서는 날짜 안에서만 의미가 있다 (오전, 오후)
+  var CLIENT_IDS = Object.keys(CLIENTS);
+  // 정직하게 대한 고객이 소개해 준 사람만 온다
+  function comes(s, id) { var c = CLIENTS[id]; return !c.ref || !!(s.refs && s.refs[id]); }
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function cleanName(n, fallback) {
@@ -90,8 +126,8 @@ var Life = (function () {
     return v || fallback;
   }
   function day(s) { return DAYS[s.day] || DAYS[DAYS.length - 1]; }
-  function clientsOn(d) {
-    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening; });
+  function clientsOn(d, s) {
+    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening && (!s || comes(s, id)); });
   }
   function nextWorkDay(d) {
     for (var i = d + 1; i < DAYS.length; i++) if (DAYS[i].kind === 'work') return i;
@@ -99,14 +135,14 @@ var Life = (function () {
   }
 
   function freshToday(s) {
-    return { day: s.day, earned: [], lost: [], spent: [], hearts: [], stickers: [], notes: [], energyNext: null, total: 0, sleep: null };
+    return { day: s.day, earned: [], lost: [], spent: [], hearts: [], stickers: [], notes: [], cancels: [], bills: [], energyNext: null, total: 0, sleep: null };
   }
 
   function create(me, cat) {
     var s = {
       v: VERSION, me: cleanName(me, '김신입'), cat: cleanName(cat, '보리'),
       day: 0, phase: 'evening', minute: T.homeArrive,
-      wallet: 20000, energy: 4, hearts: 3,
+      wallet: START_WALLET, energy: 4, hearts: 3,
       food: { dry: 4, wet: 0 },
       bowl: 'empty', bowlKind: 'dry', meal: 'pm', fed: { am: true, pm: false },
       water: false,
@@ -126,7 +162,10 @@ var Life = (function () {
       morningNote: null, evaluated: null, ended: null,
       seen: {},
       // 둘이라서: 내가 찍은 사진, 내 저녁, 4/17 회식, 4/20 알람, 4/23 마지막 준비
-      photos: [], myMeal: null, cooked: false, out: null, alarm: null, lid: null
+      photos: [], myMeal: null, cooked: false, out: null, alarm: null, lid: null,
+      // v7: 들어올 수수료, 요금, 현금서비스, 소개, 손에 익은 일
+      pending: [], bills: { phone: 'none', rent: 'none', loan: 'none' }, loan: null, refs: {}, paid: null,
+      habit: { care: 0, explain: 0 }
     };
     s.today = freshToday(s);
     return s;
@@ -221,6 +260,10 @@ var Life = (function () {
     s.meal = 'pm'; s.bowl = 'empty';
   }
 
+  // 손에 익은 돌봄: 그릇을 한 번 누르면 밥, 물, 화장실을 이어서 챙긴다 (걸리는 시간은 같다)
+  var HABIT_DAYS = 3;
+  function habitReady(s) { return !!s.habit && (s.habit.care || 0) >= HABIT_DAYS; }
+
   // ---------- 나 ----------
   function dress(s) {
     if (s.wearing === 'suit') return { ok: false, why: 'already' };
@@ -285,7 +328,7 @@ var Life = (function () {
   }
 
   // ---------- 주말 알바 ----------
-  // 슈퍼 진열 정리 네 시간에 5,000원. 몸이 고되고, 그동안 고양이는 혼자 있다.
+  // 슈퍼 진열 정리 네 시간에 최저시급만큼. 몸이 고되고, 그동안 고양이는 혼자 있다.
   function jobBlock(s) {
     if (s.phase !== 'weekend') return 'notWeekend';
     if (s.jobbed) return 'done';
@@ -322,95 +365,217 @@ var Life = (function () {
     s.minute = s.left + T.commute;
     return { ok: true, late: s.late };
   }
-  function firstClient(s) { return clientsOn(s.day)[0]; }
-  // 상담 계획. 처음 보는 신입이라 기분은 1에서 시작하고, 계약서를 건넬 때 3 이상이어야 서명한다.
-  // 메일을 읽고 가면 +1이라 실수 하나쯤은 버틴다. 안 읽고 가면 털, 하품, 머뭇거림 하나에 놓친다.
-  // 맞게 건네면 +1, 너무 오래 걸리면 −1. 엉뚱한 것을 건네면 −1이고 고객이 조금 더 분명하게 말해 준다.
-  // 두 번 엉뚱한 것을 건네면 고객은 그 자리에서 생각해 보겠다고 한다.
+  function firstClient(s) { return clientsOn(s.day, s)[0]; }
+
+  // ---------- 상담 ----------
+  // 한 번의 상담은 실제 순서대로 네 단계다: 듣기 → 설계하기 → 청약서 쓰기 → 설명하고 서명받기.
+  // 기분(mood)은 2에서 시작하고, 서명할 때 2 이상이어야 서명한다.
+  // 털, 냄새, 하품은 기분을 깎고, 메일을 읽고 간 고객, 맞는 설계, 솔직한 청약서는 기분을 올린다.
+  var SIGN_MOOD = 2;
+  // 듣기에서 고객이 하는 말. life: 사는 이야기, worry: 걱정, budget: 한 달 예산, hook: 지금 들어야 할 이유(미루는 고객만)
+  function facts(c) { var f = ['life', 'worry', 'budget']; if (c.persuade) f.push('hook'); return f; }
+  // 청약서의 알릴 의무 질문 세 줄. 예라고 답할 줄(yes)은 고객마다 다르다.
+  function questions(c) {
+    var yes = c.ask === 'disclose' || c.ask === 'refuse' || c.history ? 1 : -1;
+    return { n: 3, yes: yes };
+  }
   function plan(s, id) {
-    var c = CLIENTS[id], mood = 1, reasons = [], fur = s.fur > 0;
+    var c = CLIENTS[id], mood = SIGN_MOOD, reasons = [], fur = s.fur > 0;
     var eff = s.energy;
     if (c.evening) eff = s.energy - 2; // 저녁 8시에는 하루 일한 만큼 지쳐 있다
     var busy = c.mark === 'clock', first = id === firstClient(s) && !c.evening;
+    var base = { id: id, product: c.product, budget: c.budget, needs: c.needs.slice(), mark: c.mark, ask: c.ask || null, evening: !!c.evening };
     // 늦으면 첫 고객은 기다리다 가 버린다
-    if (first && s.late > 0) return { id: id, need: c.need, mark: c.mark, leaves: true, mood: 0, reasons: [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }], steps: [], tutorial: false };
-    // 처음으로 직접 하는 상담은 선배가 옆에서 알려 주고, 시간 제한이 없다
-    var tutorial = !(s.seen && s.seen.consulted);
+    if (first && s.late > 0) { base.leaves = true; base.mood = 0; base.reasons = [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }]; return base; }
+    // 첫 주는 선배가 옆에 앉아 청약서와 서명을 함께 봐 준다
+    var tutorial = week(s.day) === 1 && !c.evening;
     if (s.smell) { mood -= s.smell; reasons.push({ key: s.smell > 1 ? 'stink' : 'smell', delta: -s.smell }); }
     if (fur) {
       if (c.mark === 'sneeze') { mood -= 2; reasons.push({ key: 'sneeze', delta: -2 }); }
       else if (c.mark === 'cat') { mood += 1; reasons.push({ key: 'catLover', delta: +1 }); }
       else { mood -= 1; reasons.push({ key: 'fur', delta: -1 }); }
     }
-    // 고양이를 키우는 고객: 내 휴대폰 속 사진을 보여 주면 이야기가 풀린다
     if (c.mark === 'cat' && (s.photos || []).length >= 2) { mood += 1; reasons.push({ key: 'photos', delta: +1 }); }
     if (s.prepared[id]) { mood += 1; reasons.push({ key: 'prepared', delta: +1 }); }
     if (eff <= 1) { mood -= 1; reasons.push({ key: 'yawn', delta: -1 }); }
-    var steps = ['need', 'price'];
-    if (fur && c.mark === 'cat') steps.push('pet');
-    steps.push('contract');
-    return {
-      id: id, need: c.need, mark: c.mark, mood: clamp(mood, 0, 4), reasons: reasons, steps: steps,
-      timer: tutorial ? 0 : busy ? 3.5 : 5,
-      blur: eff >= 1 && eff <= 2, blink: eff <= 0,
-      prepared: !!s.prepared[id], tutorial: tutorial, evening: !!c.evening, leaves: false, fur: fur, smell: s.smell || 0
-    };
+    base.mood = clamp(mood, 0, 4); base.reasons = reasons; base.leaves = false;
+    base.facts = facts(c); base.questions = questions(c);
+    base.existing = c.existing ? c.existing.covers.slice() : null;
+    base.items = Object.keys(PRODUCTS[c.product].items);
+    base.kinds = Object.keys(UNLOCK).filter(function (k) { return s.day >= UNLOCK[k]; }).concat(c.evening ? ['group'] : []);
+    base.timer = busy ? 12 : 0; // 시간이 없는 고객: 단계마다 12초가 지나면 기분이 한 칸 내려간다
+    base.tutorial = tutorial; base.prepared = !!s.prepared[id]; base.fur = fur; base.smell = s.smell || 0;
+    base.blur = eff >= 1 && eff <= 2; base.blink = eff <= 0;
+    base.quick = (s.habit.explain || 0) >= 3; // 설명을 세 번 끝까지 하면 손에 익어 한 번에 짚는다
+    return base;
   }
-  function consult(p) { return { step: 0, mood: p.mood, wrong: 0, slow: 0, done: !!p.leaves, signed: false, clue: -1 }; }
-  function wants(p, st) {
-    var step = p.steps[st.step];
-    return step === 'need' ? p.need : step;
+  function consult(p) {
+    return { stage: p.leaves ? 'done' : 'listen', mood: p.mood, notes: [], product: null, covers: {}, wrong: 0, slow: 0,
+      over: false, switched: false, hidden: false, honest: null, explained: [], copies: false, skipped: false,
+      persuaded: false, signed: false, outcome: p.leaves ? 'left' : null, done: !!p.leaves };
   }
-  function answer(p, st, item) {
-    if (st.done) return { ok: false, done: true };
-    var want = wants(p, st);
-    if (item !== want) {
-      st.wrong++;
-      if (st.wrong >= 2) { st.mood = 0; st.done = true; st.signed = false; return { ok: false, done: true, signed: false, mood: 0, want: want }; }
-      st.mood = clamp(st.mood - 1, 0, 4); st.clue = st.step;
-      return { ok: false, done: false, clue: true, mood: st.mood, want: want };
+  function lose(st, outcome) { st.done = true; st.signed = false; st.stage = 'done'; st.outcome = outcome; return { ok: false, done: true, outcome: outcome }; }
+  // 1. 듣기: 고객의 말 중 적어 둘 것을 누른다 (세 줄까지)
+  function note(p, st, fact) {
+    if (st.stage !== 'listen' || p.facts.indexOf(fact) < 0) return { ok: false };
+    var i = st.notes.indexOf(fact);
+    if (i >= 0) { st.notes.splice(i, 1); return { ok: true, noted: false }; }
+    if (st.notes.length >= 3) return { ok: false, full: true };
+    st.notes.push(fact);
+    return { ok: true, noted: true };
+  }
+  function listened(p, st) { if (st.stage === 'listen') st.stage = 'design'; return st.stage; }
+  // 2. 설계하기: 안내서를 고르고, 보장을 켜고 끄면 보험료가 바로 바뀐다
+  function pickProduct(p, st, kind) {
+    if (st.stage !== 'design') return { ok: false };
+    if (kind !== p.product) {
+      st.wrong++; st.mood = clamp(st.mood - 1, 0, 4);
+      if (st.wrong >= 2) return lose(st, 'wrongProduct');
+      return { ok: false, wrongProduct: true, mood: st.mood };
     }
-    if (want === 'contract') { st.done = true; st.signed = st.mood >= 3; return { ok: true, done: true, signed: st.signed, mood: st.mood }; }
-    st.mood = clamp(st.mood + 1, 0, 4); st.step++;
-    return { ok: true, mood: st.mood, next: wants(p, st) };
+    st.product = kind; st.covers = {};
+    if (PRODUCTS[kind].base) st.covers[PRODUCTS[kind].base] = true;
+    return { ok: true };
   }
-  function timeout(p, st) { if (st.done || !p.timer) return st.mood; st.mood = clamp(st.mood - 1, 0, 4); st.slow++; return st.mood; }
+  function toggle(p, st, item) {
+    if (st.stage !== 'design' || !st.product || p.items.indexOf(item) < 0 || PRODUCTS[st.product].base === item) return { ok: false };
+    st.covers[item] = !st.covers[item];
+    return { ok: true, on: st.covers[item], premium: premium(p, st) };
+  }
+  function covered(st) { return Object.keys(st.covers).filter(function (k) { return st.covers[k]; }); }
+  function premium(p, st) {
+    var items = PRODUCTS[p.product].items;
+    return covered(st).reduce(function (sum, k) { return sum + (items[k] || 0); }, 0);
+  }
+  // 설계를 고객에게 보여 준다. force: 예산을 넘어도 이대로 권한다
+  function submitDesign(p, st, force) {
+    if (st.stage !== 'design' || !st.product) return { ok: false };
+    var on = covered(st);
+    var missing = p.needs.filter(function (k) { return on.indexOf(k) < 0; });
+    if (missing.length) {
+      st.wrong++; st.mood = clamp(st.mood - 1, 0, 4);
+      if (st.wrong >= 3) return lose(st, 'missing');
+      return { ok: false, missing: missing[0], mood: st.mood };
+    }
+    var pr = premium(p, st), over = pr > p.budget;
+    if (over && !force) return { ok: false, over: true, premium: pr };
+    // 여행자보험은 보험기간이 짧아 청약철회가 없어서, 고객이 그 자리에서 비싸다고 거절한다
+    if (over && PRODUCTS[p.product].once) { st.mood = clamp(st.mood - 1, 0, 4); return { ok: false, overRefused: true, mood: st.mood }; }
+    st.over = over;
+    // 이미 든 보험과 겹치는 보장을 새로 넣으면 갈아타기(승환)다
+    st.switched = !!(p.existing && on.some(function (k) { return p.existing.indexOf(k) >= 0; }));
+    if (!over) st.mood = clamp(st.mood + 1, 0, 4);
+    st.stage = 'apply';
+    return { ok: true, premium: pr, over: over, switched: st.switched };
+  }
+  // 3. 청약서 쓰기: 고객이 알릴 의무 질문에 답한다. 예라고 답한 줄이 있으면 그대로 적을지 정한다.
+  function apply(p, st, honest) {
+    if (st.stage !== 'apply') return { ok: false };
+    if (p.questions.yes < 0) { st.stage = 'explain'; st.honest = true; return { ok: true, clean: true }; }
+    st.honest = !!honest;
+    if (!honest) { st.hidden = true; st.stage = 'explain'; return { ok: true, hidden: true }; }
+    // 알리면 가입이 어려운 고객: 솔직하게 적으면 오늘은 계약이 안 된다
+    if (p.ask === 'refuse') return lose(st, 'declined');
+    st.mood = clamp(st.mood + 1, 0, 4);
+    st.stage = 'explain';
+    return { ok: true, exclusion: true, mood: st.mood };
+  }
+  // 미루는 고객: 듣기에서 적어 둔 지금 들어야 할 이유를 보여 주면 마음을 바꾼다
+  function persuade(p, st) {
+    if (p.ask !== 'delay' || st.persuaded || st.done) return { ok: false };
+    if (st.notes.indexOf('hook') >= 0) { st.persuaded = true; return { ok: true }; }
+    return lose(st, 'later');
+  }
+  // 4. 설명하고 서명받기: 설명서의 굵은 칸 세 개(보장 안 되는 경우, 처음 90일, 줄어드는 기간)를 짚고, 약관과 부본을 건넨다
+  function explain(p, st, i) {
+    if (st.stage !== 'explain' || st.explained.indexOf(i) >= 0 || i < 0 || i > 2) return { ok: false };
+    st.explained.push(i);
+    return { ok: true, left: 3 - st.explained.length };
+  }
+  function hand(p, st) { if (st.stage !== 'explain') return { ok: false }; st.copies = true; return { ok: true }; }
+  function needsPersuade(p, st) { return p.ask === 'delay' && !st.persuaded; }
+  function sign(p, st) {
+    if (st.stage !== 'explain' || needsPersuade(p, st)) return { ok: false };
+    st.skipped = st.explained.length < 3 || !st.copies;
+    st.done = true; st.stage = 'done';
+    st.signed = st.mood >= SIGN_MOOD;
+    st.outcome = st.signed ? 'signed' : 'mood';
+    return { ok: true, signed: st.signed, mood: st.mood };
+  }
+  function timeout(p, st) {
+    if (st.done || !p.timer) return st.mood;
+    st.mood = clamp(st.mood - 1, 0, 4); st.slow++;
+    if (st.mood <= 0) lose(st, 'slow');
+    return st.mood;
+  }
   function lossReason(p, st) {
     if (p.leaves) return p.reasons[0] ? p.reasons[0].key : 'lateLeft';
+    if (st.outcome && st.outcome !== 'mood') return st.outcome;
     var order = ['sneeze', 'stink', 'smell', 'fur', 'yawn'];
-    if (st.wrong) return 'mistake';
     for (var i = 0; i < order.length; i++) {
       for (var j = 0; j < p.reasons.length; j++) if (p.reasons[j].key === order[i]) return order[i];
     }
-    return st.slow ? 'slow' : 'mistake';
+    return st.slow ? 'slow' : st.wrong ? 'mistake' : 'mood';
   }
-  function payFor(s, need) { return Math.round(PRODUCTS[need].pay * (s.contracts >= GOAL ? BONUS : 1)); }
+  // 수수료: 보험료 × 상품별 배수. 이번 달 실적은 5/8에 한꺼번에 들어온다.
+  function commission(product, prem) { return Math.round(prem * PRODUCTS[product].rate / 10) * 10; }
+  // 계약이 나중에 취소되는 경우. 해피콜은 그날 저녁, 청약철회는 엿새쯤 뒤, 승환 점검은 일주일쯤 뒤.
+  function cancelPlan(s, p, st) {
+    if (st.hidden) return { day: s.day, why: 'hide' };
+    if (st.skipped && p.mark === 'doubt') return { day: s.day, why: 'unexplained' };
+    if (st.switched) return { day: Math.min(DAYS.length - 1, s.day + 7), why: 'switch' };
+    if (st.over) return { day: Math.min(DAYS.length - 1, s.day + 6), why: 'over' };
+    return null;
+  }
   function finish(s, p, st) {
     var signed = !p.leaves && !!st.signed;
-    var r = { id: p.id, day: s.day, need: p.need, signed: signed, pet: signed && p.steps.indexOf('pet') >= 0, pay: 0, why: null, bonus: false, goal: false };
+    var r = { id: p.id, day: s.day, product: p.product, signed: signed, premium: 0, amount: 0, why: null, goal: false, outcome: st.outcome };
     if (!p.leaves) s.seen.consulted = true;
     if (signed) {
-      r.bonus = s.contracts >= GOAL;
-      r.pay = payFor(s, p.need) + (r.pet ? payFor(s, 'pet') : 0);
+      r.premium = premium(p, st);
+      r.amount = commission(p.product, r.premium);
+      var cancel = cancelPlan(s, p, st);
+      s.pending.push({ id: p.id, day: s.day, product: p.product, premium: r.premium, amount: r.amount, status: 'active', cancel: cancel });
+      if (!st.skipped) s.habit.explain = (s.habit.explain || 0) + 1;
       if (!s.contracts) event(s, 'firstContract', { id: p.id });
       var before = s.contracts;
-      s.contracts += r.pet ? 2 : 1;
+      s.contracts++;
       if (before < GOAL && s.contracts >= GOAL) { r.goal = true; s.goalDay = s.day; event(s, 'goal'); }
-      s.today.stickers.push(p.need);
-      if (r.pet) { s.today.stickers.push('pet'); event(s, 'catLover', { id: p.id }); }
+      s.today.stickers.push(p.product);
+      s.today.earned.push({ key: 'pending', id: p.id, product: p.product, amount: r.amount });
+      if (p.mark === 'cat') event(s, 'catLover', { id: p.id });
       if (p.evening) event(s, 'groupSigned');
+      // 갈아타게 하지 않고 비어 있는 보장만 넣어 준 고객은 다음에 다른 사람을 소개해 준다
+      if (p.existing && !st.switched) { s.refs.r1 = true; event(s, 'referralPromise', { id: p.id }); }
+      if (st.hidden) event(s, 'hid', { id: p.id });
     } else {
       r.why = lossReason(p, st);
-      // 털 묻은 정장으로 처음 계약을 놓친 날, 선배가 돌돌이 이야기를 해 준다
-      var furry = p.reasons.some(function (x) { return x.key === 'sneeze' || x.key === 'fur'; });
+      // 알리면 가입이 어려운 고객에게 솔직했으면, 그 고객이 다른 사람을 보내 준다
+      if (st.outcome === 'declined') { s.refs.r2 = true; event(s, 'honestNo', { id: p.id }); }
+      var furry = p.reasons && p.reasons.some(function (x) { return x.key === 'sneeze' || x.key === 'fur'; });
       if (furry && !s.seen.furLost) { s.seen.furLost = true; event(s, 'furLost', { id: p.id }); }
-      // 냄새 때문에 처음 놓친 날에는 선배가 냄새 이야기를 해 준다
-      var smelly = p.reasons.some(function (x) { return x.key === 'smell' || x.key === 'stink'; });
+      var smelly = p.reasons && p.reasons.some(function (x) { return x.key === 'smell' || x.key === 'stink'; });
       if (smelly && !s.seen.smellLost) { s.seen.smellLost = true; event(s, 'smellLost', { id: p.id }); }
+      if (!p.leaves && st.outcome !== 'declined' && st.outcome !== 'later') s.today.lost.push({ id: p.id, why: r.why });
     }
     s.results.push(r);
     return r;
   }
+  // 오늘 취소되는 계약을 처리한다 (집에 오는 길에 전화나 문자가 온다)
+  function cancels(s) {
+    var out = [];
+    s.pending.forEach(function (e) {
+      if (e.status !== 'active' || !e.cancel || e.cancel.day > s.day) return;
+      e.status = 'cancelled';
+      s.contracts = Math.max(0, s.contracts - 1);
+      var x = { id: e.id, why: e.cancel.why, amount: e.amount, product: e.product };
+      out.push(x); s.today.cancels.push(x);
+      event(s, 'cancel', { id: e.id, why: e.cancel.why });
+      if (e.cancel.why === 'hide') s.seen.bossTalk = s.day + 1; // 다음 날 아침 지점장 면담
+    });
+    return out;
+  }
+  function pendingTotal(s) { return s.pending.reduce(function (sum, e) { return sum + (e.status === 'active' ? e.amount : 0); }, 0); }
   function decideGroup(s, go) {
     if (!day(s).group || s.group) return false;
     s.group = go ? 'go' : 'skip';
@@ -418,21 +583,64 @@ var Life = (function () {
     return true;
   }
   function leaveOffice(s) {
-    var mine = s.results.filter(function (r) { return r.day === s.day; });
-    s.wallet += ALLOWANCE;
-    s.today.earned.push({ key: 'allowance', amount: ALLOWANCE });
-    mine.forEach(function (r) {
-      if (r.signed) { s.wallet += r.pay; s.today.earned.push({ key: 'contract', id: r.id, need: r.need, pet: r.pet, bonus: r.bonus, amount: r.pay }); }
-      else s.today.lost.push({ id: r.id, why: r.why });
-    });
     energy(s, -2);
     var wentGroup = outLate(s);
     if (wentGroup) energy(s, -1);
     var next = nextWorkDay(s.day);
-    s.cards = next < 0 ? [] : clientsOn(next);
+    s.cards = next < 0 ? [] : clientsOn(next, s);
     s.phase = 'commute';
     s.minute = wentGroup ? T.groupLeave : T.workEnd;
     return { earned: s.today.earned.slice(), cards: s.cards.slice() };
+  }
+
+  // ---------- 요금과 돈 ----------
+  function bill(id) { return BILLS.filter(function (b) { return b.id === id; })[0]; }
+  // 냉장고 달력에 적은 요금: 안내를 받은 날부터 낼 때까지
+  function billsUp(s) { return BILLS.filter(function (b) { return s.day >= b.notice && s.bills[b.id] === 'none'; }); }
+  function billDue(s) { return BILLS.filter(function (b) { return b.due <= s.day && s.bills[b.id] === 'none'; })[0] || null; }
+  function canCash(s) { return !s.loan; }
+  // how: pay(그냥 낸다) defer(집주인에게 8일까지 기다려 달라고 한다, 월세만) cash(현금서비스를 받아 낸다)
+  function payBill(s, id, how) {
+    var b = bill(id); if (!b || s.bills[id] !== 'none') return { ok: false, why: 'done' };
+    if (how === 'defer') {
+      if (!b.defer) return { ok: false, why: 'noDefer' };
+      s.bills[id] = 'deferred'; event(s, 'deferRent');
+      return { ok: true, deferred: true };
+    }
+    if (how === 'cash') {
+      if (!canCash(s)) return { ok: false, why: 'cashUsed' };
+      s.loan = { amount: CASH.amount, day: s.day };
+      s.wallet += CASH.amount;
+      s.today.earned.push({ key: 'cash', amount: CASH.amount });
+      event(s, 'cash');
+    }
+    if (s.wallet < b.amount) return { ok: false, why: 'money' };
+    s.wallet -= b.amount; s.bills[id] = 'paid';
+    s.today.spent.push({ item: 'bill', bill: id, amount: b.amount });
+    return { ok: true, paid: b.amount };
+  }
+  // 출금되지 않았거나 보내지 못한 날: 연체. 5/8에 연체료(lateFee, 게임용 고정 금액)를 더해 낸다.
+  function lateBill(s, id) { if (s.bills[id] !== 'none') return false; s.bills[id] = 'late'; event(s, 'lateBill', { id: id }); return true; }
+  function loanInterest(s) {
+    if (!s.loan) return 0;
+    var days = Math.max(1, (DAYS.length - 1) - s.loan.day);
+    return Math.round(s.loan.amount * CASH.rate * days / 365 / 10) * 10;
+  }
+  // 5/8: 4월 실적 수수료와 정착지원금이 한꺼번에 들어오고, 미룬 돈을 갚는다
+  function payday(s) {
+    if (s.paid) return s.paid;
+    var gross = pendingTotal(s), settle = s.contracts >= GOAL ? SETTLE : 0;
+    var tax = Math.floor((gross + settle) * TAX / 10) * 10, net = gross + settle - tax;
+    s.wallet += net;
+    var out = [];
+    if (s.loan) { var back = s.loan.amount + loanInterest(s); s.wallet -= back; out.push({ key: 'loan', amount: back, interest: loanInterest(s) }); }
+    BILLS.forEach(function (b) {
+      if (s.bills[b.id] === 'deferred') { s.wallet -= b.amount; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: b.amount }); }
+      else if (s.bills[b.id] === 'late') { var a = b.amount + (b.lateFee || 0); s.wallet -= a; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: a, late: true }); }
+    });
+    s.paid = { gross: gross, settle: settle, tax: tax, net: net, out: out, wallet: s.wallet };
+    event(s, 'payday');
+    return s.paid;
   }
 
   // ---------- 가게 ----------
@@ -508,7 +716,8 @@ var Life = (function () {
     // 늦게 온 밤: 현관에서 기다리다 잠들었다
     if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
     else if (s.out === 'dinner') heart(s, -1, 'lateHome');
-    return { locked: !!s.locked, late: wentGroup };
+    var gone = cancels(s);
+    return { locked: !!s.locked, late: wentGroup, cancels: gone, bill: billDue(s) };
   }
   // 주말 오후 3시 전에 침대에 누우면 낮잠이다. 오후 3시에 깨고, 고양이 저녁 끼니가 시작된다.
   function napFirst(s) { return s.phase === 'weekend' && s.meal === 'am'; }
@@ -549,6 +758,8 @@ var Life = (function () {
       else { heart(s, -1, 'lonely'); note = 'lonely'; event(s, 'lonely'); }
     } else note = 'closed';
     if (autoPlayed) { s.autoToyLeft--; t.notes.push(s.autoToyLeft > 0 ? 'autoToy' : 'autoToyWorn'); }
+    // 밥 두 끼, 물, 화장실을 다 챙긴 날이 세 번이면 손에 익는다
+    if (s.fed.am && s.fed.pm && s.water && s.litter.poop === 0) s.habit.care = (s.habit.care || 0) + 1;
     var base = sleepGain(bed), lost = [];
     if (bed > T.bedtime) lost.push('late');
     if (woke) lost.push('woke');
@@ -605,11 +816,14 @@ var Life = (function () {
     // 문을 열어 두고 잤으면 침대까지 와서, 닫고 잤으면 거실 바닥에 실수한다
     var key = 'accident' + why + (doorOpen ? 'Bed' : '');
     if (accident) { if (s.phase === 'morning') s.minute += T.accident; heart(s, -1, key); }
+    // 휴대폰으로 요금 안내가 온 날
+    var notices = BILLS.filter(function (b) { return b.notice === s.day; }).map(function (b) { return b.id; });
+    notices.forEach(function (id) { s.today.notes.push('bill:' + id); });
     var note = s.morningNote; s.morningNote = null;
-    return { accident: accident, key: accident ? key : null, where: doorOpen ? 'bed' : 'floor', note: note, hidden: s.hidden };
+    return { notices: notices, boss: s.seen.bossTalk === s.day, accident: accident, key: accident ? key : null, where: doorOpen ? 'bed' : 'floor', note: note, hidden: s.hidden };
   }
   function evaluate(s) {
-    s.evaluated = { contracts: s.contracts, pass: s.contracts >= GOAL };
+    s.evaluated = { contracts: s.contracts, pass: s.contracts >= GOAL, paid: payday(s) };
     var t = s.today;
     t.energyNext = s.energy; t.total = s.contracts;
     s.diary.push({ day: s.day, together: false, meals: s.fed.am ? 1 : 0, played: false, water: s.water });
@@ -636,7 +850,7 @@ var Life = (function () {
 
   // ---------- 둘이라서 ----------
   var ALARM_HEARTS = 3;          // 4/20 아침, 이만큼 가까우면 고양이가 깨워 준다
-  var KNEAD_NIGHTS = [2, 4, 6, 9]; // 같이 잔 이 밤들의 새벽 5시에 얼굴을 꾹꾹 누른다
+  var KNEAD_NIGHTS = [2, 4, 9, 11, 16, 18, 22]; // 같이 잔 이 밤들의 새벽 5시에 얼굴을 꾹꾹 누른다
   // 반짝이는 순간을 휴대폰으로 찍는다 (평일 저녁 두 장, 주말 세 장까지)
   function photoCap(s) { return s.phase === 'weekend' ? 3 : 2; }
   function photosToday(s) { return s.photos.filter(function (p) { return p.day === s.day; }).length; }
@@ -670,13 +884,16 @@ var Life = (function () {
     if (!day(s).dinner || s.out) return null;
     s.out = go ? 'dinner' : 'home';
     if (!go) return { go: false };
-    var pay = payFor(s, 'travel'), before = s.contracts;
+    // 동기의 친구가 여행을 간다며 여행자보험을 부탁한다
+    var prem = 30000, amount = commission('travel', prem), before = s.contracts;
     s.contracts++;
-    s.results.push({ id: 'referral', day: s.day, need: 'travel', signed: true, pet: false, pay: pay, why: null, bonus: before >= GOAL, goal: before < GOAL && s.contracts >= GOAL });
+    s.pending.push({ id: 'referral', day: s.day, product: 'travel', premium: prem, amount: amount, status: 'active', cancel: null });
+    s.results.push({ id: 'referral', day: s.day, product: 'travel', signed: true, premium: prem, amount: amount, why: null, goal: before < GOAL && s.contracts >= GOAL });
     if (before < GOAL && s.contracts >= GOAL) { s.goalDay = s.day; event(s, 'goal'); }
     s.today.stickers.push('travel');
+    s.today.earned.push({ key: 'pending', id: 'referral', product: 'travel', amount: amount });
     event(s, 'referral');
-    return { go: true, pay: pay };
+    return { go: true, amount: amount };
   }
   // 4/23 밤: 발표 준비 중 자판 위에 앉은 고양이. 옮기면(work) 준비가 끝나고, 노트북을 덮으면(lid) 같이 논다.
   function lastPrep(s, pick) {
@@ -718,14 +935,16 @@ var Life = (function () {
   function won(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'; }
 
   return {
-    VERSION: VERSION, GOAL: GOAL, ALLOWANCE: ALLOWANCE, BONUS: BONUS, MAX: MAX, T: T,
-    PRODUCTS: PRODUCTS, SHOP: SHOP, DAYS: DAYS, CLIENTS: CLIENTS,
+    VERSION: VERSION, GOAL: GOAL, MAX: MAX, T: T, START_WALLET: START_WALLET, SETTLE: SETTLE, TAX: TAX, CASH: CASH, SIGN_MOOD: SIGN_MOOD,
+    PRODUCTS: PRODUCTS, UNLOCK: UNLOCK, SHOP: SHOP, DAYS: DAYS, CLIENTS: CLIENTS, BILLS: BILLS, week: week, comes: comes,
     DRY_MEALS: DRY_MEALS, WET_MEALS: WET_MEALS, SAND_DAYS: SAND_DAYS, TOY_PLAYS: TOY_PLAYS,
     create: create, day: day, clientsOn: clientsOn, nextWorkDay: nextWorkDay, tired: tired, cost: cost,
     feed: feed, feedBlock: feedBlock, ate: ate, water: giveWater, scoop: scoop, refill: refill, sandLow: sandLow, pet: pet,
     dress: dress, roll: roll, canRoll: canRoll, coffee: drinkCoffee, jobBlock: jobBlock, sideJob: sideJob, JOB: JOB, autoToyOn: autoToyOn, onShelf: onShelf, lunch: eatLunch, search: search,
     act: act, doBlock: doBlock, homeTime: homeTime,
-    leaveHome: leaveHome, plan: plan, consult: consult, wants: wants, answer: answer, timeout: timeout, finish: finish, payFor: payFor,
+    leaveHome: leaveHome, plan: plan, consult: consult, note: note, listened: listened, pickProduct: pickProduct, toggle: toggle, covered: covered, premium: premium,
+    submitDesign: submitDesign, apply: apply, persuade: persuade, needsPersuade: needsPersuade, explain: explain, hand: hand, sign: sign, timeout: timeout, finish: finish,
+    commission: commission, cancels: cancels, pendingTotal: pendingTotal, billsUp: billsUp, billDue: billDue, bill: bill, payBill: payBill, lateBill: lateBill, canCash: canCash, loanInterest: loanInterest, payday: payday,
     decideGroup: decideGroup, leaveOffice: leaveOffice,
     buy: buy, buyBlock: buyBlock, unbuy: unbuy, price: price, lateNight: lateNight, NIGHT_RATE: NIGHT_RATE, smellOf: smellOf,
     ENDINGS: ENDINGS, GRADE: GRADE,
@@ -733,6 +952,7 @@ var Life = (function () {
     evaluate: evaluate, ending: ending, CLEAN_FROM: CLEAN_FROM, DUST_FROM: DUST_FROM, outLate: outLate,
     photo: photo, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
     ALARM_HEARTS: ALARM_HEARTS, KNEAD_NIGHTS: KNEAD_NIGHTS, PHOTO_GOOD: PHOTO_GOOD, PHOTO_FAMILY: PHOTO_FAMILY,
+    habitReady: habitReady, HABIT_DAYS: HABIT_DAYS,
     save: save, load: load,
     hasBatchim: hasBatchim, nameForm: nameForm, josa: josa, clock: clock, won: won, cleanName: cleanName
   };
