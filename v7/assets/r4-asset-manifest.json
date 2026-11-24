@@ -1,0 +1,1374 @@
+{
+  "version": 4,
+  "updated": "2026-11-04",
+  "provider": "built-in image_gen.imagegen; approved portrait base copied from user attachment",
+  "canvas": {
+    "width": 640,
+    "height": 360,
+    "imageSmoothingEnabled": false
+  },
+  "design": {
+    "setting": "현대 도시의 생활; 중성 회색/먹색/바랜 청색, 제한된 적갈색; 과도한 연두색과 식물 제거",
+    "casual": "연한 회색 후드티 + 연청바지 + 적갈색 끈",
+    "formal": "기존 짙은 남색 정장 + 흰 셔츠",
+    "portraits": "사용자 승인 첨부의 얼굴/표정 보존. 첫 셀 의상 아래 부분만 연회색/적갈색 보정."
+  },
+  "load": {
+    "r4People": "assets/r4-people-pixel.png",
+    "r4Cats": "assets/r4-cats-pixel.png",
+    "r4Props": "assets/r4-props-pixel.png",
+    "r4Actions": "assets/r4-actions-pixel.png",
+    "r4Seated": "assets/r4-seated-pixel.png",
+    "r4Portraits": "assets/r4-portraits-approved-cords.png",
+    "r4PortraitBase": "assets/r4-portraits-approved.png",
+    "r4Scenes": "assets/r4-scenes-urban.png",
+    "r4Outdoors": "assets/r4-outdoors-urban.png"
+  },
+  "images": {
+    "r4People": {
+      "file": "assets/r4-people-pixel.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1716379,
+      "sha256": "eda49ce177376567306891046ddc0d8bf535ca897b656bb8dab039c953f4c983",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 985546
+      },
+      "sourceRects": [
+        [
+          54,
+          30,
+          105,
+          206
+        ],
+        [
+          246,
+          30,
+          98,
+          206
+        ],
+        [
+          438,
+          30,
+          98,
+          206
+        ],
+        [
+          630,
+          30,
+          103,
+          194
+        ],
+        [
+          822,
+          30,
+          104,
+          206
+        ],
+        [
+          1014,
+          30,
+          99,
+          206
+        ],
+        [
+          1205,
+          30,
+          98,
+          206
+        ],
+        [
+          1399,
+          30,
+          102,
+          205
+        ],
+        [
+          54,
+          286,
+          105,
+          205
+        ],
+        [
+          246,
+          286,
+          98,
+          205
+        ],
+        [
+          438,
+          286,
+          98,
+          205
+        ],
+        [
+          630,
+          286,
+          103,
+          193
+        ],
+        [
+          822,
+          286,
+          104,
+          205
+        ],
+        [
+          1014,
+          286,
+          98,
+          205
+        ],
+        [
+          1206,
+          286,
+          97,
+          205
+        ],
+        [
+          1399,
+          286,
+          102,
+          202
+        ],
+        [
+          54,
+          536,
+          93,
+          206
+        ],
+        [
+          218,
+          564,
+          136,
+          167
+        ],
+        [
+          413,
+          560,
+          134,
+          171
+        ],
+        [
+          583,
+          569,
+          131,
+          159
+        ],
+        [
+          751,
+          632,
+          218,
+          90
+        ],
+        [
+          1013,
+          599,
+          113,
+          123
+        ],
+        [
+          1188,
+          539,
+          124,
+          199
+        ],
+        [
+          1388,
+          544,
+          106,
+          194
+        ],
+        [
+          45,
+          796,
+          104,
+          209
+        ],
+        [
+          236,
+          801,
+          99,
+          204
+        ],
+        [
+          426,
+          794,
+          99,
+          211
+        ],
+        [
+          615,
+          801,
+          103,
+          204
+        ],
+        [
+          814,
+          791,
+          94,
+          214
+        ],
+        [
+          994,
+          829,
+          113,
+          175
+        ],
+        [
+          1182,
+          830,
+          131,
+          174
+        ],
+        [
+          1370,
+          829,
+          119,
+          175
+        ]
+      ]
+    },
+    "r4Cats": {
+      "file": "assets/r4-cats-pixel.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1696391,
+      "sha256": "b333579fbf67588c22db9ddf257455efd747056c7d9c53b0406afbcf18990f48",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 879678
+      },
+      "sourceRects": [
+        [
+          40,
+          105,
+          139,
+          120
+        ],
+        [
+          232,
+          106,
+          140,
+          119
+        ],
+        [
+          424,
+          108,
+          140,
+          117
+        ],
+        [
+          614,
+          108,
+          141,
+          117
+        ],
+        [
+          806,
+          109,
+          141,
+          117
+        ],
+        [
+          994,
+          105,
+          144,
+          121
+        ],
+        [
+          1185,
+          109,
+          145,
+          117
+        ],
+        [
+          1375,
+          110,
+          147,
+          115
+        ],
+        [
+          40,
+          360,
+          139,
+          129
+        ],
+        [
+          224,
+          391,
+          142,
+          101
+        ],
+        [
+          420,
+          365,
+          139,
+          118
+        ],
+        [
+          611,
+          331,
+          128,
+          120
+        ],
+        [
+          807,
+          322,
+          130,
+          107
+        ],
+        [
+          989,
+          341,
+          136,
+          131
+        ],
+        [
+          1180,
+          371,
+          140,
+          121
+        ],
+        [
+          1374,
+          392,
+          140,
+          99
+        ],
+        [
+          40,
+          605,
+          125,
+          129
+        ],
+        [
+          231,
+          605,
+          126,
+          129
+        ],
+        [
+          420,
+          660,
+          132,
+          75
+        ],
+        [
+          609,
+          657,
+          131,
+          78
+        ],
+        [
+          792,
+          613,
+          136,
+          122
+        ],
+        [
+          987,
+          662,
+          135,
+          73
+        ],
+        [
+          1188,
+          614,
+          138,
+          121
+        ],
+        [
+          1380,
+          607,
+          136,
+          127
+        ],
+        [
+          23,
+          876,
+          158,
+          99
+        ],
+        [
+          228,
+          874,
+          141,
+          110
+        ],
+        [
+          412,
+          862,
+          139,
+          129
+        ],
+        [
+          599,
+          864,
+          139,
+          127
+        ],
+        [
+          800,
+          861,
+          109,
+          130
+        ],
+        [
+          992,
+          884,
+          125,
+          109
+        ],
+        [
+          1180,
+          852,
+          114,
+          139
+        ],
+        [
+          1374,
+          908,
+          123,
+          83
+        ]
+      ]
+    },
+    "r4Props": {
+      "file": "assets/r4-props-pixel.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1654539,
+      "sha256": "5142915f16f35f74e3e087d53dba5a464ab5b1fe291463ea701c5506c1074534",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 834425
+      },
+      "sourceRects": [
+        [
+          35,
+          69,
+          148,
+          187
+        ],
+        [
+          216,
+          108,
+          153,
+          145
+        ],
+        [
+          401,
+          121,
+          160,
+          124
+        ],
+        [
+          590,
+          108,
+          163,
+          137
+        ],
+        [
+          783,
+          121,
+          163,
+          125
+        ],
+        [
+          1001,
+          59,
+          94,
+          199
+        ],
+        [
+          1150,
+          128,
+          170,
+          121
+        ],
+        [
+          1354,
+          68,
+          147,
+          189
+        ],
+        [
+          18,
+          369,
+          174,
+          142
+        ],
+        [
+          208,
+          369,
+          176,
+          142
+        ],
+        [
+          427,
+          316,
+          106,
+          199
+        ],
+        [
+          584,
+          304,
+          169,
+          204
+        ],
+        [
+          777,
+          361,
+          164,
+          150
+        ],
+        [
+          961,
+          304,
+          173,
+          214
+        ],
+        [
+          1152,
+          351,
+          181,
+          168
+        ],
+        [
+          1366,
+          344,
+          129,
+          175
+        ],
+        [
+          17,
+          564,
+          182,
+          196
+        ],
+        [
+          251,
+          556,
+          83,
+          204
+        ],
+        [
+          423,
+          577,
+          111,
+          176
+        ],
+        [
+          571,
+          589,
+          190,
+          155
+        ],
+        [
+          786,
+          586,
+          149,
+          158
+        ],
+        [
+          984,
+          585,
+          134,
+          163
+        ],
+        [
+          1143,
+          588,
+          184,
+          163
+        ],
+        [
+          1350,
+          607,
+          162,
+          138
+        ],
+        [
+          18,
+          826,
+          173,
+          151
+        ],
+        [
+          215,
+          850,
+          144,
+          117
+        ],
+        [
+          384,
+          822,
+          171,
+          161
+        ],
+        [
+          570,
+          826,
+          189,
+          157
+        ],
+        [
+          786,
+          800,
+          160,
+          202
+        ],
+        [
+          991,
+          793,
+          109,
+          204
+        ],
+        [
+          1143,
+          843,
+          175,
+          129
+        ],
+        [
+          1338,
+          838,
+          181,
+          137
+        ]
+      ]
+    },
+    "r4Actions": {
+      "file": "assets/r4-actions-pixel.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 971348,
+      "sha256": "ebdd0538111c679f9b2f44f51355ef6b4435df73e244244cae04084425fed6e4",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "fullyTransparentPixels": 714468
+      },
+      "sourceRects": [
+        [
+          70,
+          55,
+          169,
+          267
+        ],
+        [
+          384,
+          55,
+          169,
+          267
+        ],
+        [
+          695,
+          55,
+          204,
+          267
+        ],
+        [
+          1010,
+          55,
+          188,
+          267
+        ],
+        [
+          70,
+          378,
+          168,
+          264
+        ],
+        [
+          384,
+          381,
+          200,
+          261
+        ],
+        [
+          686,
+          392,
+          189,
+          250
+        ],
+        [
+          1012,
+          379,
+          168,
+          263
+        ],
+        [
+          69,
+          758,
+          181,
+          96
+        ],
+        [
+          396,
+          752,
+          150,
+          100
+        ],
+        [
+          693,
+          759,
+          187,
+          90
+        ],
+        [
+          1014,
+          757,
+          171,
+          102
+        ],
+        [
+          47,
+          1037,
+          228,
+          152
+        ],
+        [
+          371,
+          1006,
+          202,
+          189
+        ],
+        [
+          685,
+          1033,
+          214,
+          152
+        ],
+        [
+          1065,
+          988,
+          89,
+          220
+        ]
+      ]
+    },
+    "r4Seated": {
+      "file": "assets/r4-seated-pixel.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 901991,
+      "sha256": "05d526f472a981e0bd75cfd2fbb6fb8f80a4935bda77f25a1cfd680a26bb3eea",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "fullyTransparentPixels": 1010460
+      },
+      "sourceRects": [
+        [
+          71,
+          30,
+          169,
+          276
+        ],
+        [
+          385,
+          30,
+          168,
+          276
+        ],
+        [
+          698,
+          30,
+          179,
+          276
+        ],
+        [
+          1012,
+          30,
+          168,
+          276
+        ],
+        [
+          73,
+          348,
+          165,
+          264
+        ],
+        [
+          387,
+          351,
+          164,
+          261
+        ],
+        [
+          701,
+          348,
+          164,
+          264
+        ],
+        [
+          1015,
+          351,
+          163,
+          261
+        ],
+        [
+          71,
+          657,
+          169,
+          277
+        ],
+        [
+          385,
+          657,
+          168,
+          276
+        ],
+        [
+          698,
+          657,
+          169,
+          277
+        ],
+        [
+          1012,
+          657,
+          168,
+          277
+        ],
+        [
+          75,
+          976,
+          142,
+          262
+        ],
+        [
+          389,
+          978,
+          155,
+          260
+        ],
+        [
+          702,
+          977,
+          141,
+          261
+        ],
+        [
+          1017,
+          978,
+          151,
+          260
+        ]
+      ]
+    },
+    "r4Portraits": {
+      "file": "assets/r4-portraits-approved-cords.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1673833,
+      "sha256": "cf7d5f26602ab682e3d890841652ad6a79886c58b86e279625587e48bfb18441",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 563179
+      },
+      "sourceRects": [
+        [
+          0,
+          0,
+          384,
+          512
+        ],
+        [
+          384,
+          0,
+          384,
+          512
+        ],
+        [
+          768,
+          0,
+          384,
+          512
+        ],
+        [
+          1152,
+          0,
+          384,
+          512
+        ],
+        [
+          0,
+          512,
+          384,
+          512
+        ],
+        [
+          384,
+          512,
+          384,
+          512
+        ],
+        [
+          768,
+          512,
+          384,
+          512
+        ],
+        [
+          1152,
+          512,
+          384,
+          512
+        ]
+      ]
+    },
+    "r4PortraitBase": {
+      "file": "assets/r4-portraits-approved.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1722663,
+      "sha256": "6ba884c4a507e3ec7d23d9ab2f76904458df9fb0a092c97e3d7e360ad3784c97",
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "fullyTransparentPixels": 546505
+      },
+      "sourceRects": [
+        [
+          0,
+          0,
+          384,
+          512
+        ],
+        [
+          384,
+          0,
+          384,
+          512
+        ],
+        [
+          768,
+          0,
+          384,
+          512
+        ],
+        [
+          1152,
+          0,
+          384,
+          512
+        ],
+        [
+          0,
+          512,
+          384,
+          512
+        ],
+        [
+          384,
+          512,
+          384,
+          512
+        ],
+        [
+          768,
+          512,
+          384,
+          512
+        ],
+        [
+          1152,
+          512,
+          384,
+          512
+        ]
+      ]
+    },
+    "r4Scenes": {
+      "file": "assets/r4-scenes-urban.png",
+      "width": 1671,
+      "height": 941,
+      "bytes": 2087059,
+      "sha256": "82da7c2f47009e2487d956d1627187482cf90a60e978e93dafcf649d2fa9819b",
+      "hasAlpha": false,
+      "sourceCoordinateReference": [
+        1672,
+        941
+      ],
+      "sceneRects": {
+        "bedroom": [
+          0,
+          0,
+          836,
+          471
+        ],
+        "living": [
+          836,
+          0,
+          836,
+          471
+        ],
+        "shop": [
+          0,
+          471,
+          836,
+          470
+        ],
+        "office": [
+          836,
+          471,
+          836,
+          470
+        ]
+      },
+      "runtimeSourceScale": [
+        0.9994019138755981,
+        1
+      ]
+    },
+    "r4Outdoors": {
+      "file": "assets/r4-outdoors-urban.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2400729,
+      "sha256": "7b2dd84a0d06c1dcdb21098d75e536f4aea53646f0d4e14511ce94e33238870e",
+      "hasAlpha": false,
+      "sourceCoordinateReference": [
+        1672,
+        941
+      ],
+      "sceneRects": {
+        "streetWinter": [
+          0,
+          0,
+          836,
+          471
+        ],
+        "station": [
+          836,
+          0,
+          836,
+          471
+        ],
+        "train": [
+          0,
+          471,
+          836,
+          470
+        ],
+        "streetSpring": [
+          836,
+          471,
+          836,
+          470
+        ]
+      },
+      "runtimeSourceScale": [
+        1,
+        1
+      ]
+    }
+  },
+  "animations": {
+    "heroWalk": {
+      "image": "r4People",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "fps": 10
+    },
+    "suitWalk": {
+      "image": "r4People",
+      "frames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "fps": 10
+    },
+    "catWalk": {
+      "image": "r4Cats",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "fps": 12
+    },
+    "catJump": {
+      "image": "r4Cats",
+      "frames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "poses": [
+        "jump0",
+        "jump1",
+        "jump2",
+        "jump3",
+        "jump4",
+        "jump5",
+        "jump6",
+        "jump7"
+      ],
+      "landingPose": "land"
+    },
+    "care": {
+      "image": "r4Actions",
+      "frames": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "fps": 3
+    },
+    "consultation": {
+      "image": "r4Seated",
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "fps": 2
+    }
+  },
+  "itemWidths": {
+    "foodBag": [
+      0,
+      27
+    ],
+    "wetFood": [
+      1,
+      26
+    ],
+    "bowlEmpty": [
+      2,
+      30
+    ],
+    "bowlFull": [
+      3,
+      30
+    ],
+    "water": [
+      4,
+      30
+    ],
+    "waterBottle": [
+      5,
+      21
+    ],
+    "toy": [
+      6,
+      23
+    ],
+    "litterBag": [
+      7,
+      28
+    ],
+    "litterTray": [
+      8,
+      51
+    ],
+    "litterDirty": [
+      9,
+      51
+    ],
+    "scoop": [
+      10,
+      18
+    ],
+    "suit": [
+      11,
+      31
+    ],
+    "hoodieFolded": [
+      12,
+      34
+    ],
+    "hoodie": [
+      13,
+      34
+    ],
+    "briefcase": [
+      14,
+      31
+    ],
+    "roller": [
+      15,
+      23
+    ],
+    "umbrella": [
+      16,
+      60
+    ],
+    "umbrellaFolded": [
+      17,
+      17
+    ],
+    "phone": [
+      18,
+      18
+    ],
+    "laptop": [
+      19,
+      55
+    ],
+    "notebook": [
+      20,
+      31
+    ],
+    "sheet": [
+      21,
+      24
+    ],
+    "document": [
+      21,
+      24
+    ],
+    "laundryBasket": [
+      22,
+      46
+    ],
+    "plateDirty": [
+      23,
+      34
+    ],
+    "plate": [
+      24,
+      34
+    ],
+    "sponge": [
+      25,
+      19
+    ],
+    "crate": [
+      26,
+      39
+    ],
+    "cozyBox": [
+      27,
+      51
+    ],
+    "chair": [
+      28,
+      29
+    ],
+    "coatRack": [
+      29,
+      29
+    ],
+    "pillow": [
+      30,
+      43
+    ],
+    "blanketFolded": [
+      31,
+      48
+    ]
+  },
+  "rendering": {
+    "anchor": "body feet / item bottom centre",
+    "peopleScale": 0.28,
+    "catScale": 0.205,
+    "seatedScale": 0.178,
+    "careScale": 0.168,
+    "bowlHeightToWidth": 0.4,
+    "foldedHoodieHeightToWidth": 0.55,
+    "roller": {
+      "width": 23,
+      "bottomOffset": 2
+    },
+    "portraits": {
+      "columns": 4,
+      "rows": 2,
+      "cell": [
+        384,
+        512
+      ],
+      "order": [
+        "hoodie",
+        "suit",
+        "lead",
+        "peer",
+        "customerA",
+        "customerB",
+        "customerC",
+        "cat"
+      ],
+      "approvedBase": "r4PortraitBase",
+      "hoodieClothes": "r4Portraits",
+      "clothesSplitY": 330,
+      "recommendedCanvas": [
+        160,
+        160
+      ],
+      "recommendedDisplayPx": 128
+    },
+    "cordOverlayColor": "#9c5d52"
+  },
+  "retainedDraftsNotForLoading": [
+    "r4-people.png",
+    "r4-cats.png",
+    "r4-props.png",
+    "r4-scenes.png",
+    "r4-actions.png",
+    "r4-outdoors.png",
+    "r4-portraits-pixel.png"
+  ],
+  "verification": "해시/알파/셀 경계와 실제 Canvas 장면·프레임 검사. 전체 게임 경로/브라우저/소리/배포는 그래픽 담당 범위 아님.",
+  "approvedPortraitCopyMatchesUser": true,
+  "verificationResults": {
+    "sceneRenders": 20,
+    "distinctFrames": {
+      "people": 8,
+      "cats": 8,
+      "jump": 8,
+      "care": 4,
+      "consult": 4
+    },
+    "sourceRects": 128,
+    "portraits": 8,
+    "legacyPortraits": 8,
+    "stateMutation": false,
+    "output": "C:/Users/omool/.codex/visualizations/2026/11/04/01a1a5c6-0960-7951-86d7-3a5b0657bd19",
+    "approvedFaceRegionsExact": 8,
+    "missingAssetFallbacks": 2,
+    "portraitSource": "user approved base; only hoodie below y330 uses correction",
+    "cordColor": "#9c5d52"
+  }
+}
