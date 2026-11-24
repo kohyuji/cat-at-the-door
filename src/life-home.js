@@ -157,9 +157,9 @@ var Home = (function () {
     var k = G.cat;
     if (!k.visible || k.room !== H.room) return;
     if (H.toy && H.toy.pounce) { View.cat(c, G, k.x, k.y, k.dir, G.t, 'jump', k.scale); return; }
+    if (Arc.momentDraw(c, k)) return;
     View.shadow(c, k.x, k.y + 1, 15);
     View.cat(c, G, k.x, k.y, k.dir, G.t, k.walking ? (k.run ? 'run' : 'walk') : k.pose, k.scale);
-    Arc.momentDraw(c, k);
   }
   function heroLook() { return H.pro ? 'hoodie' : (S() && S().wearing) || 'hoodie'; }
   function drawHero(c) {
@@ -170,6 +170,8 @@ var Home = (function () {
     // 정장이나 후드티에 붙은 털
     var fur = H.pro ? (H.proFur ? 2 : 0) : (S() && S().wearing === 'suit' ? S().fur : 0);
     if (fur > 0 && pose !== 'sit') furOn(c, h.x, h.y - 96 * h.scale / 2.35, fur, 1);
+    // 카메라를 연 동안: 고양이 쪽으로 휴대폰을 든다 (그림 자리: 회색 '폰' 상자)
+    if (Phone.camOn()) { var px = h.x + (h.dir >= 0 ? 14 : -30); View.box(c, px, h.y - 112, 16, 22, '#c9c6c0', '#55505a', 2); View.text(c, '폰', px + 8, h.y - 97, 8, '#55505a', 'center'); }
   }
   // 냄새: 구불구불한 줄이 피어올랐다 사라진다 (화장실 위, 냄새 밴 옷 위)
   function stinkLines(c, x, y, n, t) {
@@ -221,6 +223,8 @@ var Home = (function () {
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
     actors.push({ y: 190, f: Arc.drawKitchen });
     actors.push({ y: 300, f: Town.drawHome });
+    actors.push({ y: 300, f: Mom.drawHome });
+    actors.push({ y: 336, f: Arc.drawBox });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -249,7 +253,7 @@ var Home = (function () {
     }
     if (!H.pro && s.owned.roller && !(H.held && H.held.id === 'roller')) View.item(c, 'roller', P.roller.x, P.roller.y, .9);
     var wearing = H.pro ? 'hoodie' : s.wearing;
-    if (wearing !== 'suit' && !H.pro) View.hangerSuit(c, P.suitRack.x, P.suitRack.y, s.fur, t);
+    if (wearing !== 'suit' && !H.pro && !Arc.suitOnBed()) View.hangerSuit(c, P.suitRack.x, P.suitRack.y, s.fur, t);
     if (wearing !== 'hoodie' || H.hoodieHung) { View.item(c, 'hoodie', P.hoodieRack.x, P.hoodieRack.y, 1.45); if (H.proFur && H.hoodieHung) furOn(c, P.hoodieRack.x, P.hoodieRack.y - 44, 2, 1); }
     var dr = View.roomDoor(c, G, BR.door, night ? H.door : 1, 'living');
     H.handle = { x: dr.hx, y: dr.hy };
@@ -844,7 +848,7 @@ var Home = (function () {
     if (H.closeUp || H.mode === 'night') return list;
     // 반짝이는 순간에는 고양이 자리가 사진 자리로 바뀐다 (사료 봉지, 물병처럼 끄는 물건이 먼저 잡히게 같은 순서에 둔다)
     var ph = G.cat.room === H.room ? Arc.photoSpot() : null;
-    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room));
+    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room), Mom.homeSpots(H.room));
     if (ph) {
       // 사진 순간은 맨 위에서 누르기를 받되, 끌기는 그 아래 물건(사료 봉지, 쓰다듬기)에 넘긴다.
       var rest = list.filter(function (x) { return x.id !== 'cat'; }), cat = list.find(function (x) { return x.id === 'cat'; });
@@ -1078,6 +1082,6 @@ var Home = (function () {
   return {
     P: P, H: H, enter: enter, wait: wait, resolveWait: resolveWait, goRoom: goRoom, noticeNeeds: noticeNeeds, needs: needs, draw: draw,
     drawLiving: drawLiving, drawBedroom: drawBedroom, sky: sky, once: once, seen: seen, cMin: cMin, cBolt: cBolt, cHeart: cHeart,
-    openMemo: openMemo, openMail: openMail, furOn: furOn, stinkLines: stinkLines, mailWaiting: mailWaiting
+    openMemo: openMemo, openMail: openMail, furOn: furOn, stinkLines: stinkLines, mailWaiting: mailWaiting, queueLine: queueLine
   };
 }());

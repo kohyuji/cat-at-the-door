@@ -18,7 +18,8 @@ var Game = (function () {
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
     if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
     // 그림이 아직 없는 사람: 얼굴 칸은 회색 상자와 이름표
-    if (w === 'grandma' || w === 'mate' || w === 'boss') return { name: Story.NAMES[w === 'boss' ? 'owner' : w], face: { blank: Story.NAMES[w === 'boss' ? 'owner' : w] } };
+    if (w === 'boss') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } }; // 슈퍼 사장님과 같은 사람
+    if (w === 'grandma' || w === 'mate' || w === 'mom') return { name: Story.NAMES[w], face: { blank: Story.NAMES[w] } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -51,7 +52,7 @@ var Game = (function () {
   function hudAll(on) { G.hudShow = { date: on, clock: on, wallet: on, food: on, energy: on, hearts: on }; }
 
   // ---------- 저장 ----------
-  function checkpoint() { try { localStorage.setItem(KEY, Life.save(G.s)); } catch (e) { /* 저장소를 못 쓰면 건너뜀 */ } }
+  function checkpoint() { try { G.s.phone = Phone.exportState(); localStorage.setItem(KEY, Life.save(G.s)); } catch (e) { /* 저장소를 못 쓰면 건너뜀 */ } }
   function loadSave() { try { return Life.load(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function clearSave() { try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ } }
 
@@ -87,8 +88,9 @@ var Game = (function () {
     return s;
   }
   async function prologue(name) {
-    G.pro = { me: name, cat: '', wallet: 12000, active: true };
+    G.pro = { me: name, cat: '', wallet: 12000, active: true, ymd: Mom.PRO_REJECT };
     G.s = proState(name);
+    Phone.load(Mom.fresh(name), { fresh: true });
     hudAll(false);
     G.fade = 1;
     await UI.black(Story.opening);
@@ -281,6 +283,7 @@ var Game = (function () {
     Home.enter('bedroom', { mode: 'pro', heroX: 330, catRoom: 'bedroom', catX: 140, catY: 336 });
     H.lock = true;
     await Engine.fade(0, .8);
+    G.pro.ymd = Mom.PRO_OFFER;
     var off = Story.phone.offer(G.pro.me);
     await UI.phoneWait({ from: off.from, time: off.time, preview: off.preview, body: off.body }, '4:10');
     H.lock = false;
@@ -404,6 +407,7 @@ var Game = (function () {
     await Engine.walkTo(180);
     await moneyBeats();
     await Town.homeBeats();
+    await Mom.homeBeats();
     var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
     if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
     if (lonely && lonely.key === 'alone' && !s.locked) await say([me(Story.catLine('alone', s.cat))]);
@@ -452,15 +456,13 @@ var Game = (function () {
         Life.payBill(s, due.id, 'pay'); UI.sfx('coin');
         await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 출금] ' + Story.BILL[due.id].name, body: M.autoOut(due.id, due.amount, s.wallet) }, now.clock);
       } else if (due.auto) {
-        var body = M.autoFail(due.id, due.amount) + money;
-        if (!canCash) {
-          await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body }, now.clock);
-          Life.lateBill(s, due.id); await say([narr(M.late)]);
-        } else {
-          var k = await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body, replies: [M.cash, M.leave] }, now.clock);
-          if (k === 0) { Life.payBill(s, due.id, 'cash'); UI.sfx('coin'); await say([narr(M.cashNote)]); }
-          else { Life.lateBill(s, due.id); await say([narr(M.late)]); }
-        }
+        // 미출금: 문자를 읽고 나면 은행 앱의 그 줄에서 고른다 (현금서비스로 채우기, 그냥 두기)
+        await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: M.autoFail(due.id, due.amount) + money }, now.clock);
+        var dueId = due.id;
+        var how0 = await Phone.bankUnpaid({ id: dueId, canCash: canCash, clock: now.clock, pay: function (how) {
+          if (how === 'cash') { Life.payBill(s, dueId, 'cash'); Mom.cashText(); } else Life.lateBill(s, dueId);
+        } });
+        await say([narr(how0 === 'cash' ? M.cashNote : M.late)]);
       } else {
         // 월세: 집주인 계좌로 보낸다. 모자라면 미뤄 달라고 하거나 현금서비스를 받는다.
         var opts = [], keys = [], short = s.wallet < due.amount;
@@ -475,10 +477,17 @@ var Game = (function () {
           Life.lateBill(s, due.id); await say([narr(M.late)]);
         } else {
           var pick = await UI.phoneWait({ from: Story.BILL[due.id].from, time: phoneNow(-30).label, preview: M.rentMsg, body: M.rentMsg, replies: opts }, now.clock);
-          var how = keys[pick] || keys[0], r = Life.payBill(s, due.id, how);
-          if (how === 'defer') await UI.phoneWait({ from: M.deferText.from, time: phoneNow(4).label, preview: M.deferText.body, body: M.deferText.body }, phoneNow(4).clock);
-          if (how === 'cash') await say([narr(M.cashNote)]);
-          if (r.ok && how !== 'defer') UI.sfx('coin');
+          var how = keys[pick] || keys[0], rentId = due.id;
+          if (how === 'defer') {
+            Life.payBill(s, rentId, 'defer');
+            await UI.phoneWait({ from: M.deferText.from, time: phoneNow(4).label, preview: M.deferText.body, body: M.deferText.body }, phoneNow(4).clock);
+          } else {
+            // 집주인 계좌로 보낸다: 은행 앱의 보내기 화면이 열린다 (보내기 전에는 닫히지 않는다)
+            await Phone.bankTransfer({ to: Story.BILL[rentId].from, amount: due.amount, cash: how === 'cash', clock: now.clock, pay: function (h) {
+              Life.payBill(s, rentId, h); if (h === 'cash') Mom.cashText();
+            } });
+            if (how === 'cash') await say([narr(M.cashNote)]);
+          }
         }
       }
       due = Life.billDue(s);
@@ -624,6 +633,7 @@ var Game = (function () {
     if (lines.length) await say(lines);
     // 늦은 아침: 동기에게 첫 고객님을 붙잡아 달라고 부탁할 수 있다
     await Town.morningBeats();
+    await Mom.morningBeats();
     if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
@@ -831,8 +841,8 @@ var Game = (function () {
   }
   var ready;
   function boot() {
-    UI.init(); Engine.init(); UI.setSpeakers(who, face);
-    UI.phoneSeed([]);
+    UI.init(); Engine.init(); UI.setSpeakers(who, face); Mom.init();
+    Phone.load(null);
     ready = Engine.loadAssets();
     setInterval(function () { if (!$('gameScreen').hidden) UI.hud(hudView()); }, 120);
     (function titleLoop() { drawTitle(); if (!$('titleScreen').hidden) requestAnimationFrame(titleLoop); }());
@@ -847,7 +857,7 @@ var Game = (function () {
     $('continueButton').onclick = function () {
       var s = loadSave(); if (!s) return;
       G.s = s; G.pro = { me: s.me, cat: s.cat, wallet: 0, active: false };
-      UI.phoneSeed([Story.phone.offer(s.me), Story.phone.rejection(s.me)].map(function (m) { return { from: m.from, time: m.time, preview: m.preview, body: m.body }; }));
+      Phone.load(s.phone || Mom.fresh(s.me, true));
       startGame(function () { if (s.ended) { endingScreen(); return null; } return mainLoop(); });
     };
     $('playerName').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('startButton').click(); });

@@ -579,7 +579,7 @@ var Work = (function () {
             .then(function () { return res.goal ? goalParty() : null; });
         });
       }, Promise.resolve());
-    }).then(function () { return Town.lunch(); }).then(function () { return results; });
+    }).then(function () { return Town.lunch(); }).then(function () { return Mom.lunch(); }).then(function () { return results; });
   }
   // 4/16 저녁 8시 단체보험
   function groupEvening() {

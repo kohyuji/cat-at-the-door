@@ -566,10 +566,11 @@ test('일은 하나씩 늘어난다: 첫 출근 날은 털만, 4/14부터 화장
 test('둘이라서: 사진, 내 저녁, 새벽 꾹꾹이, 4/17 저녁, 4/20 알람, 4/23 자판 위의 고양이', () => {
   const s = Life.create('나', '보리');
   s.day = 1; s.phase = 'evening'; s.minute = T.homeArrive;
-  // 사진은 평일 두 장까지
+  // 사진은 집에서 언제든 찍는다 (장 수 제한 없음)
   assert.equal(Life.photo(s, 'sleep').ok, true);
   assert.equal(Life.photo(s, 'groom').ok, true);
-  assert.equal(Life.photo(s, 'purr').why, 'cap');
+  assert.equal(Life.photo(s, { kind: 'box' }).photo.kind, 'box');
+  s.minute -= 3 * T.photo;
   // 차려 먹으면 그날 밤 체력이 한 칸 더 차고, 굶으면 한 칸 덜 찬다
   const m = s.minute;
   assert.equal(Life.eat(s, 'cook').ok, true);
@@ -1084,4 +1085,83 @@ test('부탁: 사장님께 10만 원을 빌리면 5/8에 갚는다. 주말 일�
   const p = Life.payday(s);
   assert.equal(p.out.find(o => o.key === 'borrow').amount, 100000);
   assert.equal(s.borrowed.back, true);
+});
+
+test('엄마: 첫 답장은 사진, 보낸 날마다 가까워지고, 반찬 택배는 이틀 뒤', () => {
+  const s = Life.create('나', '보리');
+  s.day = 2; s.phase = 'evening'; s.minute = T.homeArrive;
+  assert.equal(Life.person(s, 'mom').met, true);
+  assert.equal(Life.person(s, 'mom').bond, 0);
+  assert.equal(Life.litWindows(s), 1, '엄마는 동네 지도의 창문에 들지 않는다 (사장님만 켜져 있다)');
+  const a = Life.photo(s, { kind: 'cat' }), b = Life.photo(s, { kind: 'cat' });
+  assert.notEqual(a.id, b.id);
+  let r = Life.sendPhoto(s, a.id, 'mom');
+  assert.equal(r.up, true); assert.equal(r.first, true); assert.equal(Life.person(s, 'mom').bond, 1);
+  r = Life.sendPhoto(s, b.id, 'mom');
+  assert.equal(r.up, false, '같은 날 두 장째는 더 가까워지지 않는다');
+  assert.deepEqual(s.photos[0].to, ['mom']);
+  s.day = 3;
+  r = Life.sendPhoto(s, a.id, 'mom');
+  assert.equal(r.up, true); assert.equal(r.days, 2); assert.equal(Life.person(s, 'mom').bond, 2);
+  // 동기에게는 첫 한 장만 손을 내민 것으로 센다
+  Life.reach(s, 'talk');
+  const m0 = Life.person(s, 'mate').bond;
+  assert.equal(Life.sendPhoto(s, a.id, 'mate').up, true);
+  s.day = 4;
+  assert.equal(Life.sendPhoto(s, b.id, 'mate').up, false);
+  assert.equal(Life.person(s, 'mate').bond, m0 + 1);
+  // 반찬 택배: 이틀 뒤에 열 수 있고, 저녁 네 끼가 생긴다. 빈 상자가 남는다.
+  // 4/16(목)에 부치면 이틀 뒤는 토요일이라 다음 출근날인 4/20(월)에 온다.
+  assert.equal(Life.momSend(s), 8);
+  assert.equal(Life.momSend(s), null, '한 번만 부친다');
+  assert.equal(Life.momOpen(s).ok, false);
+  s.day = 8;
+  assert.equal(Life.momOpen(s).ok, true);
+  assert.equal(s.mom.food, Life.MOM_FOOD); assert.equal(s.box, 8);
+  s.myMeal = null;
+  assert.equal(Life.eat(s, 'mom').ok, true);
+  assert.equal(s.mom.food, Life.MOM_FOOD - 1);
+  assert.equal(s.cooked, true);
+});
+
+test('엄마와 닿는 갈래: 사진, 통화, 답장은 같은 날 갈래마다 한 번씩만 센다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 1; s.phase = 'evening'; s.minute = T.homeArrive;
+  const a = Life.photo(s, { kind: 'cat' });
+  Life.sendPhoto(s, a.id, 'mom');
+  assert.equal(Life.momBond(s), 1);
+  let r = Life.momTouch(s, 'answer');
+  assert.equal(r.up, true); assert.equal(Life.momBond(s), 2); assert.equal(r.minutes > 0, true);
+  assert.equal(s.mom.called, true);
+  r = Life.momTouch(s, 'call');
+  assert.equal(r.up, false, '같은 날 두 번째 통화는 더 가까워지지 않는다');
+  Life.momTouch(s, 'reply');
+  assert.equal(Life.momBond(s), 3);
+  s.day = 2; Life.momTouch(s, 'call');
+  assert.equal(Life.momBond(s), 3, '세 칸이 끝이다');
+  // 5/8까지 오지 못하는 택배는 부치지 않는다
+  const t = Life.create('나', '보리'); t.day = 24;
+  assert.equal(Life.momSend(t), null);
+});
+
+test('현금서비스는 은행 앱에서 한 번만, 요금이 모자랄 때도 같은 돈이다', () => {
+  const s = Life.create('나', '보리');
+  const w = s.wallet;
+  assert.equal(Life.cashService(s).ok, true);
+  assert.equal(s.wallet, w + Life.CASH.amount);
+  assert.equal(Life.canCash(s), false);
+  assert.equal(Life.cashService(s).ok, false);
+  // 이미 받은 돈으로 요금을 낼 수 있으면 'cash'로 골라도 그냥 낸다
+  s.day = 3;
+  const r = Life.payBill(s, 'phone', 'cash');
+  assert.equal(r.ok, true);
+});
+
+test('옛 v7 저장에 엄마와 사진 칸이 없어도 불러온다', () => {
+  const s = Life.create('나', '보리');
+  delete s.mom; delete s.people.mom; delete s.sent; s.photos = [{ day: 1, pose: 'sit' }]; delete s.photoSeq;
+  const t = Life.load(Life.save(s));
+  assert.ok(t.mom); assert.ok(t.people.mom); assert.deepEqual(t.sent, []);
+  assert.equal(t.photos[0].id, 'p1'); assert.deepEqual(t.photos[0].to, []);
+  assert.equal(Life.photo(Object.assign(t, { day: 1, phase: 'evening', minute: T.homeArrive }), {}).id, 'p2');
 });

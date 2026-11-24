@@ -30,10 +30,23 @@ var Arc = (function () {
   }
   function spent(m, x, y) { if (m) Engine.puff({ x: x || G.hero.x, y: y || 220, icon: 'clock', text: '+' + m + '분', px: 1 }); }
 
-  // ---------- 반짝이는 순간 (사진) ----------
-  // 저녁과 주말, 고양이가 가끔 사진 찍고 싶은 얼굴을 한다. 몇 초 안에 누르면 휴대폰에 남는다.
-  var M = { on: false, until: 0, next: 0, pose: 'sit', key: '', hint: false, rumble: -1 };
-  var POSES = ['sleep', 'groom', 'lookUp', 'purr'];
+  // ---------- 사진으로 남기고 싶은 순간 ----------
+  // 하루에 갈래마다 한 번, 고양이가 사진으로 남기고 싶은 자리에 간다. 고양이를 누르면 휴대폰 카메라가 열린다.
+  //   suit: 출근한 날 저녁, 침실. 벗어 둔 정장 위에 웅크린다 (그동안 옷걸이의 정장은 침대 위에 있다).
+  //   sun: 쉬는 날 낮 11시~4시, 거실. 창 아래 소파의 볕에서 배를 드러낸다.
+  //   box: 엄마 택배를 연 날과 그다음 날, 거실. 비워 둔 상자에 들어간다.
+  // 그림이 오기 전까지 고양이 자리는 회색 상자와 이름표로 둔다. 카메라는 이 순간이 아니어도 집에서는 언제든 열 수 있다.
+  var M = { on: null, ready: false, shot: false, until: 0, next: 0, key: '', hint: false, rumble: -1 };
+  var SPOT = {
+    suit: { room: 'bedroom', x: 128, y: 266, floor: 214, w: 80, h: 34, label: '정장 위 고양이' },
+    sun: { room: 'living', x: 468, y: 228, floor: 468, w: 78, h: 34, label: '볕 쬐는 고양이' },
+    box: { room: 'living', x: 512, y: 336, floor: 490, w: 56, h: 40, label: '상자 속 고양이' }
+  };
+  var BOX = { x: 484, y: 300, w: 56, h: 36 }; // 비워 둔 상자 (고양이가 없을 때)
+  function ph(c, x, y, w, h, label) {
+    View.box(c, x, y, w, h, '#c9c6c0', '#55505a', 2);
+    if (label) View.text(c, label, x + w / 2, y + h / 2 + 4, 10, '#55505a', 'center');
+  }
   function homeNow() {
     var s = S(), h = Home.H;
     return !!s && !h.pro && Life.homeTime(s) && h.mode !== 'night' && !h.closeUp && !h.arcHot && !h.clean && !h.toy && !h.held && !h.lock;
@@ -42,63 +55,93 @@ var Arc = (function () {
     var s = S(), h = Home.H, k = G.cat;
     return !s.hidden && k.visible && !k.walking && k.room === h.room && !h.catAct && !G.drag;
   }
+  function boxDay(s) { return s.box !== null && s.box !== undefined && (s.day === s.box || s.day === s.box + 1); }
+  // 지금 이 방에서 일어날 수 있는 순간 (그날 이미 지나간 갈래는 다시 오지 않는다)
+  function kindNow(s) {
+    var d = Life.day(s), room = Home.H.room, done = function (k) { return s.seen['moment:' + k + ':' + s.day]; };
+    if (boxDay(s) && room === 'living' && !done('box')) return 'box';
+    if (d.kind === 'off' && s.minute >= 660 && s.minute <= 960 && room === 'living' && !done('sun')) return 'sun';
+    if (d.kind === 'work' && s.phase === 'evening' && room === 'bedroom' && s.wearing !== 'suit' && !done('suit')) return 'suit';
+    return null;
+  }
   function tick(dt) {
     var s = S(); if (!s || !G.cat) return;
     var key = s.day + ':' + s.phase;
-    if (M.key !== key) { M.key = key; endMoment(); M.next = G.t + 6; }
+    if (M.key !== key) { M.key = key; endMoment(true); M.next = G.t + 8; }
     // 저녁 8시 반이 넘도록 내 저녁을 안 먹었으면 배에서 꼬르륵
     if (homeNow() && s.phase === 'evening' && s.day > 0 && !s.myMeal && s.minute >= 1230 && M.rumble !== s.day && !UI.busy()) {
       M.rumble = s.day; Engine.puff({ x: G.hero.x, y: G.hero.y - 110, icon: 'rice', px: 2, life: 1.6, rise: 10 });
     }
     if (M.on) {
-      if (UI.busy()) M.until += dt;
-      if (G.t > M.until || !homeNow() || G.cat.room !== Home.H.room || !G.cat.visible) endMoment();
+      var sp = SPOT[M.on];
+      if (UI.busy()) { M.until += dt; return; }
+      if (M.shot || G.t > M.until || Home.H.room !== sp.room || !Life.homeTime(s) || Home.H.mode === 'night' || !G.cat.visible) endMoment();
       return;
     }
-    if (G.t < M.next || UI.busy() || G.acting || !homeNow() || !catFree()) return;
-    if (s.day === 0 || Life.photosToday(s) >= Life.photoCap(s)) return;
-    startMoment();
+    if (G.t < M.next || UI.busy() || G.acting || !homeNow() || !catFree() || s.day === 0) return;
+    var kind = kindNow(s); if (kind) startMoment(kind);
   }
-  function startMoment() {
-    var s = S(), k = G.cat;
-    M.on = true; M.until = G.t + 7; M.pose = POSES[(s.photos.length + s.day) % POSES.length];
-    Home.H.catAct = 'still'; k.tx = null; k.pose = M.pose;
-    UI.sfx('purr');
-    if (!s.seen.photoHint) {
-      s.seen.photoHint = true; M.hint = true; M.until += 8;
-      G.hand = { x: k.x + 6, y: k.y - 64, tx: k.x + 6, ty: k.y - 34, period: 1.4, t0: G.t };
-      say(B().photo(s));
-    }
+  function startMoment(kind) {
+    var s = S(), k = G.cat, sp = SPOT[kind], H = Home.H;
+    M.on = kind; M.ready = false; M.shot = false; M.until = G.t + 40;
+    s.seen['moment:' + kind + ':' + s.day] = true;
+    H.catAct = 'still'; k.tx = null; k.pose = 'walk';
+    var go = Engine.catTo(sp.floor, { y: 336 });
+    go.then(function () {
+      if (M.on !== kind) return null;
+      return sp.y < 336 ? hop(sp.x, sp.y) : Engine.catTo(sp.x, { y: sp.y });
+    }).then(function () {
+      if (M.on !== kind) return;
+      k.pose = 'sleep'; M.ready = true; UI.sfx('purr');
+      if (!s.seen['momentHint:' + kind]) {
+        s.seen['momentHint:' + kind] = true; M.hint = true;
+        G.hand = { x: sp.x, y: sp.y - sp.h - 24, tx: sp.x, ty: sp.y - sp.h / 2, period: 1.4, t0: G.t };
+        say(B().moment[kind](s));
+      }
+    });
   }
-  function endMoment() {
+  function endMoment(quiet) {
     if (!M.on) return;
-    M.on = false;
+    var was = SPOT[M.on];
+    M.on = null; M.ready = false; M.shot = false;
     if (M.hint) { G.hand = null; M.hint = false; }
-    if (Home.H.catAct === 'still') Home.H.catAct = null;
-    M.next = G.t + 20 + Math.random() * 12;
-  }
-  function momentDraw(c, k) {
-    if (!M.on || k.walking) return;
-    var t = G.t;
-    for (var i = 0; i < 3; i++) {
-      var a = t * 1.6 + i * 2.1, q = (Math.sin(t * 5 + i * 2) + 1) / 2;
-      View.icon(c, 'sparkle', k.x + Math.cos(a) * 26, k.y - 26 + Math.sin(a) * 16, 1, { alpha: .45 + q * .55 });
+    var H = Home.H;
+    // 높은 자리(침대, 소파)에 있던 고양이는 바닥으로 폴짝 내려온다
+    if (!quiet && G.cat.visible && G.cat.y < 336 && was && G.cat.room === H.room) {
+      H.catAct = 'still';
+      hop(was.floor, 336).then(function () { if (H.catAct === 'still' && !M.on) H.catAct = null; });
+    } else {
+      if (H.catAct === 'still') H.catAct = null;
+      if (G.cat.y < 336 && was) { G.cat.y = 336; G.cat.x = was.floor; G.cat.pose = 'sit'; }
     }
-    View.icon(c, 'camera', k.x, k.y - 64 + Math.round(Math.sin(t * 4) * 2), 2);
+    M.next = G.t + 30;
   }
+  // 순간에는 고양이 그림 대신 그림 자리를 그린다 (그렸으면 true)
+  function momentDraw(c, k) {
+    if (!M.on || !M.ready || k.walking) return false;
+    var sp = SPOT[M.on];
+    ph(c, Math.round(k.x - sp.w / 2), Math.round(k.y - sp.h), sp.w, sp.h, sp.label);
+    return true;
+  }
+  // 비워 둔 상자: 고양이가 들어가 있지 않을 때 거실 바닥에
+  function drawBox(c) {
+    var s = S(), h = Home.H; if (!s || h.pro || h.room !== 'living' || !boxDay(s)) return;
+    if (M.on === 'box' && M.ready) return;
+    ph(c, BOX.x, BOX.y, BOX.w, BOX.h, '빈 상자');
+  }
+  // 정장 위 고양이가 있는 동안 옷걸이의 정장은 침대 위에 있다
+  function suitOnBed() { return M.on === 'suit' && M.ready; }
   function photoSpot() {
-    if (!M.on) return null;
-    var k = G.cat;
-    return { id: 'photo', x: k.x - 24, y: k.y - 80, w: 48, h: 82, glow: false, tap: snap };
+    if (!M.on || !M.ready) return null;
+    var k = G.cat, sp = SPOT[M.on];
+    return { id: 'photo', x: k.x - sp.w / 2 - 6, y: k.y - sp.h - 10, w: sp.w + 12, h: sp.h + 16, glow: false, tap: snap };
   }
   function snap() {
-    var s = S(), k = G.cat, r = Life.photo(s, M.pose);
-    if (!r.ok) { endMoment(); return null; }
-    UI.sfx('shutter'); G.flash = .55;
-    Engine.puff({ x: k.x, y: k.y - 60, icon: 'camera', text: r.n + '', px: 1, life: 1.2 });
-    endMoment();
-    return Engine.sleep(.4);
+    if (M.hint) { G.hand = null; M.hint = false; }
+    Phone.open('camera');
+    return null;
   }
+  function shotTaken() { M.shot = true; }
 
   // ---------- 내 저녁 ----------
   // 부엌 조리대: 삼각김밥(서서 5분)과 가스레인지(차려 먹기 40분, 그날 밤 체력 +1)
@@ -201,17 +244,8 @@ var Arc = (function () {
       await say(B().waitedAsleep(s));
       H.catAct = null;
     } else if (s.out === 'dinner' && !s.seen.lateHome) { s.seen.lateHome = true; await say(B().lateHome(s)); }
-    // 4/17 밤: 엄마 문자
-    if (d.mom && !s.seen.momText) {
-      s.seen.momText = true;
-      var m = B().momText;
-      await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body, replies: m.replies }, '9:40');
-      var lines = B().momAfter(s);
-      await say([lines[0]]);
-      if (!s.hidden) { await catWalk(Math.min(540, G.hero.x + 30)); k.dir = -1; k.pose = 'rub'; UI.sfx('purr'); }
-      await say([lines[1]]);
-      H.catAct = null;
-    }
+    // 4/17 밤: 엄마 문자 (답하지 않고 닫아도 된다)
+    if (d.mom && !s.seen.momText) { s.seen.momText = true; await Mom.text417(); }
     // 4/23: 발표 준비, 자판 위의 고양이
     if (d.eve && !s.lid) await lastPrep();
   }
@@ -338,6 +372,7 @@ var Arc = (function () {
       return homeBeats().then(function () { if (H.arcHot === none) H.arcHot = null; }, function (e) { if (H.arcHot === none) H.arcHot = null; throw e; });
     }, lastPrep: lastPrep,
     rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
-    moment: function () { return M.on ? { pose: M.pose, until: M.until } : null; }
+    drawBox: drawBox, suitOnBed: suitOnBed, shotTaken: shotTaken, SPOT: SPOT,
+    moment: function () { return M.on ? { kind: M.on, ready: M.ready, until: M.until } : null; }
   };
 }());
