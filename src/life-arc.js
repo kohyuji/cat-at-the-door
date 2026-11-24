@@ -181,8 +181,11 @@ var Arc = (function () {
     var m = B().dinnerText;
     return UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body, replies: [m.yes, m.no] }, '5:52').then(function (reply) {
       var r = Life.dinner(s, reply === 0);
-      if (r && r.go) { UI.sfx('coin'); return say([{ who: 'narr', text: '동기 친구와 여행자보험을 계약했다. 집에는 9시 반이 넘어서 들어갔다.' }]); }
-      return null;
+      if (!r || !r.go) return null;
+      return Town.askCat(17 * 60 + 54).then(function () { // 단톡 답장(오후 5:52) 바로 뒤
+        UI.sfx('coin');
+        return say([{ who: 'narr', text: '동기 친구와 여행자보험을 계약했다. 집에는 9시 반이 넘어서 들어갔다.' }]);
+      });
     });
   }
 

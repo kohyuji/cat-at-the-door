@@ -7,10 +7,10 @@ var Dev = (function () {
 
   // ---------- 플레이 방식 ----------
   var STYLES = {
-    balance: { label: '일도 고양이도', door: true, play: true, photos: true, prep: true, cook: 'weekend', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' },
+    balance: { label: '일도 고양이도', people: true, door: true, play: true, photos: true, prep: true, cook: 'weekend', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' },
     work: { label: '일만', door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
     greedy: { label: '실적만 (무리하게 권함)', greedy: true, door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
-    cat: { label: '고양이만', door: true, play: true, photos: true, prep: false, cook: 'always', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' }
+    cat: { label: '고양이만', people: true, door: true, play: true, photos: true, prep: false, cook: 'always', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' }
   };
 
   var flip = 0;
@@ -45,9 +45,23 @@ var Dev = (function () {
     if (!c.done) Life.sign(p, c);
     return Life.finish(s, p, c);
   }
-  function bills(s) {
+  // 동네 사람: people이면 먼저 말 걸고, 사과하고, 택배를 전하고, 점심을 같이 먹고, 현관 비밀번호를 알려 드리고, 늦는 날 부탁한다
+  function ask(s, kind) { var h = Life.helpers(s, kind); return h.length ? Life.ask(s, kind, h[0]).ok : false; }
+  function evening(s, st) {
+    if (!st.people) return;
+    if (s.day === 2) Life.reach(s, 'bow');
+    if (s.day === 4) Life.reach(s, 'parcel');
+    if (s.day >= Life.DISH_FROM && !s.seen.dish && Life.person(s, 'grandma').bond >= 2 && Life.day(s).kind === 'work') { s.seen.dish = true; s.dish = 'full'; }
+    if (s.dish === 'full' && !Life.eatBlock(s)) { Life.eat(s, 'banchan'); s.dish = 'empty'; }
+    else if (s.dish === 'empty' && Life.reach(s, 'dish').ok) s.dish = null;
+    if (Life.person(s, 'grandma').owe && !Life.reachBlock(s, 'visit')) Life.reach(s, 'visit');
+    Life.giveKey(s);
+    if (s.day === 15 && Life.person(s, 'mate').met && st.label === STYLES.balance.label) { var next = Life.clientsOn(Life.nextWorkDay(s.day), s)[0]; if (next) { s.gave = next; Life.reach(s, 'refer'); } }
+  }
+  function bills(s, st) {
     var due = Life.billDue(s);
     while (due) {
+      if (st && st.people && s.wallet < due.amount) ask(s, 'money');
       if (s.wallet >= due.amount) Life.payBill(s, due.id, 'pay');
       else if (due.defer) Life.payBill(s, due.id, 'defer');
       else if (Life.canCash(s)) Life.payBill(s, due.id, 'cash');
@@ -92,15 +106,22 @@ var Dev = (function () {
     Life.dress(s);
     if (s.fur && s.owned.roller) Life.roll(s);
     Life.feed(s, 'dry'); Life.scoop(s); Life.water(s);
+    if (st.people && s.alarm === 'late') ask(s, 'cover');
     Life.leaveHome(s);
+    if (st.people && Life.day(s).first) Life.reach(s, 'talk');
     Life.clientsOn(s.day, s).forEach(function (id) { consult(s, id, st); });
+    if (st.people && Life.LUNCH_DAYS.indexOf(s.day) >= 0 && s.wallet >= 120000) Life.reach(s, 'lunch');
     var d = Life.day(s);
-    if (d.group) { var go = d.overtime ? st.overtime : st.play === false; Life.decideGroup(s, go); if (go) consult(s, 'c6', st); }
-    if (d.dinner) Life.dinner(s, st.dinner);
+    if (d.group) {
+      var go = d.overtime ? st.overtime : st.play === false; Life.decideGroup(s, go);
+      if (go && st.people) { ask(s, 'work'); ask(s, 'cat'); }
+      if (go) consult(s, 'c6', st);
+    }
+    if (d.dinner) { Life.dinner(s, st.dinner); if (st.dinner && st.people) ask(s, 'cat'); }
     Life.leaveOffice(s);
     shopping(s).forEach(function (k) { Life.buy(s, k); });
     Life.arriveHome(s);
-    bills(s);
+    bills(s, st);
   }
   function weekend(s, st) {
     care(s, st);
@@ -129,9 +150,14 @@ var Dev = (function () {
       weekday(s, st);
       if (d.final) { Life.evaluate(s); break; }
       if (s.day === day) break; // 퇴근해서 집에 막 들어온 저녁
-      home(s, st); sleep(s, st);
+      evening(s, st); home(s, st); sleep(s, st);
     }
     s.seen.eveClock = true; s.seen.mealIntro = true; s.seen.packed = true;
+    if (s.day > 1) { s.seen.train = true; s.seen.mapHint = true; }
+    if (s.day > 2) s.seen.knock = true;
+    if (s.day > 4) s.seen.parcel = true;
+    if (s.day > 15) s.seen.refer = true;
+    Life.LUNCH_DAYS.forEach(function (d) { if (d < s.day || (d === s.day && when === 'evening')) s.seen['lunch' + d] = true; });
     s.seen.memoDay = s.day - 1;
     return s;
   }

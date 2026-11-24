@@ -220,6 +220,7 @@ var Home = (function () {
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
     actors.push({ y: 190, f: Arc.drawKitchen });
+    actors.push({ y: 300, f: Town.drawHome });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -843,7 +844,7 @@ var Home = (function () {
     if (H.closeUp || H.mode === 'night') return list;
     // 반짝이는 순간에는 고양이 자리가 사진 자리로 바뀐다 (사료 봉지, 물병처럼 끄는 물건이 먼저 잡히게 같은 순서에 둔다)
     var ph = G.cat.room === H.room ? Arc.photoSpot() : null;
-    list = list.concat(Arc.homeSpots(H.room));
+    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room));
     if (ph) {
       // 사진 순간은 맨 위에서 누르기를 받되, 끌기는 그 아래 물건(사료 봉지, 쓰다듬기)에 넘긴다.
       var rest = list.filter(function (x) { return x.id !== 'cat'; }), cat = list.find(function (x) { return x.id === 'cat'; });

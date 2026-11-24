@@ -39,6 +39,7 @@ var UI = (function () {
   }
   var SFX = {
     tap: function () { tone(740, .05, 'square', .03); },
+    knock: function () { [0, .2, .4].forEach(function (d) { tone(150, .07, 'square', .07, 0, d); }); },
     coin: function () { tone(988, .07, 'square', .045); tone(1319, .14, 'square', .045, 0, .07); },
     spend: function () { tone(660, .06, 'square', .035); tone(440, .1, 'square', .035, 0, .06); },
     meow: function () { tone(620, .14, 'triangle', .09, 980); tone(980, .26, 'triangle', .08, 520, .13); },
@@ -263,6 +264,7 @@ var UI = (function () {
     phoneHome();
   }
   function phoneClose() {
+    if (PH.ask) { askEnd(); return; }
     $('phone').hidden = true;
     var done = PH.waits.filter(function (w) { return !w.msg.unread && (!w.msg.replies || w.msg.reply != null); });
     PH.waits = PH.waits.filter(function (w) { return done.indexOf(w) < 0; });
@@ -285,6 +287,7 @@ var UI = (function () {
   function phoneClick(e) {
     var b = e.target.closest('button'), screen = e.target.closest('.iphone');
     if (!screen) { phoneClose(); return; }
+    if (PH.ask) { if (b) askClick(b); return; }
     if (!b) return;
     if (b.dataset.app === 'msg') { sfx('tap'); phoneList(); }
     else if (b.dataset.app) { b.animate && b.animate([{ transform: 'scale(.94)' }, { transform: 'none' }], { duration: 160 }); }
@@ -296,6 +299,119 @@ var UI = (function () {
       phoneThread(PH.thread);
       setTimeout(phoneClose, 900);
     }
+  }
+
+  // ---------- 부탁하기 (청하는 손) ----------
+  // 휴대폰이 새 메시지 화면으로 열린다. 받는 사람 목록에는 지금 이 부탁을 들어줄 수 있는 사람만 뜬다.
+  // 글은 저절로 써지고, 보내기를 길게 눌러야 보내진다. 누르는 동안 쓴 글이 한 번 지워졌다가 다시 써진다.
+  // 손을 떼면 처음 쓴 글로 돌아간다. 다 보내면 답장이 오고, 휴대폰을 닫으면 끝난다.
+  // o: { list: [{ id, name }], draft(id) → { first, again, final }, reply(id) → 답장, clock }
+  // 돌려주는 값: 보낸 사람의 id, 아무에게도 안 보냈으면 null
+  var HOLD = 2.6;
+  function askEl() {
+    var el = $('iosAsk');
+    if (!el) { el = document.createElement('div'); el.id = 'iosAsk'; el.className = 'ios-app ios-ask'; el.hidden = true; $('iosThread').parentNode.insertBefore(el, $('iosHomebar')); }
+    return el;
+  }
+  function phoneAsk(o) {
+    return new Promise(function (resolve) {
+      PH.ask = { o: o, resolve: resolve, sent: null, to: null, timers: [] };
+      ring(false); point(null);
+      if (o.clock) PH.clock = o.clock;
+      $('iosTime').textContent = PH.clock;
+      $('phone').hidden = false;
+      $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = true;
+      askEl().hidden = false;
+      sfx('tap');
+      askList();
+    });
+  }
+  function askClear() { var a = PH.ask; if (!a) return; a.timers.forEach(clearTimeout); a.timers = []; if (a.hold) { cancelAnimationFrame(a.hold.raf); a.hold = null; } }
+  function askList() {
+    var a = PH.ask; askClear(); a.to = null;
+    var rows = a.o.list.map(function (p) {
+      return '<button class="ios-row" data-ask-to="' + esc(p.id) + '"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span><span><span class="who">' + esc(p.name) + '</span><span class="pre"></span></span></button>';
+    }).join('');
+    askEl().innerHTML = '<div class="ios-nav"><span></span><span>새 메시지</span><span></span></div><div class="ios-to">받는 사람:</div>' +
+      (rows || '<div class="ios-empty"></div>');
+  }
+  function askType(text, done, speed) {
+    var a = PH.ask, field = $('askText'), cur = field.textContent, i = 0;
+    // 지금 글과 새 글이 같은 앞부분까지는 두고, 나머지만 지우고 다시 쓴다
+    while (i < cur.length && i < text.length && cur[i] === text[i]) i++;
+    var steps = [];
+    for (var k = cur.length; k > i; k--) steps.push(cur.slice(0, k - 1));
+    for (var m = i + 1; m <= text.length; m++) steps.push(text.slice(0, m));
+    var n = 0;
+    (function next() {
+      if (!PH.ask || PH.ask !== a) return;
+      if (n >= steps.length) { if (done) done(); return; }
+      field.textContent = steps[n++];
+      a.timers.push(setTimeout(next, n <= cur.length - i ? 32 : (speed || 42)));
+    }());
+  }
+  function askCompose(id) {
+    var a = PH.ask, p = a.o.list.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    askClear(); a.to = id; a.d = a.o.draft(id);
+    askEl().innerHTML = '<div class="ios-nav"><button data-ask-nav="list">‹</button><span></span><span></span></div><div class="ios-head"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span>' + esc(p.name) + '</div>' +
+      '<div class="ios-msgs" id="askMsgs"></div><div class="ios-compose"><div class="ios-field" id="askText"></div><button class="ios-send" id="askSend" disabled aria-label="보내기"><i></i></button></div>';
+    var send = $('askSend');
+    send.addEventListener('pointerdown', askHoldStart);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { send.addEventListener(ev, askHoldStop); });
+    askType(a.d.first, function () { send.disabled = false; send.classList.add('ready'); });
+  }
+  function askHoldStart(e) {
+    var a = PH.ask; if (!a || a.sent || $('askSend').disabled) return;
+    e.preventDefault();
+    try { e.target.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ }
+    var t0 = performance.now(), send = $('askSend'), stage = 0;
+    a.hold = { raf: 0 };
+    (function frame(now) {
+      if (!a.hold) return;
+      var q = Math.min(1, (now - t0) / 1000 / HOLD);
+      send.style.setProperty('--p', (q * 100).toFixed(1) + '%');
+      // 누르고 있는 동안: 잠깐 멈칫, 쓴 글을 지우고, 다시 쓴다
+      if (stage === 0 && q > .18) { stage = 1; askType(a.d.again, null, 40); }
+      if (stage === 1 && q > .5) { stage = 2; askType(a.d.final, null, 30); }
+      if (q >= 1) { a.hold = null; askSent(); return; }
+      a.hold.raf = requestAnimationFrame(frame);
+    }(t0));
+  }
+  function askHoldStop() {
+    var a = PH.ask; if (!a || !a.hold || a.sent) return;
+    askClear();
+    var send = $('askSend'); send.style.setProperty('--p', '0%');
+    askType(a.d.first, null, 20); // 손을 떼면 처음 쓴 글로 돌아간다
+  }
+  function askSent() {
+    var a = PH.ask, msgs = $('askMsgs'), send = $('askSend');
+    askClear();
+    a.sent = a.to;
+    $('askText').textContent = ''; send.disabled = true; send.classList.remove('ready'); send.style.setProperty('--p', '0%');
+    msgs.innerHTML = '<div class="ios-day">' + esc(a.o.time || '') + '</div><div class="bubble out">' + esc(a.d.final) + '</div>';
+    sfx('tap');
+    var nav = askEl().querySelector('[data-ask-nav]'); if (nav) nav.remove();
+    a.timers.push(setTimeout(function () {
+      msgs.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>');
+      a.timers.push(setTimeout(function () {
+        var tp = msgs.querySelector('.typing'); if (tp) tp.remove();
+        msgs.insertAdjacentHTML('beforeend', '<div class="bubble in">' + esc(a.o.reply(a.sent)) + '</div>');
+        sfx('buzz'); a.replied = true;
+      }, 1500));
+    }, 700));
+  }
+  function askClick(b) {
+    var a = PH.ask;
+    if (b.dataset.askTo) { sfx('tap'); askCompose(b.dataset.askTo); }
+    else if (b.dataset.askNav === 'list' && !a.sent) { sfx('tap'); askList(); }
+  }
+  function askEnd() {
+    var a = PH.ask; if (!a) return;
+    if (a.sent && !a.replied) return; // 답장이 올 때까지는 닫히지 않는다
+    askClear(); PH.ask = null;
+    askEl().hidden = true; $('phone').hidden = true;
+    phoneBadge(); if (PH.waits.length) ring(true);
+    a.resolve(a.sent);
   }
 
   // ---------- 손가락 화살표 (HTML 쪽 대상) ----------
@@ -333,6 +449,7 @@ var UI = (function () {
     var earned = t.earned.map(function (e) {
       if (e.key === 'job') return line('슈퍼 알바', wonSigned(e.amount), 'plus', '진열 정리 4시간');
       if (e.key === 'cash') return line('현금서비스', wonSigned(e.amount), 'minus', '5/8에 이자와 함께 갚는다');
+      if (e.key === 'borrow') return line('사장님께 빌린 돈', wonSigned(e.amount), 'minus', '5/8에 갚는다');
       return '';
     }).join('');
     h += sec('coin', '들어온 돈', earned);
@@ -420,7 +537,7 @@ var UI = (function () {
     hud: hud, hudReset: hudReset, float: float,
     say: say, talking: talking, setSpeakers: setSpeakers, advance: advance,
     black: black, blackOn: blackOn, blackOff: blackOff,
-    phoneWait: phoneWait, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
+    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
     point: point, placePointer: placePointer, chips: chips,
     receipt: receipt, receiptHTML: receiptHTML, askName: askName, gameOver: gameOver, busy: busy, wait: wait, esc: esc, img: img
   };

@@ -977,3 +977,111 @@ test('밥 두 끼, 물, 화장실을 다 챙긴 날이 사흘이면 손에 익�
   }
   assert.equal(Life.habitReady(s), true);
 });
+
+// ---------- v7 2단계: 동네 사람들 ----------
+test('사람: 손을 내밀면 창문이 켜지고, 가까워지면 환해진다. 사장님은 처음부터 아는 사이', () => {
+  const s = Life.create('나', '보리');
+  assert.equal(Life.windowOf(s, 'grandma'), 0);
+  assert.equal(Life.windowOf(s, 'boss'), 1);
+  assert.equal(Life.litWindows(s), 1);
+  s.day = 2; s.phase = 'evening'; s.minute = 1200;
+  const r = Life.reach(s, 'bow');
+  assert.equal(r.ok, true); assert.equal(r.first, true); assert.equal(r.minutes, 10);
+  assert.equal(Life.windowOf(s, 'grandma'), 1);
+  assert.equal(Life.reach(s, 'parcel').why, 'today'); // 같은 사람에게는 하루 한 번
+  s.day = 4;
+  assert.equal(Life.reach(s, 'parcel').ok, true);
+  assert.equal(Life.windowOf(s, 'grandma'), 2);
+  s.day = 5; assert.equal(Life.reachBlock(s, 'visit'), 'soon'); // 찾아가 인사드리기는 마지막으로 본 날부터 사흘 뒤에
+  s.day = 7; assert.equal(Life.reachBlock(s, 'visit'), null);
+});
+
+test('사람: 점심은 9,000원이 들고, 돈이 모자라면 못 간다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 3; s.wallet = 8000;
+  assert.equal(Life.reach(s, 'lunch').why, 'money');
+  s.wallet = 20000;
+  assert.equal(Life.reach(s, 'lunch').ok, true);
+  assert.equal(s.wallet, 11000);
+  assert.equal(Life.person(s, 'mate').bond, 1);
+});
+
+test('부탁: 열쇠를 맡긴 할머니만 고양이 밥을 챙겨 줄 수 있고, 늦은 밤 밥그릇이 채워져 있다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 2; Life.reach(s, 'bow');
+  assert.deepEqual(Life.helpers(s, 'cat'), []);
+  assert.equal(Life.giveKey(s).ok, false); // 아직 가까운 사이가 아니다
+  s.day = 4; Life.reach(s, 'parcel');
+  assert.equal(Life.giveKey(s).ok, true);
+  assert.deepEqual(Life.helpers(s, 'cat'), ['grandma']);
+  // 4/17 동기들과 저녁에 가는 날
+  s.day = 5; s.phase = 'work'; s.fed = { am: true, pm: false };
+  Life.dinner(s, true);
+  assert.equal(Life.ask(s, 'cat', 'grandma').ok, true);
+  assert.deepEqual(Life.helpers(s, 'cat'), []); // 빚을 진 사람에게는 다시 부탁하지 못한다
+  const food = s.food.dry, hearts = s.hearts;
+  Life.leaveOffice(s);
+  const a = Life.arriveHome(s);
+  assert.equal(a.helper.who, 'grandma');
+  assert.equal(s.fed.pm, true); assert.equal(s.water, true); assert.equal(s.food.dry, food - 1);
+  assert.equal(s.hearts, hearts - 2); // 혼자 보낸 낮(−2)만 있고, 늦게 와서 깎이는 마음은 없다
+});
+
+test('부탁: 갚지 않고 이레가 지나면 한 칸 멀어지고, 다시 손을 내밀면 갚아진다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 2; Life.reach(s, 'bow'); s.day = 4; Life.reach(s, 'parcel'); Life.giveKey(s);
+  s.day = 5; Life.ask(s, 'cat', 'grandma');
+  s.day = 9; Life.reach(s, 'visit');
+  assert.equal(Life.person(s, 'grandma').owe, null);
+  assert.equal(Life.person(s, 'grandma').bond, 3);
+  s.day = 10; Life.ask(s, 'cat', 'grandma');
+  s.day = 16; assert.deepEqual(Life.drift(s), []);
+  s.day = 17; assert.deepEqual(Life.drift(s), ['grandma']);
+  assert.equal(Life.person(s, 'grandma').bond, 2);
+  assert.equal(Life.person(s, 'grandma').owe, null);
+});
+
+test('부탁: 동기가 늦은 아침 첫 고객님을 붙잡아 주고, 야근을 나눠 하면 한 시간 일찍 들어온다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 1; Life.reach(s, 'talk');
+  s.day = 8; s.phase = 'morning'; s.minute = T.leaveBy + 30; s.wearing = 'suit';
+  Life.leaveHome(s);
+  assert.ok(s.late > 0);
+  assert.equal(Life.plan(s, Life.clientsOn(8, s)[0]).leaves, true);
+  assert.equal(Life.ask(s, 'cover', 'mate').ok, true);
+  assert.ok(!Life.plan(s, Life.clientsOn(8, s)[0]).leaves);
+  // 4/29 야근
+  const t = Life.create('나', '보리');
+  t.day = 15; Life.reach(t, 'lunch'); t.day = 16; Life.reach(t, 'refer');
+  t.day = 17; t.phase = 'work';
+  Life.decideGroup(t, true);
+  assert.deepEqual(Life.helpers(t, 'work'), ['mate']);
+  Life.ask(t, 'work', 'mate');
+  Life.leaveOffice(t); Life.arriveHome(t);
+  assert.equal(t.minute, T.groupHome - Life.WORK_HELP);
+});
+
+test('부탁: 동기에게 고객 한 분을 넘기면 그날 그 고객은 오지 않는다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 15;
+  const next = Life.clientsOn(16, s)[0];
+  s.gave = next; Life.reach(s, 'refer');
+  assert.equal(Life.clientsOn(16, s).includes(next), false);
+  assert.equal(Life.person(s, 'mate').bond, 2);
+});
+
+test('부탁: 사장님께 10만 원을 빌리면 5/8에 갚는다. 주말 일손을 도우면 가까워진다', () => {
+  const s = Life.create('나', '보리');
+  assert.deepEqual(Life.helpers(s, 'money'), []);
+  s.day = 6; s.phase = 'weekend'; s.minute = T.weekendStart; s.energy = 4; s.meal = 'am'; s.fed = { am: true, pm: false };
+  Life.sideJob(s);
+  assert.equal(Life.person(s, 'boss').bond, 2);
+  s.day = 15; s.wallet = 100000;
+  const r = Life.ask(s, 'money', 'boss');
+  assert.equal(r.amount, 100000); assert.equal(s.wallet, 200000);
+  assert.equal(Life.payBill(s, 'rent', 'pay').why, 'money');
+  s.day = 26; s.wallet = 0; s.contracts = 0;
+  const p = Life.payday(s);
+  assert.equal(p.out.find(o => o.key === 'borrow').amount, 100000);
+  assert.equal(s.borrowed.back, true);
+});
