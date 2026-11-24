@@ -18,14 +18,17 @@ var PixelArt = (function () {
   function extraRect(c,key,x,y,w,h){var a=EXTRA[key],im=images.r6Extras;if(!a||!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(im,a[0],a[1],a[2],a[3],Math.round(x),Math.round(y),Math.round(w),Math.round(h));c.restore();return true;}
   // 우산: 주인공 그림과 같은 픽셀 크기(u)로 그린다. (0,0)은 손잡이를 쥔 손.
   // 기울일 때도 화면을 돌리지 않고 한 칸 단위로 다시 찍어서(가장 가까운 칸) 픽셀 격자가 주인공과 같게 남는다.
-  var umbMap=null,umbCache={};
-  function umbrellaMap(){
-    if(umbMap)return umbMap;
-    var m={},W=31,cx=15,dark='#3b2b30',coral='#e2775e',light='#f2a083',rib='#b9533f';
+  var umbMaps={},umbCache={};
+  // 우산 천 색: 기본(프롤로그의 내 우산), 노란 우산, 비닐우산, 남색 우산
+  var UMB_PAL={coral:['#3b2b30','#e2775e','#f2a083','#b9533f','#c4664f'],yellow:['#4a3b22','#e6bf3a','#f5da7a','#b38f2b','#b38f2b'],clear:['#8c98a2','rgba(214,226,232,.62)','rgba(240,246,249,.78)','#b4c0c8','#9aa6ae'],navy:['#232838','#3f5a86','#5d7bab','#2c4064','#5a4636']};
+  function umbrellaMap(kind){
+    kind=UMB_PAL[kind]?kind:'coral';
+    if(umbMaps[kind])return umbMaps[kind];
+    var P=UMB_PAL[kind],m={},W=31,cx=15,dark=P[0],coral=P[1],light=P[2],rib=P[3];
     function px(xx,yy,col){m[(xx-cx)+','+yy]=col;}
     // 손잡이(J)와 대
     for(var k=-16;k<0;k++)px(cx,k,'#7d7f86');px(cx,0,dark);px(cx,1,dark);px(cx-1,2,dark);px(cx-2,2,dark);px(cx-3,1,dark);
-    px(cx-1,1,'#c4664f');px(cx-2,1,'#c4664f');
+    px(cx-1,1,P[4]);px(cx-2,1,P[4]);
     // 천: 위가 둥근 반원
     var top=-29,h=12;
     for(var yy=0;yy<=h;yy++){var half=Math.round(Math.sqrt(Math.max(0,1-Math.pow((h-yy)/h,2)))*15);for(var xx=cx-half;xx<=cx+half;xx++){var edge=xx===cx-half||xx===cx+half||yy===0;px(xx,top+yy,edge?dark:(yy<4?light:coral));}}
@@ -34,25 +37,25 @@ var PixelArt = (function () {
     // 살
     [[cx,0],[cx-8,-1],[cx+8,1]].forEach(function(r){for(var yy3=2;yy3<=h;yy3++){var xx3=Math.round(r[0]+(r[1]*(yy3-2))/3);if(r[1]===0)xx3=cx;px(xx3,top+yy3,rib);}});
     px(cx,top-1,dark);px(cx,top-2,dark);
-    return umbMap=m;
+    return umbMaps[kind]=m;
   }
   var UMB_R=36;
-  function umbrellaSprite(angle){
-    var key=Math.round(angle*40);
-    if(umbCache[key])return umbCache[key];
+  function umbrellaSprite(angle,kind){
+    var key=Math.round(angle*40),ck=(kind||'coral')+':'+key;
+    if(umbCache[ck])return umbCache[ck];
     if(typeof document==='undefined')return null;
-    var m=umbrellaMap(),a=key/40,co=Math.cos(a),si=Math.sin(a),S=UMB_R*2,cv=document.createElement('canvas');
+    var m=umbrellaMap(kind),a=key/40,co=Math.cos(a),si=Math.sin(a),S=UMB_R*2,cv=document.createElement('canvas');
     cv.width=S;cv.height=S;var g=cv.getContext('2d');
     for(var Y=-UMB_R;Y<UMB_R;Y++)for(var X=-UMB_R;X<UMB_R;X++){
       var sx=co*(X+.5)+si*(Y+.5),sy=-si*(X+.5)+co*(Y+.5),col=m[Math.floor(sx)+','+Math.floor(sy)];
       if(col){g.fillStyle=col;g.fillRect(X+UMB_R,Y+UMB_R,1,1);}
     }
-    return umbCache[key]=cv;
+    return umbCache[ck]=cv;
   }
-  function umbrella(c,x,y,angle,u){
-    var sp=umbrellaSprite(angle||0);
+  function umbrella(c,x,y,angle,u,kind){
+    var sp=umbrellaSprite(angle||0,kind);
     if(sp){c.save();c.imageSmoothingEnabled=false;c.drawImage(sp,Math.round(x)-UMB_R*u,Math.round(y)-UMB_R*u,UMB_R*2*u,UMB_R*2*u);c.restore();return;}
-    var m=umbrellaMap();c.save();c.translate(Math.round(x),Math.round(y));c.rotate(angle||0);c.scale(u,u);
+    var m=umbrellaMap(kind);c.save();c.translate(Math.round(x),Math.round(y));c.rotate(angle||0);c.scale(u,u);
     for(var k in m){var p=k.split(',');c.fillStyle=m[k];c.fillRect(+p[0],+p[1],1,1);}
     c.restore();
   }

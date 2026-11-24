@@ -260,7 +260,7 @@ var UI = (function () {
       + t.lost.map(function (l) { return line(clientName(l.id), '0원', 'minus', Story.LOST[l.why]); }).join('');
     if (pend) pend += line('5/8에 들어올 수수료', Life.won(Life.pendingTotal(s)), '');
     h += sec('sticker', '들어올 수수료', pend);
-    h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line(sp.item === 'bill' ? Story.BILL[sp.bill].name : Story.ITEM[sp.item], wonSigned(-sp.amount), 'minus'); }).join(''));
+    h += sec('coin', '쓴 돈', t.spent.map(function (sp) { return line((sp.item === 'bill' ? Story.BILL[sp.bill].name : Story.ITEM[sp.item]) + (sp.card ? ' (신용카드)' : ''), wonSigned(-sp.amount), 'minus'); }).join(''));
     h += sec('heart', Life.josa(s.cat, 'of') + ' 마음', t.hearts.map(function (x) { return line(Story.HEART[x.key], sign(x.delta), x.delta > 0 ? 'plus' : 'minus'); }).join('') +
       '<div class="r-stickers">' + (function () { var o = ''; for (var i = 0; i < Life.MAX; i++) o += img(i < s.hearts ? 'heart' : 'heartEmpty', 1); return o; }()) + '</div>');
     var en = '', next = t.energyNext == null ? s.energy : t.energyNext; for (var k = 0; k < Life.MAX; k++) en += img('bolt', 1, k < next ? '' : 'off');

@@ -38,13 +38,33 @@ var Town = (function () {
     grandma: { x: 130, y: 232, w: 62, h: 76, label: '302호' },
     station: { x: 286, y: 272, w: 96, h: 50, label: '역' },
     shop: { x: 272, y: 150, w: 100, h: 64, label: '슈퍼' },
-    branch: { x: 500, y: 34, w: 112, h: 110, label: '새솔지점' }
+    branch: { x: 500, y: 34, w: 112, h: 110, label: '새솔지점' },
+    // 알게 되면 밝아지는 곳: 동물병원(4/22부터), 공원과 영화관(그 사람과 약속을 잡으면), 성훈 씨네(같은 동네인 줄 알면, 갈 수는 없다)
+    vet: { x: 414, y: 178, w: 86, h: 58, label: '동물병원' },
+    park: { x: 212, y: 52, w: 84, h: 58, label: '공원' },
+    cinema: { x: 352, y: 58, w: 92, h: 58, label: '영화관' },
+    oneHome: { x: 52, y: 44, w: 132, h: 84, label: '성훈 씨네', view: true },
+    // 지하철로 40분 떨어진 곳: 결혼식에 가기로 한 날에만 밝아진다 (어두운 먼 곳 자리)
+    hall: { x: 498, y: 228, w: 116, h: 90, label: '결혼식장' }
   };
+  function known(s, id) {
+    if (id === 'vet') return s.day >= Life.VET.day || Life.vetDone(s);
+    if (id === 'park') return !!Life.appt(s, 'park');
+    if (id === 'cinema') return !!Life.appt(s, 'date');
+    if (id === 'oneHome') return Life.windowOf(s, 'one') > 0;
+    if (id === 'hall') return !!Life.day(s).wedding && !!s.wed && s.wed.answer === 'yes' && !s.wed.went;
+    return true;
+  }
   var VILLA = { x: 58, y: 196, w: 142, h: 120 };
-  // 아직 모르는 곳: 사람을 알게 될 때마다 하나씩 밝아진다 (4단계)
-  var DARK = [{ x: 52, y: 44, w: 132, h: 84 }, { x: 212, y: 52, w: 84, h: 58 }, { x: 352, y: 58, w: 92, h: 58 }, { x: 414, y: 178, w: 86, h: 58 }, { x: 498, y: 228, w: 116, h: 90 }];
-  var ROADS = [['station', 'home'], ['station', 'shop'], ['shop', 'grandma'], ['station', 'branch']];
-  var WIN = { mine: { x: 89, y: 244 }, grandma: { x: 153, y: 244 }, boss: { x: 336, y: 158 }, mate: { x: 560, y: 52 } };
+  // 아직 모르는 곳은 어둡다. 사람을 알게 될 때마다 하나씩 밝아진다.
+  var FAR = { x: 498, y: 228, w: 116, h: 90 };
+  var ROADS = [['station', 'home'], ['station', 'shop'], ['shop', 'grandma'], ['station', 'branch'], ['station', 'vet'], ['shop', 'park'], ['station', 'cinema'], ['park', 'oneHome'], ['station', 'hall']];
+  var WIN = { mine: { x: 89, y: 244 }, grandma: { x: 153, y: 244 }, boss: { x: 336, y: 158 }, mate: { x: 560, y: 52 }, one: { x: 110, y: 70 } };
+  // 4단계에서 더하는 갈 곳: 지도에 뜨는 조건(routes)과 고르면 하는 일(PLACES)
+  var EXTRA = [], PLACES = {}, RUN = {};
+  function addRoutes(fn) { EXTRA.push(fn); }
+  function place(id, fn) { PLACES[id] = fn; }
+  function onRun(kind, fn) { RUN[kind] = fn; }
   var MP = null;
   function center(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
   function foot(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h - 8 }; }
@@ -54,8 +74,11 @@ var Town = (function () {
     if (from === 'station') out.shop = Life.T.shopStop;
     else if (!Life.doBlock(s, 'shop')) out.shop = Life.T.shopTrip;
     if (!Life.reachBlock(s, 'visit')) out.grandma = Life.REACH.visit[2];
+    EXTRA.forEach(function (fn) { var o = fn(s, from) || {}; for (var k in o) out[k] = o[k]; });
+    if (MP_ONLY) { var only = {}; MP_ONLY.forEach(function (k) { if (out[k] !== undefined) only[k] = out[k]; }); return only; }
     return out;
   }
+  var MP_ONLY = null;
   function windowColor(level) { return level >= 2 ? '#ffd970' : level === 1 ? '#b59a5c' : '#4a4754'; }
   function drawWindow(c, w, level, glow) {
     if (glow && level >= 2) View.lampGlow(c, w.x + 8, w.y + 6, 26, .35);
@@ -66,12 +89,13 @@ var Town = (function () {
     c.fillStyle = '#d9d6cf'; c.fillRect(0, 0, 640, 360);
     View.text(c, '동네 지도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
     c.lineCap = 'round';
-    ROADS.forEach(function (r) { var a = center(r[0]), b = center(r[1]); c.strokeStyle = '#f2efe8'; c.lineWidth = 14; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); });
-    DARK.forEach(function (d) { ph(c, d.x, d.y, d.w, d.h, '', '#8f8a92', '#6c6772'); });
+    ROADS.forEach(function (r) { if (!known(s, r[0]) || !known(s, r[1])) return; var a = center(r[0]), b = center(r[1]); c.strokeStyle = '#f2efe8'; c.lineWidth = 14; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); });
+    if (!known(s, 'hall')) ph(c, FAR.x, FAR.y, FAR.w, FAR.h, '', '#8f8a92', '#6c6772');
     ph(c, VILLA.x, VILLA.y, VILLA.w, VILLA.h, '', '#c9c6c0');
     View.text(c, '우리 빌라', VILLA.x + VILLA.w / 2, VILLA.y + 18, 10, '#55505a', 'center');
     Object.keys(SPOT).forEach(function (id) {
       var r = SPOT[id], can = MP.to[id] !== undefined && id !== MP.at;
+      if (!known(s, id)) { if (id !== 'hall') ph(c, r.x, r.y, r.w, r.h, '', '#8f8a92', '#6c6772'); return; }
       ph(c, r.x, r.y, r.w, r.h, '', can ? '#efeae0' : '#c9c6c0');
       View.text(c, r.label, r.x + r.w / 2, r.y - 6, 10, '#55505a', 'center');
     });
@@ -80,6 +104,7 @@ var Town = (function () {
     drawWindow(c, WIN.grandma, Life.windowOf(s, 'grandma'), true);
     drawWindow(c, WIN.boss, Life.windowOf(s, 'boss'), true);
     drawWindow(c, WIN.mate, Life.windowOf(s, 'mate'), true);
+    if (known(s, 'oneHome')) drawWindow(c, WIN.one, Life.windowOf(s, 'one'), true);
     // 내 인형
     var p = MP.drag || MP.tok;
     View.shadow(c, p.x, p.y + 2, 10);
@@ -124,11 +149,13 @@ var Town = (function () {
     } });
     return list;
   }
-  // from: 'station'(퇴근길) 또는 'home'(집에서 나섬). 고른 곳의 id를 돌려준다.
-  function map(from) {
+  // from: 'station'(퇴근길) 또는 'home'(집에서 나섬). 고른 곳의 id를 돌려준다. only: 이곳들만 고를 수 있다 (이동장을 들고 나선 길)
+  function map(from, only) {
     var s = S(), at = from === 'station' ? 'station' : 'home';
+    MP_ONLY = only || null;
     var away = from === 'station' ? Math.max(0, 1 - (Life.T.homeArrive - (s.left || Life.T.leaveBy)) / 720) : 1;
-    MP = { from: from, at: at, to: routes(s, from), tok: foot(at), done: null, drag: null, moving: false, moved: false, away: away, view: s.phase === 'evening' || from === 'station' ? 'evening' : 'day' };
+    var to = routes(s, from); MP_ONLY = null;
+    MP = { from: from, at: at, to: to, tok: foot(at), done: null, drag: null, moving: false, moved: false, away: away, view: s.phase === 'evening' || from === 'station' ? 'evening' : 'day' };
     Engine.setScene({ draw: drawMap, hot: hotMap, place: 'map' });
     var first = !s.seen.mapHint;
     return Engine.fade(0, .3).then(function () {
@@ -315,7 +342,7 @@ var Town = (function () {
   }
   function homeSpots(room) {
     var s = S(), H = Home.H; if (room !== 'living' || !homeOK()) return [];
-    var list = [], out = !!H.waiter && H.waiter.types.indexOf('town') >= 0;
+    var list = [], out = !!H.waiter && H.waiter.types.indexOf('town') >= 0 && H.mode !== 'morning';
     if (out && s.seen.parcelAt === s.day) list.push({ id: 'parcel', x: HOME_SPOT.parcel.x - 20, y: HOME_SPOT.parcel.y - 26, w: 40, h: 30, chips: [Home.cMin(Life.REACH.parcel[2])], tap: outTo('parcel', HOME_SPOT.parcel.x + 20) });
     if (s.dish === 'full' && !Life.eatBlock(s)) list.push({ id: 'dish', x: HOME_SPOT.dish.x - 18, y: HOME_SPOT.dish.y - 20, w: 36, h: 24, chips: [Home.cMin(Life.T.banchan), Home.cBolt(1)], tap: eatDish });
     if (out && s.dish === 'empty' && !Life.reachBlock(s, 'dish')) list.push({ id: 'dishBack', x: HOME_SPOT.dish.x - 18, y: HOME_SPOT.dish.y - 20, w: 36, h: 24, chips: [Home.cMin(Life.REACH.dish[2])], tap: outTo('dish', HOME_SPOT.dish.x + 20) });
@@ -326,8 +353,11 @@ var Town = (function () {
     var k = GO.next; GO.next = null;
     if (k === 'parcel') return deliverParcel();
     if (k === 'dish') return returnDish();
+    if (RUN[k]) return RUN[k]();
     return Promise.resolve();
   }
+  // 다른 장면(동물병원, 그 사람)에서 집 안의 물건을 누르면 저녁 흐름으로 넘겨 그 일을 한다
+  function go(kind) { GO.next = kind; if (!Home.resolveWait('town')) { GO.next = null; return false; } return true; }
   function eatDish() {
     var s = S();
     return Engine.walkTo(HOME_SPOT.dish.x + 24).then(function () {
@@ -339,8 +369,14 @@ var Town = (function () {
   }
 
   // ---------- 집에 돌아온 저녁의 사람 일 ----------
-  async function homeBeats() {
+  // part 'door': 현관 앞과 문을 열 때의 일 (고양이가 맞기 전) / 'phone': 들어와서 받는 문자
+  async function homeBeats(part) {
     var s = S(), H = Home.H;
+    if (part === 'phone') {
+      // 4/27: 실적이 모자란 동기
+      if (s.day === 15 && !s.seen.refer && Life.person(s, 'mate').met) { s.seen.refer = true; await referText(); }
+      return;
+    }
     // 늦게 들어온 밤에 다녀간 흔적
     if (s.events.some(function (e) { return e.key === 'helperFed' && e.day === s.day; }) && !s.seen['fedNote' + s.day]) {
       s.seen['fedNote' + s.day] = true;
@@ -354,8 +390,6 @@ var Town = (function () {
     if (s.day >= Life.DISH_FROM && !s.seen.dish && Life.person(s, 'grandma').bond >= 2 && Life.day(s).kind === 'work') {
       s.seen.dish = true; s.dish = 'full'; UI.sfx('page'); await say(PP().dish.notice);
     }
-    // 4/27: 실적이 모자란 동기
-    if (s.day === 15 && !s.seen.refer && Life.person(s, 'mate').met) { s.seen.refer = true; await referText(); }
   }
   async function referText() {
     var s = S(), m = PP().refer.text, next = Life.nextWorkDay(s.day), give = next > 0 ? Life.clientsOn(next, s)[0] : null;
@@ -418,7 +452,7 @@ var Town = (function () {
   function askVia(kind, at) {
     var s = S(), A = PP().ask[kind], now = phoneTime(0, at);
     return UI.phoneAsk({
-      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: Story.CONTACT[w] }; }), // 휴대폰에 저장된 이름 (그 사람과 나눈 대화방에 이어진다)
+      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: Story.contactName(w, s) }; }), // 휴대폰에 저장된 이름 (그 사람과 나눈 대화방에 이어진다)
       draft: function (w) { return A[w](s); },
       reply: function (w) { return A.reply[w]; },
       clock: now.clock, time: now.label
@@ -467,9 +501,52 @@ var Town = (function () {
     return who;
   }
 
+  // ---------- 그림이 아직 없는 장소 (동물병원, 고깃집, 결혼식장, 공원, 영화관) ----------
+  // o: { title, place, bg, boxes: [{ x, y, w, h, label, fill, hide }], people: [{ x, y, v, dir, pose, hue, hide }], draw(c, t), top(c, t), night, walk }
+  // 사람 그림이 있는 사람(지점장님, 선배, 손님 그림을 빌린 성훈 씨)은 그림으로, 없는 사람은 회색 상자로 둔다
+  var STG = { spots: [], o: {} };
+  function stage(o) {
+    o = o || {};
+    STG = { spots: [], o: o };
+    var h = G.hero; h.tx = null; h.visible = o.hero !== false; h.pose = o.pose || null; h.y = o.heroY || 342; h.scale = 2.35;
+    if (o.heroX !== undefined) h.x = o.heroX;
+    if (o.dir) h.dir = o.dir;
+    Engine.setScene({ place: o.place || 'stage', draw: drawStage, hot: function () { return STG.spots; }, walk: o.walk || null });
+    return STG;
+  }
+  function drawStage(c) {
+    var o = STG.o, t = G.t, h = G.hero, s = S();
+    c.fillStyle = o.bg || '#d8d4cc'; c.fillRect(0, 0, 640, 360);
+    View.text(c, (o.title || '') + ' (그림 자리)', 10, 16, 10, '#7a7480', 'left');
+    if (o.floor !== false) { c.fillStyle = o.floorFill || '#b7b1a6'; c.fillRect(0, 322, 640, 38); }
+    (o.boxes || []).forEach(function (b) { if (!b.hide) ph(c, b.x, b.y, b.w, b.h, b.label, b.fill); });
+    if (o.draw) o.draw(c, t);
+    (o.people || []).forEach(function (p) {
+      if (p.hide) return;
+      if (p.box) { ph(c, p.x - 20, p.y - 108, 40, 108, p.box, p.fill || '#bfb6c9'); return; }
+      View.shadow(c, p.x, p.y + 1, 18);
+      View.person(c, G, p.x, p.y, p.v, p.dir || 1, t, p.pose || 'stand', p.scale || 2.35, p.hue);
+    });
+    if (h.visible) {
+      View.shadow(c, h.x, h.y + 1, 20);
+      View.person(c, G, h.x, h.y, s.wearing === 'suit' ? 'suit' : 'hoodie', h.dir, t, h.walking ? 'walk' : (h.pose || 'stand'), h.scale || 2.35);
+    }
+    if (o.top) o.top(c, t);
+    if (o.night) View.nightTint(c, o.night);
+  }
+  // 장면이 끝나고 거실로 돌아온다 (저녁 흐름이 이어진다)
+  function backIn(heroX) {
+    var s = S();
+    Home.enter('living', { mode: s.phase === 'morning' ? 'morning' : s.phase === 'weekend' ? 'weekend' : 'evening', heroX: heroX || 110 });
+    G.hero.dir = 1;
+    if (!s.hidden) { G.cat.visible = true; G.cat.room = 'living'; }
+    return Engine.fade(0, .35);
+  }
+
   return {
+    stage: stage, STG: function () { return STG; }, backIn: backIn, known: known,
     map: map, visit: visit, knock: knock, train: train, lunch: lunch, homeBeats: homeBeats, homeSpots: homeSpots, drawHome: drawHome,
     askCat: askCat, askCover: askCover, morningBeats: morningBeats, run: run, lateAsks: lateAsks, askMoney: askMoney, phoneTime: phoneTime,
-    SPOT: SPOT
+    SPOT: SPOT, addRoutes: addRoutes, place: place, PLACES: PLACES, onRun: onRun, go: go, askVia: askVia, ph: ph, pickFrom: pickFrom, outline: outline, heartPuff: heartPuff, spent: spent
   };
 }());

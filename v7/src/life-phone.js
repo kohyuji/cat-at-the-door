@@ -192,7 +192,7 @@ var Phone = (function () {
     $('phone').hidden = false;
     sfx('tap');
     if (P.rings) { incomingScreen(); return; }
-    if (view === 'camera') camera(); else home();
+    if (view === 'camera') camera(); else if (view === 'bank') bank(); else home();
   }
   function close() {
     if (P.ask) { askEnd(); return; }
@@ -494,7 +494,8 @@ var Phone = (function () {
     if (B.transfer && !P.bankPick) {
       var t = B.transfer, short = m.wallet < t.amount;
       html += '<div class="bank-sheet"><p>받는 분 <b>' + esc(t.to) + '</b></p><p class="big">' + won(t.amount) + '</p><p class="fine">통장 잔액 ' + won(m.wallet) + '</p>' +
-        (short && t.cash ? '<p class="fine warn">모자란 돈은 카드 현금서비스 ' + won(m.cash) + '로 채웁니다. 다음 카드값에 이자가 붙어서 나갑니다.</p><button data-bank="cashSend">현금서비스 받고 보내기</button>' : '<button data-bank="send">보내기</button>') + '</div>';
+        (short && t.cash ? '<p class="fine warn">모자란 돈은 카드 현금서비스 ' + won(m.cash) + '로 채웁니다. 다음 카드값에 이자가 붙어서 나갑니다.</p><button data-bank="cashSend">현금서비스 받고 보내기</button>' : short && t.optional ? '<p class="fine warn">잔액이 모자랍니다.</p>' : '<button data-bank="send">보내기</button>') +
+        (t.optional ? '<button data-bank="leave" class="plain">보내지 않기</button>' : '') + '</div>';
     }
     el('iosBank').className = 'ios-app ios-bank';
     el('iosBank').innerHTML = html;
@@ -518,11 +519,11 @@ var Phone = (function () {
     });
   }
   // 돈을 보낸다 (월세): 은행 앱의 보내기 화면. 보내기 전에는 닫히지 않는다.
-  // o: { to, amount, cash(모자란 돈을 현금서비스로 채우는지), clock, pay(how) }
+  // o: { to, amount, cash(모자란 돈을 현금서비스로 채우는지), clock, pay(how), optional(보내지 않고 닫을 수 있다: 축의금) }
   function bankTransfer(o) {
     return new Promise(function (resolve) {
       P.bankPick = null;
-      P.bank = { transfer: o, must: true, resolve: resolve, o: o };
+      P.bank = { transfer: o, must: !o.optional, resolve: resolve, o: o };
       openBank(o.clock);
     });
   }
@@ -685,6 +686,15 @@ var Phone = (function () {
   }
 
   // ---------- 저장과 불러오기 ----------
+  // 대화방 이름을 고친다 (연락처에 저장한 이름을 바꿨다)
+  function rename(from, to) {
+    if (from === to) return;
+    P.log.forEach(function (m) { if (m.c === from) m.c = to; });
+    P.calls.forEach(function (x) { if (x.c === from) x.c = to; });
+    P.waits.forEach(function (w) { if (w.c === from) w.c = to; });
+    if (P.conv === from) P.conv = to;
+    badge();
+  }
   function exportState() { return JSON.parse(JSON.stringify({ log: P.log, calls: P.calls })); }
   function load(o, opts) {
     o = o ? JSON.parse(JSON.stringify(o)) : {};
@@ -698,7 +708,7 @@ var Phone = (function () {
   return {
     init: init, setHooks: setHooks, wait: wait, drop: drop, ask: ask, open: open, close: close, afterClose: afterClose, setClock: setClock,
     bankUnpaid: bankUnpaid, bankTransfer: bankTransfer, incoming: incoming, callStart: callStart, callEnd: callEnd, callPick: callPick, talking: talking,
-    logCall: logCall, exportState: exportState, load: load, busy: busy, ring: ring, badge: badge, dateLabel: dateLabel,
+    logCall: logCall, exportState: exportState, rename: rename, load: load, busy: busy, ring: ring, badge: badge, dateLabel: dateLabel,
     camOn: function () { return !!P.cam && !$('phone').hidden; },
     P: P
   };

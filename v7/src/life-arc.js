@@ -47,9 +47,10 @@ var Arc = (function () {
     View.box(c, x, y, w, h, '#c9c6c0', '#55505a', 2);
     if (label) View.text(c, label, x + w / 2, y + h / 2 + 4, 10, '#55505a', 'center');
   }
+  function atHome() { return G.place === 'living' || G.place === 'bedroom'; } // 집 밖(지도, 동네)에 나가 있지 않다
   function homeNow() {
     var s = S(), h = Home.H;
-    return !!s && !h.pro && Life.homeTime(s) && h.mode !== 'night' && !h.closeUp && !h.arcHot && !h.clean && !h.toy && !h.held && !h.lock;
+    return !!s && !h.pro && Life.homeTime(s) && h.mode !== 'night' && !h.closeUp && !h.arcHot && !h.clean && !h.toy && !h.held && !h.lock && atHome();
   }
   function catFree() {
     var s = S(), h = Home.H, k = G.cat;
@@ -75,7 +76,7 @@ var Arc = (function () {
     if (M.on) {
       var sp = SPOT[M.on];
       if (UI.busy()) { M.until += dt; return; }
-      if (M.shot || G.t > M.until || Home.H.room !== sp.room || !Life.homeTime(s) || Home.H.mode === 'night' || !G.cat.visible) endMoment();
+      if (M.shot || G.t > M.until || Home.H.room !== sp.room || !atHome() || !Life.homeTime(s) || Home.H.mode === 'night' || !G.cat.visible) endMoment(!atHome());
       return;
     }
     if (G.t < M.next || UI.busy() || G.acting || !homeNow() || !catFree() || s.day === 0) return;
@@ -91,7 +92,7 @@ var Arc = (function () {
       if (M.on !== kind) return null;
       return sp.y < 336 ? hop(sp.x, sp.y) : Engine.catTo(sp.x, { y: sp.y });
     }).then(function () {
-      if (M.on !== kind) return;
+      if (M.on !== kind || !atHome() || Home.H.arcHot) return;
       k.pose = 'sleep'; M.ready = true; UI.sfx('purr');
       if (!s.seen['momentHint:' + kind]) {
         s.seen['momentHint:' + kind] = true; M.hint = true;
@@ -289,44 +290,112 @@ var Arc = (function () {
     G.hero.pose = null; H.catAct = null;
   }
 
-  // ---------- 4/24: 다시, 비 ----------
+  // ---------- 5/8: 다시, 비 ----------
+  // 프롤로그를 뒤집는다. 그날은 내가 슈퍼 앞의 고양이에게 우산을 기울였다. 오늘은 우산이 없다.
+  // 이 동네에서 가장 가까워진 사람(성훈 씨, 옆집 할머니, 슈퍼 사장님)이 우산을 기울이고, 나는 그 아래로 한 걸음 들어간다.
+  // 동기 지안이 가장 가까우면 지점을 나설 때 우산을 빌려줬다. 아무도 없으면 슈퍼에서 비닐우산을 사서 혼자 편다.
+  var RAIN_PAL = { grandma: { label: '옆집 할머니', fill: '#d6cbbd' } };
   async function rainHome() {
-    var s = S(), st = { open: 0, opened: false };
+    var s = S(), R = B().RAIN, who = Life.umbrellaBy(s);
+    var st = { open: 0, opened: false, own: who === 'mate', mine: false, other: null, under: false, step: 0 }, STEP = 26;
+    var o = who && who !== 'mate' ? { who: who, x: 520, dir: -1, on: false, walking: false } : null;
+    st.other = o;
     G.hero.x = 40; G.hero.dir = 1; G.hero.tx = null; G.hero.visible = true;
     Work.street({
       dusk: true,
       draw: function (c) {
         var h = G.hero, t = G.t;
         PixelArt.rain(c, { x: 0, y: 0, w: 640, h: 360 }, t, 1);
+        // 함께 쓰는 우산: 그 사람이 들고 내 쪽으로 기울인다
+        if (o && o.on) {
+          View.shadow(c, o.x, 343, 18);
+          if (RAIN_PAL[o.who]) { var P = RAIN_PAL[o.who]; View.box(c, o.x - 20, 236, 40, 106, P.fill, '#55505a', 2); }
+          else View.person(c, G, o.x, 342, o.who === 'one' ? 'customerA' : 'customerC', o.walking ? 1 : o.dir, t, o.walking ? 'walk' : 'stand', 2.35, o.who === 'one' ? 100 : 200);
+          var mid = st.under ? (o.x + h.x) / 2 : o.x - 6;
+          PixelArt.umbrella(c, mid, 258, st.under ? -.18 : -.5, View.HERO_PX, 'navy');
+        }
         View.shadow(c, h.x, 343, 20);
-        View.person(c, G, h.x, 342, 'suit', h.walking ? h.dir : 1, t, h.walking ? (st.opened ? 'umbrellaWalk' : 'walk') : (st.opened ? 'umbrella' : 'stand'), 2.35);
-        if (st.opened || st.open > 0) PixelArt.umbrella(c, h.x + (h.walking ? 6 : 16), h.walking ? 262 : 258 + (1 - st.open) * 30, 0, View.HERO_PX);
-        else View.r(c, h.x + 14, 270, 3, 44, '#3a3440'); // 접힌 우산
+        var holding = st.opened || st.open > 0;
+        View.person(c, G, h.x, 342, 'suit', h.walking ? h.dir : 1, t, h.walking ? (holding ? 'umbrellaWalk' : 'walk') : (holding ? 'umbrella' : 'stand'), 2.35);
+        if (holding) PixelArt.umbrella(c, h.x + (h.walking ? 6 : 16), h.walking ? 262 : 258 + (1 - st.open) * 30, 0, View.HERO_PX, st.own ? 'yellow' : 'clear');
+        else if (st.mine) View.r(c, h.x + 14, 270, 3, 44, st.own ? '#e0b43c' : '#c9d2d8'); // 접힌 우산 (지안의 노란 우산 / 비닐우산)
+        // 그림이 오기 전의 회색 상자: 이름은 나보다 앞에 써서 가리지 않는다
+        if (o && o.on && RAIN_PAL[o.who]) View.text(c, RAIN_PAL[o.who].label, o.x + 8, 254, 9, '#3b3540', 'center');
       },
       hot: function () {
-        if (st.opened || G.hero.walking || !st.ready) return [];
-        var x = G.hero.x + 16;
-        return [{ id: 'umbrella', x: x - 30, y: 220, w: 60, h: 110, drag: {
-          start: function (d) { st.y0 = d.y; G.hand = null; },
-          move: function (d) { st.open = Math.max(0, Math.min(1, (st.y0 - d.y) / 60)); },
-          end: function () { if (st.open > .6) { st.open = 1; st.opened = true; UI.sfx('tap'); } else st.open = 0; return null; }
-        } }];
+        var h = G.hero;
+        if (st.ready === 'open' && !st.opened && !h.walking) {
+          return [{ id: 'umbrella', x: h.x + 16 - 30, y: 220, w: 60, h: 110, drag: {
+            start: function (d) { st.y0 = d.y; G.hand = null; },
+            move: function (d) { st.open = Math.max(0, Math.min(1, (st.y0 - d.y) / 60)); },
+            end: function () { if (st.open > .6) { st.open = 1; st.opened = true; UI.sfx('tap'); } else st.open = 0; return null; }
+          } }];
+        }
+        if (st.ready === 'step' && !st.under) {
+          // 나를 우산 아래로 한 걸음 끌어 옮긴다 (눌러도 된다)
+          return [{ id: 'step', x: h.x - 30, y: 200, w: o.x - h.x + 30, h: 150, drag: {
+            start: function (d) { st.x0 = d.x; G.hand = null; },
+            move: function (d) { st.step = Math.max(0, Math.min(1, (d.x - st.x0) / 40)); h.x = st.base + st.step * STEP; },
+            end: function () { if (st.step > .5) { st.under = true; h.x = st.base + STEP; UI.sfx('tap'); } else { st.step = 0; h.x = st.base; } return null; }
+          }, tap: function () { st.under = true; h.x = st.base + STEP; UI.sfx('tap'); return null; } }];
+        }
+        if (st.ready === 'shop') {
+          return [{ id: 'shopDoor', x: 452, y: 168, w: 112, h: 128, pulse: true, tap: function () { st.buy = true; return null; } }];
+        }
+        return [];
       },
       walk: null
     });
     await Engine.fade(0, .6);
     UI.sfx('rain');
-    await Engine.walkTo(430, { speed: 90 });
-    G.hero.speed = 170;
-    await say(B().rain(s));
-    st.ready = true;
-    G.hand = { x: G.hero.x + 16, y: 300, tx: G.hero.x + 16, ty: 240, period: 2, t0: G.t };
-    await Engine.until(function () { return st.opened; });
-    G.hand = null;
-    await Engine.sleep(.5);
-    await Engine.walkTo(640, { speed: 110 });
+    if (st.own) {
+      // 지점을 나설 때 지안이 우산을 쥐여 줬다
+      st.mine = true;
+      await Engine.walkTo(300, { speed: 90 });
+      await say(R.start(s));
+      await say(R.mate);
+      await openOwn();
+      await say(R.mateAfter);
+      await Engine.walkTo(640, { speed: 110 });
+    } else {
+      // 슈퍼 차양 아래에 선다
+      await Engine.walkTo(392, { speed: 90 });
+      G.hero.speed = 170;
+      await say(R.start(s));
+      await say(R.noUmbrella);
+      if (o) {
+        o.on = true; UI.sfx('door');
+        o.walking = true; await slideX(o, 458, .7); o.walking = false; o.dir = -1;
+        await say(R.come[o.who]);
+        st.base = G.hero.x; st.ready = 'step';
+        G.hand = { x: G.hero.x, y: 300, tx: G.hero.x + 30, ty: 300, period: 1.6, t0: G.t };
+        await Engine.until(function () { return st.under; });
+        G.hand = null; st.ready = null;
+        await Engine.sleep(.4);
+        await say(R.under);
+        // 둘이 같이 걷는다
+        o.walking = true;
+        var gap = o.x - G.hero.x;
+        var follow = setInterval(function () { o.x = G.hero.x + gap; }, 16);
+        await Engine.walkTo(640, { speed: 90 });
+        clearInterval(follow);
+        G.hero.speed = 170;
+      } else {
+        st.ready = 'shop'; G.guide = { x: 508, y: 160, dir: 'down' };
+        await Engine.until(function () { return st.buy; });
+        G.guide = null; st.ready = null;
+        await Engine.fade(1, .3);
+        var r = Life.payAny(s, 'umbrella', Life.UMBRELLA); UI.sfx(r.card ? 'tap' : 'spend');
+        st.mine = true;
+        await Engine.fade(0, .3);
+        await say(R.bought);
+        await openOwn();
+        await Engine.walkTo(640, { speed: 110 });
+      }
+    }
     G.hero.speed = 170;
     await Engine.fade(1, .5);
+    if (o) await say(R.home[o.who]);
     // 집: 기다리는 고양이
     var H = Home.H, k = G.cat, close = s.hearts >= 3;
     H.mode = 'evening'; H.inBed = false; H.closeUp = null; H.catAct = 'still';
@@ -339,6 +408,17 @@ var Arc = (function () {
     await say(B().home(s));
     H.catAct = null;
     await Engine.fade(1, .8);
+
+    // 접힌 우산을 위로 밀어 편다 (프롤로그와 같은 손짓)
+    function openOwn() {
+      st.ready = 'open';
+      G.hand = { x: G.hero.x + 16, y: 300, tx: G.hero.x + 16, ty: 240, period: 2, t0: G.t };
+      return Engine.until(function () { return st.opened; }).then(function () { G.hand = null; st.ready = null; return Engine.sleep(.5); });
+    }
+  }
+  function slideX(b, x, sec) {
+    var x0 = b.x, t0 = G.t;
+    return new Promise(function (resolve) { (function step() { var q = Math.min(1, (G.t - t0) / sec); b.x = x0 + (x - x0) * q; if (q < 1) setTimeout(step, 16); else resolve(); }()); });
   }
 
   // ---------- 엔딩의 사진첩 ----------
@@ -346,7 +426,7 @@ var Arc = (function () {
   function album(s) {
     var shots = [];
     s.ledger.forEach(function (t) { if (Life.DAYS[t.day].kind === 'work' && s.results.some(function (r) { return r.day === t.day; })) shots.push({ day: t.day, memo: true }); });
-    (s.photos || []).forEach(function (p) { shots.push({ day: p.day, pose: p.pose }); });
+    (s.photos || []).forEach(function (p) { shots.push({ day: p.day, pose: p.pose, to: (p.to || []).slice() }); });
     shots.sort(function (a, b) { return a.day - b.day || (a.memo ? -1 : 1); });
     return shots;
   }
@@ -371,7 +451,7 @@ var Arc = (function () {
       var H = Home.H, none = function () { return []; }; H.arcHot = none; G.drag = null; H.held = null; G.hero.tx = null;
       return homeBeats().then(function () { if (H.arcHot === none) H.arcHot = null; }, function (e) { if (H.arcHot === none) H.arcHot = null; throw e; });
     }, lastPrep: lastPrep,
-    rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
+    rainHome: rainHome, album: album, stopMoment: function () { endMoment(true); }, drawShot: drawShot, KITCHEN: KITCHEN,
     drawBox: drawBox, suitOnBed: suitOnBed, shotTaken: shotTaken, SPOT: SPOT,
     moment: function () { return M.on ? { kind: M.on, ready: M.ready, until: M.until } : null; }
   };

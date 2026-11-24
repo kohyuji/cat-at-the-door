@@ -30,6 +30,9 @@ var Mom = (function () {
   function fresh(me, played) {
     var log = M().unread.map(function (m) { return { c: '엄마', ymd: [m[0], m[1], m[2]], time: m[3], dir: 'in', text: m[4], u: true, old: true }; });
     var calls = M().missed.map(function (m) { return { c: '엄마', ymd: [m[0], m[1], m[2]], time: m[3], kind: 'missed', n: 1, old: true }; });
+    // 대학 친구 은지의 모바일 청첩장 (읽고 답하지 않았다)
+    var wc = Story.WED.card;
+    log.push({ c: wc.from, ymd: wc.ymd.slice(), time: wc.time, dir: 'in', text: wc.body, u: false, old: true });
     if (played) {
       var rej = Story.phone.rejection(me), off = Story.phone.offer(me);
       log.push({ c: rej.from, ymd: PRO_REJECT, time: rej.time, dir: 'in', text: rej.body });
@@ -39,11 +42,15 @@ var Mom = (function () {
   }
 
   // ---------- 연락처 ----------
-  var PERSONS = ['집주인', '새솔지점 지점장', '윤순자 사장님'];
-  function idOf(c) { for (var k in Story.CONTACT) if (Story.CONTACT[k] === c) return k; return null; }
+  var PERSONS = ['집주인', '새솔지점 지점장', '윤순자 사장님', '은지'];
+  function idOf(c) {
+    if (c === Story.ONE.contact || c === Story.ONE.near) return 'one';
+    for (var k in Story.CONTACT) if (Story.CONTACT[k] === c) return k;
+    return null;
+  }
   function contact(c) {
     var id = idOf(c), s = S();
-    if (!id) return { person: PERSONS.indexOf(c) >= 0 };
+    if (!id) return { person: PERSONS.indexOf(c) >= 0 || / 고객님$/.test(c) };
     if (!s || pro()) return { id: id, person: true };
     var p = Life.person(s, id) || {};
     // 사진을 보낼 수 있는 방: 엄마는 처음부터, 할머니는 번호를 저장한 뒤(현관 비밀번호를 알려 드린 날), 다른 사람은 알게 된 뒤
@@ -80,7 +87,10 @@ var Mom = (function () {
   function photoSent(c, id) {
     var s = S(), k = contact(c); if (!k.id || pro()) return [];
     var r = Life.sendPhoto(s, id, k.id); if (!r.ok) return [];
-    if (k.id !== 'mom') { var o = OTHER[k.id]; return [r.first ? o.first : o.more[(s.sent.length + s.day) % o.more.length]]; }
+    if (k.id !== 'mom') {
+      var o = k.id === 'one' ? { first: Story.ONE.photoFirst(s), more: Story.ONE.photoMore(s) } : OTHER[k.id];
+      return [r.first ? o.first : o.more[(s.sent.length + s.day) % o.more.length]];
+    }
     if (r.first) { Phone.afterClose(function () { setTimeout(firstCall, 1600); }); return []; }
     var fromParcel = r.kind === 'box' && s.mom.opened !== null && s.box === s.mom.opened;
     var lines = M().photoReply(s, r, fromParcel).slice();
@@ -101,6 +111,7 @@ var Mom = (function () {
     var borrowed = [];
     if (s.borrowed && !s.borrowed.back) borrowed.push({ when: Life.DAYS[s.borrowed.day].date, name: Story.CONTACT[s.borrowed.who] || '', note: '5/8에 갚기', amount: s.borrowed.amount });
     if (s.loan && !s.paid) borrowed.push({ when: Life.DAYS[s.loan.day].date, name: '카드 현금서비스', note: '이자 포함, 다음 카드값', amount: s.loan.amount + Life.loanInterest(s) });
+    if (s.card && s.card.amount && !s.card.back) borrowed.push({ when: Life.DAYS[s.card.items[0].day].date, name: '신용카드', note: s.card.items.map(function (x) { return Story.ITEM[x.item]; }).join(', ') + ' · 다음 카드값', amount: s.card.amount });
     return { wallet: s.wallet, out: out, pending: s.paid ? 0 : Life.pendingTotal(s), lost: lost, borrowed: borrowed, canCash: Life.canCash(s) && !s.paid, cash: Life.CASH.amount };
   }
   function cashText() { Phone.drop({ from: '은행', time: now().label, body: Story.MONEY.cashSms(Life.CASH.amount) }); }
