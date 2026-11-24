@@ -423,6 +423,7 @@ var Work = (function () {
   }
   function bad(k) { UI.sfx('bad'); k.shake = true; setTimeout(function () { k.shake = false; }, 600); }
   function consult(id, opts) {
+    if (G.autoConsult) return Engine.fade(0, .1).then(function () { return G.autoConsult(id); }); // 개발자 모드 시험: 상담을 봇이 대신 한다
     var s = S(), p = Life.plan(s, id), st = Life.consult(p), k;
     k = Wk.consult = { id: id, p: p, st: st, left: p.timer, ready: false, gone: !!p.leaves, peer: !!p.tutorial, heroFrame: 0, view: 'listen', shown: 0, answers: [] };
     Engine.setScene({ draw: drawConsult, hot: hotConsult, tick: tickConsult, place: 'consult' });
@@ -565,10 +566,24 @@ var Work = (function () {
   var CONSULT_AT = [600, 840, 960];
   function workClock(m) { var s = S(); if (s && s.phase === 'work') s.minute = Math.max(s.minute, m); }
   function workDay() {
-    var s = S(), ids = Life.clientsOn(s.day, s), results = [];
+    var s = S(), ids = Life.clientsOn(s.day, s), results = [], left = false;
     return Engine.fade(1, .3).then(assembly).then(function () {
       return ids.reduce(function (pr, id, i) {
-        return pr.then(function () { return Engine.fade(1, .3); }).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
+        return pr.then(function () {
+          // 4/22 점심: 오후 상담을 미루고 고양이를 병원에 데려갈 수 있다
+          if (left || i === 0 || CONSULT_AT[Math.min(i, 2)] < 840) return null;
+          return Engine.fade(1, .3).then(function () { return Vet.noon(id); }).then(function (r) { if (r === 'go') left = true; });
+        }).then(function () {
+          if (left) return null;
+          return after(id, i);
+        });
+      }, Promise.resolve());
+    }).then(function () { return left ? null : Town.lunch(); }).then(function () { return left ? null : Mom.lunch(); }).then(function () { return results; });
+    function after(id, i) {
+        return Engine.fade(1, .3).then(function () { workClock(CONSULT_AT[Math.min(i, 2)]); return consult(id); }).then(function (res) {
+          // 4/16 상담이 끝나고: 고객님이 휴대폰 속 고양이를 보여 준다
+          return One.consultEnd(id, res).then(function () { return res; });
+        }).then(function (res) {
           results.push(res);
           var furLost = !res.signed && s.events.some(function (e) { return e.key === 'furLost' && e.day === s.day && e.id === res.id; });
           var smellLost = !res.signed && s.events.some(function (e) { return e.key === 'smellLost' && e.day === s.day && e.id === res.id; });
@@ -578,8 +593,7 @@ var Work = (function () {
           return Engine.fade(1, .3).then(function () { office(); return Engine.fade(0, .3); }).then(function () { return sticker(1); })
             .then(function () { return res.goal ? goalParty() : null; });
         });
-      }, Promise.resolve());
-    }).then(function () { return Town.lunch(); }).then(function () { return Mom.lunch(); }).then(function () { return results; });
+    }
   }
   // 4/16 저녁 8시 단체보험
   function groupEvening() {
@@ -1008,5 +1022,5 @@ var Work = (function () {
   }
 
   return { Wk: Wk, commute: commute, drawTrain: drawTrain, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
-    leaveOffice: leaveOffice, overtime: overtime, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT };
+    leaveOffice: leaveOffice, overtime: overtime, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT, DESK: DESK };
 }());

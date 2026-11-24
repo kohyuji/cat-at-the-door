@@ -330,7 +330,8 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
 .album figure { margin: 0; text-align: center; }
 .album canvas { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border: 2px solid var(--ink); border-radius: 3px; background: #eee; box-sizing: border-box; }
-.album figcaption { font-size: 12px; }
+.album figcaption { font-size: 12px; line-height: 1.3; }
+.album figure.sent canvas { border-color: #c0703c; }
 .ending-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
 
 @media (max-width: 1180px) {

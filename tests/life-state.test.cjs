@@ -490,29 +490,48 @@ test('4/21 아침에는 고양이가 안 보이고, 서랍 속에서 찾는다',
   assert.equal(s.hidden, false);
 });
 
-test('엔딩은 계약, 마음, 사진으로 정해지고, 다 지켜 준 사람만 숨은 엔딩을 본다', () => {
+test('엔딩은 계약, 마음, 가까워진 사람, 남은 빚으로 정해지고, 다 지켜 준 사람만 숨은 엔딩을 본다', () => {
   const s = Life.create('나', '보리');
   const G = Life.GOAL;
-  const pick = (h, c, p) => { s.hearts = h; s.contracts = c; s.photos = Array.from({ length: p }, (_, i) => ({ day: 1 + (i % 10), pose: 'sit' })); return Life.ending(s).key; };
-  assert.equal(pick(5, G, 4), 'both');
-  assert.equal(pick(5, G, 3), 'soso');              // 사진이 모자라면 좋은 엔딩이 아니다
-  s.events.push({ day: 3, key: 'curtain' });
-  assert.equal(pick(5, G, 9), 'both');              // 서랍 속 아침도 지켜 줘야
-  s.events.push({ day: 9, key: 'drawer' });
-  assert.equal(pick(5, G, 6), 'both');              // 사진첩도 가득해야
-  assert.equal(pick(5, G, 7), 'family');
+  const bond = (who, b) => { const p = Life.person(s, who); p.met = true; p.bond = b; if (who === 'one') p.near = true; };
+  const pick = (h, c) => { s.hearts = h; s.contracts = c; return Life.ending(s).key; };
+  assert.deepEqual(Life.ties(s), [], '사장님은 처음부터 아는 사이지만 한 칸뿐이다');
+  assert.equal(pick(5, G), 'soso', '일과 고양이만 지키고 가까워진 사람이 없으면 좋은 엔딩이 아니다');
+  bond('grandma', 2);
+  assert.equal(pick(5, G), 'both');
+  assert.equal(Life.umbrellaBy(s), 'grandma');
+  bond('mate', 2); bond('mom', 3);
+  assert.deepEqual(Life.ties(s), ['grandma', 'mate', 'mom']);
+  assert.equal(pick(5, G), 'both', '천둥 치던 밤과 서랍 속 아침도 지켜 줘야');
+  s.events.push({ day: 3, key: 'curtain' }, { day: 9, key: 'drawer' });
+  assert.equal(pick(5, G), 'family');
   assert.equal(Life.ending(s).grade, 'hidden');
-  assert.equal(pick(4, G, 9), 'both');              // 마음이 하나라도 비면 아니다
+  assert.equal(pick(4, G), 'both', '마음이 하나라도 비면 아니다');
   s.missed = 1;
-  assert.equal(pick(5, G, 9), 'both');              // 한 끼라도 굶기면 아니다
-  s.missed = 0; s.events = [];
-  assert.equal(Life.ENDINGS.length, 8);
-  assert.deepEqual(Life.ENDINGS.map(k => Life.GRADE[k]), ['hidden', 'good', 'normal', 'normal', 'normal', 'bad', 'bad', 'bad']);
-  assert.equal(pick(4, G - 1, 9), 'catStays');
-  assert.equal(pick(3, G + 1, 9), 'soso');
-  assert.equal(pick(2, 3, 9), 'clumsy');
-  assert.equal(pick(1, G + 2, 9), 'oneBody');
-  assert.equal(pick(0, 0, 0), 'again');
+  assert.equal(pick(5, G), 'both', '한 끼라도 굶기면 아니다');
+  s.missed = 0;
+  // 우산: 엄마는 이 동네에 없다. 가장 가까운 사람, 같으면 최근에 닿은 사람
+  Life.person(s, 'grandma').last = 5; Life.person(s, 'mate').last = 9;
+  assert.equal(Life.umbrellaBy(s), 'mate');
+  bond('one', 3);
+  assert.equal(Life.umbrellaBy(s), 'one');
+  Life.person(s, 'one').near = false;
+  assert.equal(Life.umbrellaBy(s), 'mate', '같은 동네에 사는 줄 모르면 그 사람은 오지 않는다');
+  // 5/8에 다 갚고도 통장이 마이너스면 빚 엔딩
+  s.paid = { wallet: -12000 };
+  assert.equal(pick(5, G), 'debt');
+  s.paid = { wallet: 3000 };
+  assert.equal(pick(5, G), 'family');
+  // 사람만 챙겨서는 안 된다
+  assert.equal(pick(4, G - 1), 'catStays');
+  assert.equal(pick(1, G - 1), 'again');
+  assert.equal(pick(3, G + 1), 'soso');
+  assert.equal(pick(2, 3), 'clumsy');
+  assert.equal(pick(1, G + 2), 'oneBody');
+  assert.equal(Life.ENDINGS.length, 9);
+  assert.deepEqual(Life.ENDINGS.map(k => Life.GRADE[k]), ['hidden', 'good', 'normal', 'normal', 'normal', 'bad', 'bad', 'bad', 'bad']);
+  s.missed = 4;
+  assert.equal(pick(5, G), 'emptyBowl');
 });
 
 test('저장하고 다시 불러오면 같은 상태다', () => {
@@ -649,7 +668,13 @@ test('4/12 일요일 저녁에 통장 38만 원으로 시작하고, 첫 달은 5
 test('평일 고객은 하루 한 분(첫날만 두 분)이고, 소개받은 고객은 소개가 있어야 온다', () => {
   const s = Life.create('나', '보리');
   assert.deepEqual(Life.clientsOn(1, s), ['c1', 'c16']);
-  for (let d = 2; d < Life.DAYS.length; d++) if (Life.DAYS[d].kind === 'work') assert.ok(Life.clientsOn(d, s).length <= 1, Life.DAYS[d].date);
+  // 4/22만 오전과 오후 두 분이다 (오후 상담을 미루고 동물병원에 갈 수 있다)
+  for (let d = 2; d < Life.DAYS.length; d++) if (Life.DAYS[d].kind === 'work') assert.ok(Life.clientsOn(d, s).length <= (d === Life.VET.day ? 2 : 1), Life.DAYS[d].date);
+  assert.deepEqual(Life.clientsOn(Life.VET.day, s), ['c4', 'c22']);
+  // 회식 2차에서 넘겨받은 상담 신청 고객은 2차에 가야 온다
+  assert.deepEqual(Life.clientsOn(15, s), ['c13']);
+  s.refs.d1 = true;
+  assert.deepEqual(Life.clientsOn(15, s), ['c13', 'd1']);
   assert.deepEqual(Life.clientsOn(25, s), ['c21']);
   s.refs.r1 = true;
   assert.deepEqual(Life.clientsOn(25, s), ['r1', 'c21']);
@@ -1164,4 +1189,131 @@ test('옛 v7 저장에 엄마와 사진 칸이 없어도 불러온다', () => {
   assert.ok(t.mom); assert.ok(t.people.mom); assert.deepEqual(t.sent, []);
   assert.equal(t.photos[0].id, 'p1'); assert.deepEqual(t.photos[0].to, []);
   assert.equal(Life.photo(Object.assign(t, { day: 1, phase: 'evening', minute: T.homeArrive }), {}).id, 'p2');
+});
+
+test('동물병원: 4/22부터 갈 수 있고, 통장이 모자라면 신용카드로 긁어 5/8에 갚는다. 다음 날 가면 더 든다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 9; s.phase = 'evening'; s.minute = T.homeArrive;
+  assert.equal(Life.treat(s, 'eve').ok, false, '4/21에는 아직 모른다');
+  s.day = 10;
+  assert.equal(Life.vetDue(s), true);
+  s.wallet = 200000;
+  let r = Life.treat(s, 'eve');
+  assert.equal(r.ok, true); assert.equal(r.amount, Life.VET.bill); assert.equal(r.card, false);
+  assert.equal(s.wallet, 200000 - Life.VET.bill);
+  assert.equal(Life.treat(s, 'eve').ok, false, '한 번만 간다');
+  assert.equal(Life.vetDue(s), false);
+  // 약은 그날부터 닷새
+  assert.equal(Life.onMed(s), true); s.day = 14; assert.equal(Life.onMed(s), true); s.day = 15; assert.equal(Life.onMed(s), false);
+  // 다음 날 아침에 가면 수액이 붙고, 통장이 모자라면 카드
+  const t = Life.create('나', '보리');
+  t.day = 11; t.phase = 'commute'; t.minute = T.leaveBy; t.wallet = 50000;
+  r = Life.treat(t, 'next');
+  assert.equal(r.amount, Life.VET.worse); assert.equal(r.card, true);
+  assert.equal(t.wallet, 50000, '통장은 그대로');
+  assert.equal(t.card.amount, Life.VET.worse);
+  assert.equal(t.vet.med, 11 + Life.VET.med - 1);
+  t.day = Life.DAYS.length - 1;
+  const p = Life.payday(t);
+  assert.ok(p.out.some(o => o.key === 'card' && o.amount === Life.VET.worse));
+  assert.equal(t.card.back, true);
+});
+
+test('4/22 오후 상담을 미루면 그 고객님은 미룬 것으로 남는다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 10;
+  assert.deepEqual(Life.clientsOn(10, s), ['c4', 'c22']);
+  Life.postpone(s, 'c22');
+  assert.equal(s.postponed.c22, 10);
+  assert.ok(s.events.some(e => e.key === 'postponed'));
+});
+
+test('회식: 1차는 누구나, 2차 회비 2만 원은 통장에서만 나간다. 2차에 가면 동기와 가까워지고 고객을 넘겨받는다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 11;
+  assert.equal(Life.hoesik(s, 1), null, '회식 날이 아니다');
+  s.day = Life.HOESIK.day; s.phase = 'commute';
+  assert.equal(Life.hoesik(s, 1).stage, 1);
+  assert.equal(Life.hoesik(s, 1), null, '1차는 한 번');
+  s.wallet = 15000;
+  let r = Life.hoesik(s, 2);
+  assert.equal(r.ok, false); assert.equal(r.why, 'money');
+  assert.equal(s.out, 'hoesik'); assert.equal(s.wallet, 15000);
+  assert.ok(!s.card || !s.card.amount, '카드로는 못 낸다');
+  s.wallet = 50000;
+  const m = Life.person(s, 'mate'); m.met = true; const b0 = m.bond;
+  r = Life.hoesik(s, 2);
+  assert.equal(r.ok, true); assert.equal(r.mate, true);
+  assert.equal(s.wallet, 50000 - Life.HOESIK.second);
+  assert.equal(m.bond, b0 + 1);
+  assert.equal(s.refs.d1, true);
+  assert.equal(s.minute, Life.HOESIK.leave2);
+  assert.equal(Life.hoesik(s, 2), null, '2차도 한 번');
+});
+
+test('결혼식 축의금: 봉투는 현금이라 통장이 모자라면 현금서비스를 받고, 그마저 썼으면 못 낸다', () => {
+  const s = Life.create('나', '보리');
+  s.day = Life.WEDDING.day; s.phase = 'weekend'; s.minute = 600;
+  Life.wedAnswer(s, true);
+  s.wallet = 20000;
+  let r = Life.wedGift(s, 50000, 'cash');
+  assert.equal(r.ok, true); assert.equal(r.cashed, true);
+  assert.equal(s.wallet, 20000 + Life.CASH.amount - 50000);
+  assert.equal(Life.wedGift(s, 50000, 'cash').ok, false, '한 번만 낸다');
+  const t = Life.create('나', '보리');
+  t.day = Life.WEDDING.ask; t.phase = 'evening'; t.minute = T.homeArrive;
+  Life.cashService(t); t.wallet = 10000;
+  r = Life.wedGift(t, 50000, 'send');
+  assert.equal(r.ok, false); assert.equal(r.why, 'money');
+  assert.equal(t.wed.gift, 0);
+  Life.wedGo(s);
+  assert.equal(s.wed.went, true);
+  assert.equal(s.minute >= Life.WEDDING.back, true);
+});
+
+test('그 사람: 같은 일은 한 번만 세고, 사진 보여 주기, 이동장 맡아 주기, 공원, 영화가 한 칸씩이다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 4;
+  const p = Life.person(s, 'one');
+  assert.equal(p.met, false);
+  assert.equal(Life.oneMeet(s, 'client').first, true);
+  assert.equal(Life.oneBond(s), 0);
+  assert.equal(Life.oneMeet(s, 'show').bond, 1);
+  assert.equal(Life.oneMeet(s, 'show').ok, false);
+  s.day = 10;
+  Life.oneMeet(s, 'carrier'); Life.oneMeet(s, 'vet');
+  assert.equal(Life.oneBond(s), 2); assert.equal(p.near, true);
+  s.day = 14; Life.oneMeet(s, 'park');
+  s.day = 20; Life.oneMeet(s, 'date');
+  assert.equal(Life.oneBond(s), 3, '세 칸이 끝이다');
+  s.day = 23; Life.oneMeet(s, 'visit');
+  assert.equal(p.key, true);
+  assert.equal(Life.oneMeet(s, 'nope').ok, false);
+});
+
+test('약속: 냉장고 달력에 붙고, 한 시간 전부터 30분 뒤까지 갈 수 있고, 지나면 놓친다', () => {
+  const s = Life.create('나', '보리');
+  s.day = 14; s.phase = 'weekend'; s.minute = 600;
+  Life.addAppt(s, 'park', 14, Life.DATE.park, 'park');
+  Life.addAppt(s, 'park', 14, Life.DATE.park, 'park');
+  assert.equal(s.appts.length, 1, '같은 약속은 하나');
+  assert.equal(Life.apptNow(s), null);
+  s.minute = Life.DATE.park - 60; assert.equal(Life.apptNow(s).key, 'park');
+  s.minute = Life.DATE.park + 30; assert.equal(Life.apptNow(s).key, 'park');
+  assert.equal(Life.apptMissed(s).length, 0);
+  s.minute = Life.DATE.park + 31; assert.equal(Life.apptNow(s), null);
+  assert.equal(Life.apptMissed(s).length, 1);
+  Life.apptDone(s, 'park', 'missed');
+  assert.equal(Life.apptMissed(s).length, 0);
+  // 집에 오는 약속은 놓치는 약속으로 세지 않는다
+  Life.addAppt(s, 'visit', 14, 600, 'home');
+  assert.equal(Life.apptMissed(s).length, 0);
+});
+
+test('그 사람과 나간 쉬는 날은 고양이가 혼자다. 처음 온 손님에게 다가가면 한 칸', () => {
+  const s = Life.create('나', '보리');
+  s.day = 20; s.phase = 'weekend'; s.minute = 600; s.hearts = 3;
+  Life.dateOut(s, false); assert.equal(s.hearts, 2);
+  Life.dateOut(s, true); assert.equal(s.hearts, 0);
+  Life.visitOk(s); assert.equal(s.hearts, 1);
 });
