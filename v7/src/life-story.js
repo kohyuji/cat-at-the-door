@@ -68,7 +68,10 @@ var Story = (function () {
     c18: { name: '홍재원', look: 'customerA', tint: 30 },
     c19: { name: '유가은', look: 'customerB', tint: 300 },
     c20: { name: '권도윤', look: 'customerA', tint: 160 },
-    c21: { name: '백승아', look: 'customerB', tint: 60 }
+    c21: { name: '백승아', look: 'customerB', tint: 60 },
+    // 소개로 오는 고객 (솔직하게 권하지 않은 고객이 소개해 준다)
+    r1: { name: '서유나', look: 'customerB', tint: 210 },
+    r2: { name: '문태오', look: 'customerC', tint: 90 }
   };
 
   var ORDINAL = ['첫', '두', '세', '네'];
@@ -366,7 +369,8 @@ var Story = (function () {
     leave: '그냥 둔다',
     deferText: { from: '집주인', body: '네, 8일까지는 기다릴게요. 그 뒤로는 어렵습니다.' },
     cashNote: '카드 현금서비스로 30만 원을 받았다. 다음 카드값에 이자까지 붙어서 나간다.',
-    late: '이대로면 연체다. 5/8에 연체료를 더해 내야 한다.'
+    late: '이대로면 연체다. 5/8에 연체료를 더해 내야 한다.',
+    cashSms: function (n) { return '[카드 현금서비스]\n' + Life.won(n) + '이 입금되었습니다.\n이자는 다음 카드 결제일에 함께 청구됩니다.'; }
   };
   function statement(s, p) {
     var l = [{ label: '4월 계약 수수료', amount: p.gross }];
@@ -456,7 +460,12 @@ var Story = (function () {
   // 사건은 꼭 일어나고, 플레이어의 손이 그 결과만 바꾼다. 설명하는 말은 줄이고 장면과 손짓으로 보여 준다.
   var BEAT = {
     meal: [{ who: 'me', text: '배고프다... 나도 뭘 좀 먹어야지.' }],
-    photo: function (s) { return [{ who: 'me', text: '지금 이 얼굴은 남겨 둬야 해.' }]; },
+    // 사진으로 남기고 싶은 순간을 처음 본 날
+    moment: {
+      suit: function (s) { return [{ who: 'me', text: '내 정장 위에서 자고 있네.' }, { who: 'me', text: '털 다 묻겠다... 그래도 이건 찍어 둬야지.' }]; },
+      sun: function (s) { return [{ who: 'me', text: '볕 드는 자리는 귀신같이 안다니까.' }]; },
+      box: function (s) { return [{ who: 'me', text: '반찬은 냉장고에 넣었고, 상자는 ' + j(s.cat, 'bare') + ' 차지네.' }]; }
+    },
     knead: function (s) { return [{ who: 'narr', text: '새벽 다섯 시. 얼굴 위에 말랑한 발이 꾹, 꾹.' }]; },
     kneadPet: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 골골거린다. 다시 잠들기는 글렀다.' }]; },
     kneadPush: function (s) { return [{ who: 'narr', text: '이불을 머리끝까지 덮었다. 발이 멈췄다.' }]; },
@@ -467,10 +476,7 @@ var Story = (function () {
     friday: function (s) { return [{ who: 'narr', text: s.contracts < 5 ? '금요일. 실적 그래프에서 내 칸이 제일 짧다. 지점장님은 아무 말 없이 다음 사람으로 넘어갔다.' : '금요일. 첫 주가 끝났다.' }]; },
     dinnerText: { from: '동기 단톡', time: '오후 5:52', preview: '금요일인데 다 같이 저녁 먹고 가요!',
       body: '금요일인데 다 같이 저녁 먹고 가요!\n\n제 친구가 여행자보험 알아본대서 소개해 줄게요 ㅎㅎ', yes: '갈게요!', no: '오늘은 먼저 갈게요' },
-    momText: { from: '엄마', time: '오후 9:40', preview: '회사는 다닐 만하니? 밥은 먹고 다니고?',
-      body: '회사는 다닐 만하니? 밥은 먹고 다니고?', replies: ['응, 괜찮아.'] },
-    momAfter: function (s) { return [{ who: 'narr', text: '몇 번을 썼다 지우고, 그 한 줄만 보냈다.' }, { who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' }]; },
-    alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'bare') + '.' }]; },
+    alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'call') + '.' }]; },
     alarmLate: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다.' }, { who: 'me', text: '8시 20분...?! 늦었다!' }]; },
     overtime: function (s) { return [{ who: 'lead', text: '첫 달 마감 전이니까요. 남을 사람은 남아서 한 건 더 해 봐요.' }, { who: 'me', text: '(집에서 ' + j(s.cat, 'subject') + ' 기다릴 텐데.)' }]; },
     waitedAsleep: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관 매트 위에서 웅크린 채 잠들어 있었다.' }]; },
@@ -493,11 +499,11 @@ var Story = (function () {
     knock: {
       sound: '똑똑똑. 누가 현관문을 두드린다.',
       open: function (s) { return [
-        { who: 'grandma', text: '옆집 사는 사람이야. 밤마다 애기 우는 소리가 나서 와 봤어.' },
+        { who: 'grandma', text: '옆집 사는 사람이야. 요 며칠 밤마다 애기 우는 소리가 나서 와 봤어.' },
         { who: 'grandma', text: '고양이지? 새벽에 그렇게 울면 나도 잠을 못 자.' }
       ]; },
       bow: function (s) { return [
-        { who: 'me', text: '죄송합니다. 데려온 지 얼마 안 돼서, 밤에 혼자 있으면 우나 봐요. 조심할게요.' },
+        { who: 'me', text: '죄송합니다. 제가 이번 주부터 출근을 해서, 낮에 혼자 있다 보니 밤에 우나 봐요. 조심할게요.' },
         { who: 'grandma', text: '...그래. 우리 영감 살아 있을 때는 개를 키웠어. 짐승은 혼자 두면 울어.' },
         { who: 'grandma', text: '방문 닫지 말고 같이 자 봐. 그럼 덜 울 거야.' }
       ]; },
@@ -515,7 +521,7 @@ var Story = (function () {
       // 4/14에 문을 닫아 버린 뒤 처음 마주 선 자리
       stranger: function (s) { return [
         { who: 'grandma', text: '아이고, 그게 거기 가 있었어? ...고마워.' },
-        { who: 'me', text: '저번엔 죄송했어요. 데려온 지 얼마 안 돼서 저도 정신이 없었어요.' },
+        { who: 'me', text: '저번엔 죄송했어요. 일을 막 시작해서 저도 정신이 없었어요.' },
         { who: 'grandma', text: '...그래. 처음엔 다 그래. 방문 열어 두고 같이 자 봐. 그럼 덜 울 거야.' }
       ]; },
       // 그날 밤 못 갖다드리면 다음 날 아침
@@ -541,7 +547,7 @@ var Story = (function () {
     // 현관 비밀번호: 가까운 사이가 되면 할머니가 먼저 꺼내는 말 (우리 집 현관은 도어락)
     key: {
       offer: [{ who: 'grandma', text: '혼자 살면서 고양이 키우기 쉽지 않지. 늦는 날 있으면 말해.' }, { who: 'grandma', text: '현관 비밀번호 알려 주면 밥은 내가 줄게.' }],
-      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야.' }]; },
+      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야. 늦는 날엔 문자 해.' }, { who: 'narr', text: '할머니 번호를 휴대폰에 저장했다.' }]; },
       keep: function (s) { return [{ who: 'me', text: '괜찮아요. 제가 어떻게든 해 볼게요.' }, { who: 'grandma', text: '그래. 마음 바뀌면 말해.' }]; }
     },
     // 늦게 들어온 밤, 할머니가 다녀간 흔적
@@ -557,7 +563,7 @@ var Story = (function () {
         { who: 'mate', text: '네! 오늘 첫 출근이에요. 혹시 같이 위촉되신...?' },
         { who: 'me', text: '네. ' + s.me + (Life.hasBatchim(s.me) ? '이에요.' : '예요.') },
         { who: 'mate', text: '저는 윤지안이에요. 근데 소매에 털이... 고양이 키우세요? 저희 본가에도 있어요.' },
-        { who: 'me', text: '아... 네. 며칠 됐어요.' }
+        { who: 'me', text: '아... 네. 겨울에 데려왔어요.' }
       ]; },
       brush: [{ who: 'narr', text: '소매를 털고 창밖을 봤다. 털은 반쯤 남았다.' }]
     },
@@ -612,7 +618,153 @@ var Story = (function () {
     // 동네 지도에서 처음 길을 고를 때
     mapHint: [{ who: 'me', text: '어디로 갈까.' }]
   };
-  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안' };
+
+  // ---------- 엄마 (v7) ----------
+  // 휴대폰 연락처 이름 (대화방 이름과 같다)
+  var CONTACT = { mom: '엄마', mate: '지안', grandma: '옆집 할머니', boss: '행복슈퍼 사장님' };
+  // 프롤로그 전부터 와 있던 엄마 문자 37개. 하나도 답하지 않은 채 쌓였다. [년, 월, 일, 시각, 글]
+  var MOM_UNREAD = [
+    [2025, 9, 15, '오후 8:12', '추석에 내려오니? 기차표 엄마가 끊어 줄까'],
+    [2025, 10, 4, '오전 9:30', '바쁘면 안 와도 된다. 송편 얼려서 보낼게'],
+    [2025, 10, 6, '오후 6:05', '추석 잘 보내라. 밥 꼭 챙겨 먹고'],
+    [2025, 10, 13, '오후 9:41', '택배 받았니? 송편이랑 김치 넣었다'],
+    [2025, 10, 20, '오후 9:15', '감 따서 보낼까'],
+    [2025, 10, 27, '오후 10:02', '요즘 날이 차다. 두꺼운 이불 꺼내 덮어라'],
+    [2025, 11, 3, '오전 7:50', '아침은 먹었니'],
+    [2025, 11, 10, '오후 8:30', '전화 한번 해라. 목소리 좀 듣자'],
+    [2025, 11, 13, '오전 8:15', '오늘 수능날이네. 너 시험 보던 날 생각난다'],
+    [2025, 11, 17, '오후 8:48', '엄마 휴대폰 바꿨다. 사진이 잘 나오네 ㅎㅎ'],
+    [2025, 11, 21, '오후 9:12', '바쁘구나. 답 안 해도 된다'],
+    [2025, 11, 30, '오후 7:44', '김장했다. 김치 보낼까'],
+    [2025, 12, 5, '오후 10:30', '보일러 아끼지 말고 틀어라. 감기 걸린다'],
+    [2025, 12, 12, '오전 8:30', '눈 온다더라. 미끄러지지 않게 조심해라'],
+    [2025, 12, 17, '오후 8:05', '엄마 꿈에 네가 나왔다. 별일 없지?'],
+    [2025, 12, 24, '오후 9:00', '크리스마스 이브네. 케이크라도 하나 사 먹어라'],
+    [2025, 12, 31, '오후 11:58', '올 한 해 고생 많았다'],
+    [2026, 1, 1, '오전 12:03', '새해 복 많이 받아라. 엄마는 너 건강한 게 제일이다'],
+    [2026, 1, 8, '오후 7:12', '많이 춥지. 수도 얼지 않게 물 조금 틀어 놓고 자라'],
+    [2026, 1, 13, '오후 10:40', '잘 자라'],
+    [2026, 1, 19, '오후 9:50', '목소리 듣고 싶다'],
+    [2026, 1, 28, '오후 6:40', '귤 한 상자 사 놨다. 오면 가져가라'],
+    [2026, 2, 5, '오후 8:20', '설에는 내려오니?'],
+    [2026, 2, 10, '오후 3:10', '떡국 떡 보냈다. 설에 꼭 끓여 먹어라'],
+    [2026, 2, 12, '오후 9:33', '안 와도 괜찮다. 엄마 서운하지 않다'],
+    [2026, 2, 17, '오전 9:00', '새해 복 많이 받아라'],
+    [2026, 2, 21, '오후 6:00', '엄마가 전화했었다'],
+    [2026, 2, 26, '오후 10:11', '요즘은 어떻게 지내니'],
+    [2026, 3, 3, '오전 8:00', '3월인데도 아직 쌀쌀하다. 옷 따뜻하게 입고 다녀라'],
+    [2026, 3, 11, '오후 9:05', '답 안 해도 되니까 읽기만 해라'],
+    [2026, 3, 15, '오후 8:12', '이번 주는 좀 따뜻하다더라'],
+    [2026, 3, 20, '오후 7:30', '엄마 요즘 노래 교실 다닌다 ㅎㅎ'],
+    [2026, 3, 24, '오후 7:20', '날이 풀려서 마당에 상추 모종 심었다'],
+    [2026, 3, 27, '오후 9:40', '밥은 먹고 다니니'],
+    [2026, 4, 2, '오후 8:15', '동네 개천에 벚꽃 폈다. 너 어릴 때 거기서 사진 찍은 거 기억나니'],
+    [2026, 4, 9, '오후 9:00', '보고 싶다'],
+    [2026, 4, 11, '오후 6:30', '주말인데 뭐 하니']
+  ];
+  // 받지 않은 엄마 전화 [년, 월, 일, 시각]
+  var MOM_MISSED = [[2026, 1, 1, '오전 12:05'], [2026, 2, 17, '오전 9:02'], [2026, 2, 21, '오후 5:52'], [2026, 3, 27, '오후 9:42']];
+  // 엄마가 고양이를 아는지: 고양이 사진을 한 장이라도 받았으면 안다
+  function catKnown(s) { return (s.sent || []).some(function (e) { return e.who === 'mom'; }); }
+  var MOM = {
+    unread: MOM_UNREAD, missed: MOM_MISSED,
+    // 4/17 금요일 밤 (아직 아무 답도 안 했으면 늘 하던 말, 답을 했으면 조금 더 아는 말)
+    // 아직 한 번도 답하지 않았으면(bond 0) 늘 하던 말에 짧은 답 하나, 이미 닿았으면 조금 더 아는 말에 답 둘. 답하지 않고 닫아도 된다.
+    text417: function (s, bond) {
+      if (bond < 1) return '요즘은 어떻게 지내니. 밥은 먹고 다니고?';
+      return s.mom.knows ? '금요일이네. 회사는 다닐 만하니? 밥은 먹고 다니고?' : catKnown(s) ? '금요일이네. 밥은 먹고 다니니? 고양이 사진 또 보내라 ㅎㅎ' : '금요일이네. 밥은 먹고 다니니?';
+    },
+    reply417: function (bond) { return bond < 1 ? ['응, 괜찮아.'] : ['응, 잘 먹고 다녀.', '그냥 그래.']; },
+    // 내 답에 엄마가 다시 보내는 문자 (답하지 않았으면 없다)
+    back417: function (s, bond, pick) {
+      if (pick == null) return null;
+      if (bond < 1) return '...그래. 답장해 줘서 고맙다. 밥 잘 챙겨 먹어라';
+      return pick === 0 ? '그래야지 ㅎㅎ 주말엔 푹 쉬어라' : '그래. 그런 날도 있다. 오늘은 일찍 자라';
+    },
+    after417: function (s, bond, pick) {
+      var l = bond < 1 ? (pick == null ? '답장 칸을 한참 보다가 휴대폰을 엎어 놓았다.' : '몇 번을 썼다 지우고, 그 한 줄만 보냈다.') : (pick === 1 ? '괜찮다고 하지 않은 건 처음이다.' : null);
+      var out = []; if (l) out.push({ who: 'narr', text: l });
+      out.push({ who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' });
+      return out;
+    },
+    // 4/28 화요일 밤 (아직 한 번도 답하지 않았으면 답할 말이 뜨지 않는다)
+    text428: '어버이날에 내려오니? 바쁘면 안 와도 된다',
+    reply428: ['그날 일해서 못 가. 대신 전화할게.', '아직 잘 모르겠어.'],
+    back428: ['그래. 전화만 해도 엄마는 좋다', '그래. 바쁘면 안 와도 된다'],
+    // 사진을 받은 엄마의 답. r: Life.sendPhoto의 결과 (days: 엄마에게 사진을 보낸 날 수)
+    photoReply: function (s, r, fromParcel) {
+      if (r.today) return [['이쁘다 ㅎㅎ', '이것도 이쁘네', '엄마 이거 저장했다'][(r.days + s.sent.length) % 3]];
+      var k = r.kind;
+      if (k === 'box') return [fromParcel ? '엄마가 보낸 상자에 들어가 있네 ㅎㅎ 반찬보다 상자가 더 맘에 들었나 보다' : '상자에 쏙 들어갔네 ㅎㅎ 고양이들은 상자를 그렇게 좋아한다더라'];
+      if (k === 'sun') return ['햇볕 쬐는 거 보니 엄마도 따뜻하다. 너도 주말엔 볕 좀 쬐어라'];
+      if (k === 'suit') return [s.mom.knows ? '옷 위에서 자네 ㅎㅎ 털 붙겠다. 출근할 때 잘 털고 가라' : '옷 위에서 자네 ㅎㅎ 털 붙겠다'];
+      if (k === 'room') return ['이건 뭐니? 고양이는 어디 갔니 ㅎㅎ'];
+      if (r.days <= 2) return ['또 보냈네 ㅎㅎ 고양이가 너를 많이 따르나 보다. 너도 밥 잘 챙겨 먹어라'];
+      if (r.days === 3) return ['엄마가 사진 보고 또 봤다. 표정이 꼭 너 어릴 때 같다 ㅎㅎ'];
+      if (r.days === 4) return ['너는 어떠니. 요즘 잠은 잘 자니? 엄마는 노래 교실 다니는 재미로 산다 ㅎㅎ'];
+      return ['사진 볼 때마다 엄마도 기분이 좋다. 힘든 일 있으면 엄마한테 말해라. 엄마는 언제나 네 편이다'];
+    },
+    // 택배가 오는 날: 모레면 '모레쯤', 주말을 넘기면 그 요일
+    parcelText: function (s, day) { return '반찬 좀 보냈다. ' + (day === s.day + 2 ? '모레쯤' : Life.DAYS[day].wd + '요일쯤') + ' 도착할 거다. 오면 바로 냉장고에 넣어라'; },
+    declined: '바쁘구나. 고양이 참 이쁘다. 사진 또 보내라',
+    // 처음 사진을 보낸 날, 바로 걸려 오는 전화
+    firstCall: {
+      open: function (s) { return [
+        { who: 'mom', text: '...여보세요? 너니?' },
+        { who: 'me', text: '...응, 엄마.' },
+        { who: 'mom', text: '아이고, 이게 얼마 만이야. 사진 보고 깜짝 놀랐다. 고양이 키우니?' },
+        { who: 'me', text: '응. 겨울에 비 오는 날 데려왔어.' },
+        { who: 'mom', text: '그랬구나. 이름은?' },
+        { who: 'me', text: s.cat + '.' },
+        { who: 'mom', text: s.cat + '... 이쁘네. 너는? 밥은 먹고 다니니? 요즘은 뭐 하고 지내?' }
+      ]; },
+      picks: ['보험 회사 다녀. 설계사 일 시작했어.', '그냥... 이것저것 해.'],
+      told: [{ who: 'mom', text: '그래? 잘됐다... 처음이라 힘들 텐데, 몸 조심하고.' }],
+      hid: [{ who: 'mom', text: '그래. 말하기 싫으면 안 해도 된다. 밥만 잘 챙겨 먹어라.' }],
+      close: function (s, parcel) {
+        var l = [];
+        if (parcel) l.push({ who: 'mom', text: '반찬 좀 보내 줄게. 주소는 그대로지?' }, { who: 'me', text: '...응.' });
+        l.push({ who: 'mom', text: '사진 또 보내라. 엄마는 그거면 된다.' });
+        return l;
+      }
+    },
+    // 내가 거는 전화 (하루 한 번)
+    chat: [
+      function (s) {
+        var l = [{ who: 'mom', text: '웬일이야? 무슨 일 있니?' }, { who: 'me', text: '아니, 그냥.' }];
+        if (catKnown(s)) l.push({ who: 'mom', text: '그래... 목소리 들으니 좋다. ' + j(s.cat, 'bare') + '는 잘 있고?' }, { who: 'me', text: '응. 지금 옆에 있어.' }, { who: 'mom', text: '그래. 너도 일찍 자라.' });
+        else l.push({ who: 'mom', text: '그래... 목소리 들으니 좋다.' }, { who: 'mom', text: '일찍 자라.' });
+        return l;
+      },
+      function (s) { return [{ who: 'mom', text: '밥은 먹었니?' }, { who: 'me', text: s.myMeal ? '응, 먹었어.' : '이제 먹으려고.' }, { who: 'mom', text: '늦게 먹지 말고. 엄마는 오늘 노래 교실 다녀왔다.' }]; },
+      function (s) { return [{ who: 'mom', text: s.mom.knows ? '요즘 회사는 어때?' : '요즘 어떻게 지내?' }, { who: 'me', text: '그냥... 그럭저럭.' }, { who: 'mom', text: '그래. 그럭저럭이면 됐다. 무리하지 말고.' }]; }
+    ],
+    // 내가 건 전화에서 가까워졌을 때: 반찬을 부친다고 한다
+    parcelCall: [{ who: 'mom', text: '참, 반찬 좀 보내 줄게. 주소는 그대로지?' }, { who: 'me', text: '...응. 고마워.' }],
+    // 가까워지기 전에는 걸다가 끊는다
+    hesitate: [{ who: 'narr', text: '통화 버튼을 눌렀다가, 신호가 가기 전에 끊었다.' }],
+    // 반찬 택배
+    parcelNotice: [{ who: 'narr', text: '문 앞에 놓여 있던 상자를 들고 들어왔다. 보내는 사람: 엄마.' }],
+    parcelOpen: [{ who: 'narr', text: '김치, 멸치볶음, 장조림. 아이스팩은 반쯤 녹아 있다.' }, { who: 'narr', text: '반찬통 사이에 쪽지가 끼워져 있다. 「밥 꼭 챙겨 먹어라. -엄마」' }],
+    parcelGot: '잘 받았니? 김치는 금방 시니까 먼저 먹어라',
+    eat: [{ who: 'narr', text: '엄마 반찬을 꺼내 밥을 먹었다. 집에서 먹던 맛이다.' }],
+    // 5/8 어버이날
+    morning: function (s) { return [{ who: 'narr', text: '오늘은 어버이날이다.' }, { who: 'me', text: s.mom.promised ? '전화하겠다고 했지.' : '...엄마한테 전화해 볼까.' }]; },
+    parentsDay: {
+      // talked: 오늘 전에 엄마와 통화한 적이 있는지
+      open: function (s, bond, talked) {
+        if (bond < 1) return [{ who: 'mom', text: '...여보세요? 너니? 무슨 일 있니?' }, { who: 'me', text: '아니. 오늘 어버이날이잖아.' }, { who: 'mom', text: '...그래. 전화해 줘서 고맙다.' }, { who: 'mom', text: '요즘은 어떻게 지내?' }];
+        return [{ who: 'mom', text: talked ? '여보세요? 응, 엄마야.' : '여보세요? 아이고, 웬일로 전화를 다 하고.' }, { who: 'me', text: '엄마, 오늘 어버이날이잖아. 늘 고마워.' }, { who: 'mom', text: '고맙긴. ' + (s.mom.knows ? '회사는 어때? 힘들지는 않고?' : '요즘은 어때? 지낼 만하니?') }];
+      },
+      picks: function (bond) { return bond >= 2 ? ['응, 괜찮아.', '사실... 좀 힘들었어.'] : ['응, 괜찮아.']; },
+      fine: function (s, bond) { return bond < 1 ? [{ who: 'mom', text: '그래. 괜찮으면 됐다.' }, { who: 'narr', text: '괜찮다는 말이 오늘도 먼저 나왔다.' }] : [{ who: 'mom', text: '그래. 너는 늘 괜찮다고 하더라.' }, { who: 'mom', text: '엄마는 네 목소리 들으니 됐다.' }]; },
+      hard: function (s) { return [{ who: 'mom', text: '...그랬구나.' }, { who: 'mom', text: '말해 줘서 고맙다. 엄마는 그 말이 듣고 싶었다.' }, { who: 'me', text: '...응.' }, { who: 'mom', text: '힘들면 언제든 전화해라.' + (catKnown(s) ? ' ' + j(s.cat, 'to') + '도 안부 전하고.' : '') }]; }
+    },
+    noCall: '오늘 바쁘지? 엄마는 괜찮다. 밥 잘 챙겨 먹어라',
+    catKnown: catKnown
+  };
+
+  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안', mom: '엄마' };
 
   var ENDING = {
     family: { title: '우리 집', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '첫 수수료로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
@@ -708,7 +860,7 @@ var Story = (function () {
   }
 
   return {
-    opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
+    opening: opening, phone: phone, MOM: MOM, CONTACT: CONTACT, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
     MARK_NOTE: MARK_NOTE, COVER: COVER, coverName: coverName, TALK: TALK, QUESTIONS: QUESTIONS, EXPLAIN: EXPLAIN, DESIGN: DESIGN, APPLY: APPLY, SIGN: SIGN, CANCEL: CANCEL, CANCEL_SHORT: CANCEL_SHORT, bossTalk: bossTalk, BILL: BILL, billNotice: billNotice, MONEY: MONEY, statement: statement, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
     assembly: assembly, senior: senior, seniorSmell: seniorSmell, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,

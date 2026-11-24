@@ -84,9 +84,15 @@ var Dev = (function () {
     if (s.pantry.sand && Life.sandLow(s)) Life.refill(s);
     Life.pet(s);
   }
+  // 사진을 찍고, 사람들(people)과 지내는 방식이면 엄마에게 하루 한 장 보낸다. 처음 보낸 날 엄마 전화를 받는다.
   function photos(s, st) {
     if (!st.photos || s.day === 0) return;
     while (Life.photosToday(s) < Life.photoCap(s)) if (!Life.photo(s, 'sit').ok) break;
+    if (!st.people || !s.photos.length) return;
+    var r = Life.sendPhoto(s, s.photos[s.photos.length - 1].id, 'mom');
+    if (r.first) { Life.momTouch(s, 'answer'); s.mom.knows = true; }
+    if (Life.momBond(s) >= 2 && s.mom.parcel === null) Life.momSend(s);
+    if (s.mom.parcel !== null && s.day >= s.mom.parcel && s.mom.opened === null) { s.mom.got = s.day; Life.momOpen(s); }
   }
   function home(s, st) {
     care(s, st);
@@ -208,7 +214,7 @@ var Dev = (function () {
   }
   function start(s) {
     G.s = s; G.pro = { me: s.me, cat: s.cat, wallet: 0, active: false };
-    UI.phoneSeed([Story.phone.offer(s.me), Story.phone.rejection(s.me)].map(function (m) { return { from: m.from, time: m.time, preview: m.preview, body: m.body }; }));
+    Phone.load(Mom.fresh(s.me, true), { fresh: true });
     Game.checkpoint();
     Game.startGame(function () { Game.hudAll(true); return Game.mainLoop(); });
   }

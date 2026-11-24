@@ -418,7 +418,7 @@ var Town = (function () {
   function askVia(kind, at) {
     var s = S(), A = PP().ask[kind], now = phoneTime(0, at);
     return UI.phoneAsk({
-      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: nameOf(w) }; }),
+      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: Story.CONTACT[w] }; }), // 휴대폰에 저장된 이름 (그 사람과 나눈 대화방에 이어진다)
       draft: function (w) { return A[w](s); },
       reply: function (w) { return A.reply[w]; },
       clock: now.clock, time: now.label

@@ -208,211 +208,13 @@ var UI = (function () {
   function blackOn() { $('blackScreen').hidden = false; $('blackText').textContent = ''; }
 
   // ---------- 휴대폰 ----------
-  var APPS = [
-    { id: 'msg', name: '메시지', bg: '#34c759', svg: '<path d="M12 4C6.5 4 2.5 7.4 2.5 11.6c0 2.4 1.3 4.5 3.4 5.9-.2 1.4-.9 2.6-1.9 3.5 2 0 3.8-.8 5-1.9.9.2 1.9.3 3 .3 5.5 0 9.5-3.4 9.5-7.6S17.5 4 12 4z" fill="#fff"/>' },
-    { id: 'call', name: '전화', bg: '#34c759', svg: '<path d="M7 3.5l3 3.6-1.8 2.2c1 2.2 2.6 3.9 4.6 4.8l2.2-1.8 3.5 3-1.6 3.2C10.6 18.2 5.8 13.4 3.5 6.8z" fill="#fff"/>' },
-    { id: 'photo', name: '사진', bg: '#fff', svg: '<g transform="translate(12 12)"><ellipse rx="3" ry="6" cy="-4" fill="#f9c440"/><ellipse rx="3" ry="6" cy="-4" fill="#f57b39" transform="rotate(60)"/><ellipse rx="3" ry="6" cy="-4" fill="#e9428a" transform="rotate(120)"/><ellipse rx="3" ry="6" cy="-4" fill="#9a5ce6" transform="rotate(180)"/><ellipse rx="3" ry="6" cy="-4" fill="#3d9bf0" transform="rotate(240)"/><ellipse rx="3" ry="6" cy="-4" fill="#4cc764" transform="rotate(300)"/></g>' },
-    { id: 'camera', name: '카메라', bg: 'linear-gradient(#d9dadc,#9a9ca0)', svg: '<rect x="3" y="7" width="18" height="12" rx="2" fill="#2c2c2e"/><rect x="8" y="5" width="8" height="3" rx="1" fill="#2c2c2e"/><circle cx="12" cy="13" r="4" fill="#5a5a5e" stroke="#c7c7cc" stroke-width="1.5"/>' },
-    { id: 'weather', name: '날씨', bg: 'linear-gradient(#4aa3f0,#2a6fd0)', svg: '<circle cx="9" cy="9" r="4" fill="#ffd60a"/><path d="M8 18h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.4 1.6A2.7 2.7 0 0 0 8 18z" fill="#fff"/>' },
-    { id: 'clock', name: '시계', bg: '#000', svg: '<circle cx="12" cy="12" r="8.5" fill="#fff"/><path d="M12 7v5l3.5 2" stroke="#000" stroke-width="1.6" fill="none"/>' },
-    { id: 'cal', name: '캘린더', bg: '#fff', svg: '<text x="12" y="8" font-size="5" text-anchor="middle" fill="#ff3b30" font-family="sans-serif">DAY</text><text x="12" y="19" font-size="11" text-anchor="middle" fill="#000" font-family="sans-serif">12</text>' },
-    { id: 'set', name: '설정', bg: 'linear-gradient(#b6b8bd,#8e9096)', svg: '<circle cx="12" cy="12" r="6.5" fill="none" stroke="#3a3a3c" stroke-width="3" stroke-dasharray="2.4 1.6"/><circle cx="12" cy="12" r="3" fill="#3a3a3c"/>' }
-  ];
-  var PH = { msgs: [], view: 'home', thread: null, waits: [], clock: '10:42' };
-  function phoneBadge() { var n = PH.msgs.filter(function (m) { return m.unread || (m.replies && m.reply == null); }).length; $('phoneBadge').hidden = !n; $('phoneBadge').textContent = '!'; return n; }
-  function ring(on) { $('phoneButton').classList.toggle('ring', !!on); }
-  function phoneHome() {
-    PH.view = 'home';
-    var unread = PH.msgs.filter(function (m) { return m.unread || (m.replies && m.reply == null); }).length;
-    $('iosHome').innerHTML = APPS.map(function (a) {
-      return '<button class="ios-app-icon" data-app="' + a.id + '"><span class="glyph" style="background:' + a.bg + '"><svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">' + a.svg + '</svg></span>' + esc(a.name) + (a.id === 'msg' && unread ? '<b>' + unread + '</b>' : '') + '</button>';
-    }).join('');
-    $('iosHome').hidden = false; $('iosList').hidden = true; $('iosThread').hidden = true;
-  }
-  function avatar(m) { return '<span class="ios-avatar">' + esc(m.from.charAt(0)) + '</span>'; }
-  function phoneList() {
-    PH.view = 'list';
-    $('iosList').innerHTML = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div><div class="ios-title">메시지</div>' +
-      PH.msgs.map(function (m, i) {
-        return '<button class="ios-row" data-msg="' + i + '">' + avatar(m) + '<span><span class="who">' + esc(m.from) + '<small>' + esc(m.time) + '</small></span><span class="pre">' + esc(m.preview || m.body) + '</span></span>' + (m.unread ? '<i class="unread"></i>' : '') + '</button>';
-      }).join('');
-    $('iosHome').hidden = true; $('iosList').hidden = false; $('iosThread').hidden = true;
-  }
-  function phoneThread(i) {
-    var m = PH.msgs[i]; if (!m) return;
-    PH.view = 'thread'; PH.thread = i;
-    m.unread = false;
-    var html = '<div class="ios-nav"><button data-nav="list">‹</button><span></span><span></span></div><div class="ios-head">' + avatar(m) + esc(m.from) + '</div><div class="ios-msgs"><div class="ios-day">' + esc(m.time) + '</div><div class="bubble in">' + esc(m.body) + '</div>' +
-      (m.reply != null ? '<div class="bubble out">' + esc(m.replies[m.reply]) + '</div>' : '') + '</div>';
-    if (m.replies && m.reply == null) html += '<div class="ios-replies">' + m.replies.map(function (r, k) { return '<button data-reply="' + k + '">' + esc(r) + '</button>'; }).join('') + '</div>';
-    $('iosThread').innerHTML = html;
-    $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = false;
-    phoneBadge();
-    // 가장 최근에 받은 문자의 첫 줄부터 보이게 (긴 문자가 화면이 낮은 가로 폰에서 잘리지 않게)
-    var box = $('iosThread').querySelector('.ios-msgs');
-    if (box) {
-      var ins = box.querySelectorAll('.bubble.in'), b = ins[ins.length - 1];
-      box.scrollTop = b ? Math.max(0, b.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 28) : box.scrollHeight;
-    }
-  }
-  function phoneOpen() {
-    if (!$('phone').hidden) return;
-    ring(false); point(null);
-    $('iosTime').textContent = PH.clock;
-    $('phone').hidden = false;
-    sfx('tap');
-    phoneHome();
-  }
-  function phoneClose() {
-    if (PH.ask) { askEnd(); return; }
-    $('phone').hidden = true;
-    var done = PH.waits.filter(function (w) { return !w.msg.unread && (!w.msg.replies || w.msg.reply != null); });
-    PH.waits = PH.waits.filter(function (w) { return done.indexOf(w) < 0; });
-    done.forEach(function (w) { w.resolve(w.msg.reply); });
-    if (PH.waits.length) { ring(true); }
-    phoneBadge();
-  }
-  // 새 문자가 오고, 그 문자를 읽고(답이 있으면 답하고) 휴대폰을 닫을 때까지 기다린다.
-  function phoneWait(msg, clock) {
-    msg.unread = true;
-    PH.msgs.unshift(msg);
-    if (clock) PH.clock = clock;
-    phoneBadge(); ring(true); sfx('buzz');
-    point($('phoneButton'));
-    return new Promise(function (resolve) { PH.waits.push({ msg: msg, resolve: resolve }); });
-  }
-  function phoneSeed(msgs) { PH.msgs = msgs.map(function (m) { m.unread = false; return m; }); phoneBadge(); }
-  function phoneMsgs() { return PH.msgs; }
-  function phoneSetClock(c) { PH.clock = c; }
-  function phoneClick(e) {
-    var b = e.target.closest('button'), screen = e.target.closest('.iphone');
-    if (!screen) { phoneClose(); return; }
-    if (PH.ask) { if (b) askClick(b); return; }
-    if (!b) return;
-    if (b.dataset.app === 'msg') { sfx('tap'); phoneList(); }
-    else if (b.dataset.app) { b.animate && b.animate([{ transform: 'scale(.94)' }, { transform: 'none' }], { duration: 160 }); }
-    else if (b.dataset.nav === 'home') { sfx('tap'); phoneHome(); }
-    else if (b.dataset.nav === 'list') { sfx('tap'); phoneList(); }
-    else if (b.dataset.msg != null) { sfx('tap'); phoneThread(+b.dataset.msg); }
-    else if (b.dataset.reply != null) {
-      var m = PH.msgs[PH.thread]; m.reply = +b.dataset.reply; sfx('tap');
-      phoneThread(PH.thread);
-      setTimeout(phoneClose, 900);
-    }
-  }
-
-  // ---------- 부탁하기 (청하는 손) ----------
-  // 휴대폰이 새 메시지 화면으로 열린다. 받는 사람 목록에는 지금 이 부탁을 들어줄 수 있는 사람만 뜬다.
-  // 글은 저절로 써지고, 보내기를 길게 눌러야 보내진다. 누르는 동안 쓴 글이 한 번 지워졌다가 다시 써진다.
-  // 손을 떼면 처음 쓴 글로 돌아간다. 다 보내면 답장이 오고, 휴대폰을 닫으면 끝난다.
-  // o: { list: [{ id, name }], draft(id) → { first, again, final }, reply(id) → 답장, clock }
-  // 돌려주는 값: 보낸 사람의 id, 아무에게도 안 보냈으면 null
-  var HOLD = 2.6;
-  function askEl() {
-    var el = $('iosAsk');
-    if (!el) { el = document.createElement('div'); el.id = 'iosAsk'; el.className = 'ios-app ios-ask'; el.hidden = true; $('iosThread').parentNode.insertBefore(el, $('iosHomebar')); }
-    return el;
-  }
-  function phoneAsk(o) {
-    return new Promise(function (resolve) {
-      PH.ask = { o: o, resolve: resolve, sent: null, to: null, timers: [] };
-      ring(false); point(null);
-      if (o.clock) PH.clock = o.clock;
-      $('iosTime').textContent = PH.clock;
-      $('phone').hidden = false;
-      $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = true;
-      askEl().hidden = false;
-      sfx('tap');
-      askList();
-    });
-  }
-  function askClear() { var a = PH.ask; if (!a) return; a.timers.forEach(clearTimeout); a.timers = []; if (a.hold) { cancelAnimationFrame(a.hold.raf); a.hold = null; } }
-  function askList() {
-    var a = PH.ask; askClear(); a.to = null;
-    var rows = a.o.list.map(function (p) {
-      return '<button class="ios-row" data-ask-to="' + esc(p.id) + '"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span><span><span class="who">' + esc(p.name) + '</span><span class="pre"></span></span></button>';
-    }).join('');
-    askEl().innerHTML = '<div class="ios-nav"><span></span><span>새 메시지</span><span></span></div><div class="ios-to">받는 사람:</div>' +
-      (rows || '<div class="ios-empty"></div>');
-  }
-  function askType(text, done, speed) {
-    var a = PH.ask, field = $('askText'), cur = field.textContent, i = 0;
-    // 지금 글과 새 글이 같은 앞부분까지는 두고, 나머지만 지우고 다시 쓴다
-    while (i < cur.length && i < text.length && cur[i] === text[i]) i++;
-    var steps = [];
-    for (var k = cur.length; k > i; k--) steps.push(cur.slice(0, k - 1));
-    for (var m = i + 1; m <= text.length; m++) steps.push(text.slice(0, m));
-    var n = 0;
-    (function next() {
-      if (!PH.ask || PH.ask !== a) return;
-      if (n >= steps.length) { if (done) done(); return; }
-      field.textContent = steps[n++];
-      a.timers.push(setTimeout(next, n <= cur.length - i ? 32 : (speed || 42)));
-    }());
-  }
-  function askCompose(id) {
-    var a = PH.ask, p = a.o.list.filter(function (x) { return x.id === id; })[0]; if (!p) return;
-    askClear(); a.to = id; a.d = a.o.draft(id);
-    askEl().innerHTML = '<div class="ios-nav"><button data-ask-nav="list">‹</button><span></span><span></span></div><div class="ios-head"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span>' + esc(p.name) + '</div>' +
-      '<div class="ios-msgs" id="askMsgs"></div><div class="ios-compose"><div class="ios-field" id="askText"></div><button class="ios-send" id="askSend" disabled aria-label="보내기"><i></i></button></div>';
-    var send = $('askSend');
-    send.addEventListener('pointerdown', askHoldStart);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { send.addEventListener(ev, askHoldStop); });
-    askType(a.d.first, function () { send.disabled = false; send.classList.add('ready'); });
-  }
-  function askHoldStart(e) {
-    var a = PH.ask; if (!a || a.sent || $('askSend').disabled) return;
-    e.preventDefault();
-    try { e.target.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ }
-    var t0 = performance.now(), send = $('askSend'), stage = 0;
-    a.hold = { raf: 0 };
-    (function frame(now) {
-      if (!a.hold) return;
-      var q = Math.min(1, (now - t0) / 1000 / HOLD);
-      send.style.setProperty('--p', (q * 100).toFixed(1) + '%');
-      // 누르고 있는 동안: 잠깐 멈칫, 쓴 글을 지우고, 다시 쓴다
-      if (stage === 0 && q > .18) { stage = 1; askType(a.d.again, null, 40); }
-      if (stage === 1 && q > .5) { stage = 2; askType(a.d.final, null, 30); }
-      if (q >= 1) { a.hold = null; askSent(); return; }
-      a.hold.raf = requestAnimationFrame(frame);
-    }(t0));
-  }
-  function askHoldStop() {
-    var a = PH.ask; if (!a || !a.hold || a.sent) return;
-    askClear();
-    var send = $('askSend'); send.style.setProperty('--p', '0%');
-    askType(a.d.first, null, 20); // 손을 떼면 처음 쓴 글로 돌아간다
-  }
-  function askSent() {
-    var a = PH.ask, msgs = $('askMsgs'), send = $('askSend');
-    askClear();
-    a.sent = a.to;
-    $('askText').textContent = ''; send.disabled = true; send.classList.remove('ready'); send.style.setProperty('--p', '0%');
-    msgs.innerHTML = '<div class="ios-day">' + esc(a.o.time || '') + '</div><div class="bubble out">' + esc(a.d.final) + '</div>';
-    sfx('tap');
-    var nav = askEl().querySelector('[data-ask-nav]'); if (nav) nav.remove();
-    a.timers.push(setTimeout(function () {
-      msgs.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>');
-      a.timers.push(setTimeout(function () {
-        var tp = msgs.querySelector('.typing'); if (tp) tp.remove();
-        msgs.insertAdjacentHTML('beforeend', '<div class="bubble in">' + esc(a.o.reply(a.sent)) + '</div>');
-        sfx('buzz'); a.replied = true;
-      }, 1500));
-    }, 700));
-  }
-  function askClick(b) {
-    var a = PH.ask;
-    if (b.dataset.askTo) { sfx('tap'); askCompose(b.dataset.askTo); }
-    else if (b.dataset.askNav === 'list' && !a.sent) { sfx('tap'); askList(); }
-  }
-  function askEnd() {
-    var a = PH.ask; if (!a) return;
-    if (a.sent && !a.replied) return; // 답장이 올 때까지는 닫히지 않는다
-    askClear(); PH.ask = null;
-    askEl().hidden = true; $('phone').hidden = true;
-    phoneBadge(); if (PH.waits.length) ring(true);
-    a.resolve(a.sent);
-  }
+  // 휴대폰은 life-phone.js(Phone)에 있다. 여기 이름들은 예전 부르는 곳을 위해 그대로 둔다.
+  function phoneWait(msg, clock) { return Phone.wait(msg, clock); }
+  function phoneAsk(o) { return Phone.ask(o); }
+  function phoneOpen() { return Phone.open(); }
+  function phoneClose() { return Phone.close(); }
+  function phoneSetClock(c) { return Phone.setClock(c); }
+  function ring(on) { return Phone.ring(on); }
 
   // ---------- 손가락 화살표 (HTML 쪽 대상) ----------
   function point(el) {
@@ -510,7 +312,7 @@ var UI = (function () {
     return new Promise(function (resolve) { $('retryShelf').onclick = function () { m.hidden = true; resolve(); }; });
   }
   function busy() {
-    return !!T || !$('phone').hidden || !$('receipt').hidden || !$('naming').hidden || !$('gameOver').hidden || !$('menu').hidden || !$('blackScreen').hidden || !$('dialogue').hidden;
+    return !!T || Phone.busy() || !$('receipt').hidden || !$('naming').hidden || !$('gameOver').hidden || !$('menu').hidden || !$('blackScreen').hidden || !$('dialogue').hidden;
   }
 
   function init() {
@@ -518,13 +320,11 @@ var UI = (function () {
     // 대화는 대화창이 아니라 화면 어디를 눌러도 넘어간다 (버튼과 휴대폰, 메뉴는 빼고)
     document.addEventListener('pointerdown', function (e) {
       if ($('dialogue').hidden || (e.button !== undefined && e.button > 0)) return;
-      if (e.target && e.target.closest && e.target.closest('button, input, #phone, #menu, #receipt, #naming, #blackScreen, #gameOver')) return;
+      if (e.target && e.target.closest && e.target.closest('button, input, #phone, #callBar, #menu, #receipt, #naming, #blackScreen, #gameOver')) return;
       if (advance()) sfx('tap');
     });
     $('blackScreen').addEventListener('click', function () { advance(); });
-    $('phone').addEventListener('click', phoneClick);
-    $('iosHomebar').addEventListener('click', function (e) { e.stopPropagation(); phoneClose(); });
-    $('phoneButton').addEventListener('click', phoneOpen);
+    Phone.init();
     $('soundButton').addEventListener('click', function () { setMuted(!muted); if (!muted) sfx('tap'); });
     document.addEventListener('keydown', function (e) {
       if ((e.key === ' ' || e.key === 'Enter') && T && !(e.target && e.target.tagName === 'INPUT')) { e.preventDefault(); advance(); }
@@ -537,7 +337,7 @@ var UI = (function () {
     hud: hud, hudReset: hudReset, float: float,
     say: say, talking: talking, setSpeakers: setSpeakers, advance: advance,
     black: black, blackOn: blackOn, blackOff: blackOff,
-    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
+    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSetClock: phoneSetClock, ring: ring,
     point: point, placePointer: placePointer, chips: chips,
     receipt: receipt, receiptHTML: receiptHTML, askName: askName, gameOver: gameOver, busy: busy, wait: wait, esc: esc, img: img
   };

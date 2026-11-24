@@ -166,6 +166,97 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .bubble.typing i:nth-child(2) { animation-delay: .15s; }
 .bubble.typing i:nth-child(3) { animation-delay: .3s; }
 @keyframes typingDot { 50% { opacity: .3; } }
+/* v7 휴대폰: 앱 다섯, 대화방, 카메라, 사진, 은행, 전화 */
+.ios-home { grid-template-columns: repeat(4, 1fr); }
+.ios-app-icon.off .glyph { filter: grayscale(1) brightness(.85); }
+.ios-scroll { flex: 1; overflow-y: auto; }
+.ios-row .unread { min-width: 9px; height: 9px; font-style: normal; font-size: 0; }
+.ios-row .unread:not(:empty) { left: auto; right: 12px; top: 30px; min-width: 20px; height: 20px; border-radius: 10px; font-size: 12px; line-height: 20px; color: #fff; text-align: center; padding: 0 5px; }
+.ios-avatar.sil { background: linear-gradient(#c4c8cf, #9fa4ad); }
+.ios-avatar.sil svg { width: 70%; height: 70%; margin-top: 15%; }
+.ios-avatar.face { background: linear-gradient(#f2c79b, #e0a774); color: #5b3a24; }
+.ios-avatar.big { width: 50px; height: 50px; }
+.bubble.photo { padding: 3px; background: none !important; border: 0; }
+.bubble.photo img, .bubble.photo .ph-none { display: block; width: 120px; height: 160px; object-fit: cover; border-radius: 14px; image-rendering: pixelated; }
+.ph-none { display: grid; place-items: center; background: #c9c6c0; color: #6c6772; font-size: 12px; width: 100%; height: 100%; }
+.ios-field.muted { min-height: 34px; background: #f0f0f2; border-color: #e0e0e5; }
+.ios-plus { width: 34px; height: 34px; min-height: 0; padding: 6px; border-radius: 50%; border: 0; box-shadow: none; background: #e5e5ea; color: #007aff; }
+.ios-plus.on { background: #007aff; color: #fff; }
+.ios-plus svg { width: 100%; height: 100%; }
+.ios-tray { display: flex; gap: 6px; padding: 8px 10px 26px; overflow-x: auto; background: #f6f6f8; border-top: 1px solid #e5e5ea; touch-action: pan-x; }
+.tray-thumb { flex: 0 0 auto; width: 54px; height: 72px; border-radius: 8px; overflow: hidden; background: #ddd; cursor: grab; touch-action: none; }
+.tray-thumb img, .tray-thumb .ph-none { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; pointer-events: none; }
+.tray-thumb.lifted { opacity: .35; }
+.tray-ghost { position: fixed; z-index: 60; width: 64px; height: 86px; border-radius: 10px; overflow: hidden; transform: translate(-50%, -60%) rotate(-4deg); box-shadow: 0 8px 18px rgba(0,0,0,.35); pointer-events: none; }
+.tray-ghost img, .tray-ghost .ph-none { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.ios-msgs.drop { background: #eaf3ff; box-shadow: inset 0 0 0 2px #0a84ff; }
+.ios-nav.dark { color: #fff; }
+.ios-nav.dark button { color: #ffd60a; }
+.ios-nav.dark span { color: #fff; font-weight: 600; }
+.ios-cam { background: #000; color: #fff; }
+.cam-view { position: relative; flex: 1; display: grid; place-items: center; overflow: hidden; }
+.cam-view canvas { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.cam-flash.on { animation: camFlash .35s ease-out; }
+@keyframes camFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.cam-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 18px 30px; }
+.cam-last { width: 40px; height: 52px; min-height: 0; padding: 0; border-radius: 6px; overflow: hidden; border: 2px solid #fff; background: #222; box-shadow: none; }
+.cam-last img, .cam-last .ph-none { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.cam-shutter { width: 62px; height: 62px; min-height: 0; padding: 0; border-radius: 50%; background: #fff; border: 4px solid #000; box-shadow: 0 0 0 3px #fff; }
+.cam-shutter:active { transform: scale(.92); }
+.ios-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; align-content: start; }
+.grid-thumb { position: relative; aspect-ratio: 3 / 4; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #ddd; overflow: hidden; }
+.grid-thumb img, .grid-thumb .ph-none { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.grid-thumb .sent { position: absolute; right: 4px; bottom: 4px; width: 10px; height: 10px; border-radius: 50%; background: #0a84ff; border: 2px solid #fff; }
+.ios-viewer { position: absolute; inset: 0; z-index: 3; background: #000; padding-top: 44px; display: flex; flex-direction: column; }
+.viewer-img { flex: 1; display: grid; place-items: center; padding: 6px; }
+.viewer-img img, .viewer-img .ph-none { width: 100%; max-height: 100%; aspect-ratio: 3 / 4; object-fit: contain; image-rendering: pixelated; }
+.viewer-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 30px; }
+.viewer-bar button { background: none; border: 0; box-shadow: none; color: #ffd60a; font-size: 26px; min-height: 0; padding: 0 8px; }
+.viewer-bar button:disabled { opacity: .25; }
+.viewer-bar span { display: flex; gap: 4px; }
+.viewer-bar .ios-avatar { width: 28px; height: 28px; font-size: 12px; }
+.ios-bank { background: #f2f4f7; }
+.bank-card { margin: 4px 14px 8px; padding: 14px 16px; border-radius: 16px; background: linear-gradient(135deg, #2f6fd6, #1d4fa8); color: #fff; display: grid; gap: 2px; }
+.bank-card small { opacity: .8; font-size: 12px; }
+.bank-card strong { font-size: 24px; letter-spacing: -.5px; }
+.ios-bank h5 { margin: 10px 16px 4px; font-size: 12px; color: #6b7280; font-weight: 600; }
+.bank-row { display: grid; grid-template-columns: 38px 1fr auto; gap: 8px; align-items: center; margin: 0 12px 4px; padding: 9px 10px; border-radius: 12px; background: #fff; font-size: 13px; }
+.bank-row .d { color: #6b7280; font-size: 12px; }
+.bank-row .n { display: grid; line-height: 1.25; }
+.bank-row small { color: #6b7280; font-size: 11px; }
+.bank-row small.unpaid, .bank-row small.late { color: #e5484d; font-weight: 600; }
+.bank-row small.due { color: #c9822b; font-weight: 600; }
+.bank-row small.deferred { color: #b7791f; }
+.bank-row.done { opacity: .55; }
+.bank-row.lost b { color: #e5484d; }
+.bank-row.hot { box-shadow: 0 0 0 2px #e5484d; }
+.bank-pick { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 4px; }
+.bank-pick button, .bank-sheet button { flex: 1; min-height: 0; padding: 9px 8px; border-radius: 10px; border: 0; box-shadow: none; background: #2f6fd6; color: #fff; font-size: 13px; font-weight: 600; }
+.bank-pick button.plain, .bank-sheet button.plain { background: #e5e7eb; color: #374151; }
+.bank-ad { display: grid; gap: 2px; width: calc(100% - 24px); margin: 12px; padding: 12px 14px; min-height: 0; text-align: left; border-radius: 14px; border: 0; box-shadow: none; background: linear-gradient(135deg, #ffe08a, #ffb347); color: #5b3a00; font-size: 12px; }
+.bank-ad b { font-size: 14px; }
+.bank-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 16px 16px 30px; border-radius: 18px 18px 0 0; background: #fff; box-shadow: 0 -8px 24px rgba(0,0,0,.18); display: grid; gap: 8px; text-align: center; font-size: 14px; }
+.bank-sheet p { margin: 0; }
+.bank-sheet .big { font-size: 26px; font-weight: 700; }
+.bank-sheet .fine { color: #6b7280; font-size: 12px; }
+.bank-sheet .warn { color: #b7791f; }
+.ios-call { background: linear-gradient(#3a3f4a, #1c1f26); color: #fff; justify-content: space-between; }
+.call-top { display: grid; justify-items: center; gap: 6px; padding-top: 40px; }
+.call-top .ios-avatar { width: 84px; height: 84px; font-size: 32px; }
+.call-top b { font-size: 26px; font-weight: 500; }
+.call-top small { color: #c7c7cc; }
+.call-btns { display: flex; justify-content: space-around; padding: 0 20px 56px; }
+.call-btns button { width: 66px; height: 66px; min-height: 0; padding: 14px; border-radius: 50%; border: 0; box-shadow: none; }
+.call-btns .decline { background: #ff3b30; }
+.call-btns .accept { background: #34c759; animation: sendPulse 1.2s ease-in-out infinite; }
+.call-btns svg { width: 100%; height: 100%; }
+.call-bar { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 22; display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 18px; background: #1c1f26; color: #fff; font-size: 14px; box-shadow: 0 6px 16px rgba(0,0,0,.35); font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', sans-serif; }
+.call-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #34c759; }
+.call-picks { grid-column: 1 / -1; display: grid; gap: 6px; }
+.call-picks:empty { display: none; }
+.call-picks button { min-height: 0; padding: 8px 12px; border-radius: 12px; border: 0; box-shadow: none; background: #fff; color: #1c1f26; font-size: 14px; }
+.ios-row .who.missed { color: #ff3b30; }
 .ios-homebar { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 110px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.75); z-index: 4; cursor: pointer; }
 .ios-homebar::before { content: ''; position: absolute; inset: -14px -30px; }
 
@@ -522,7 +613,7 @@ var Life = (function () {
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, cook: 40, quick: 5, banchan: 10, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
+    play: 40, rest: 60, cook: 40, quick: 5, banchan: 10, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40, call: 10
   };
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
@@ -670,12 +761,44 @@ var Life = (function () {
       habit: { care: 0, explain: 0 },
       // v7 동네: 손을 내민 사람들. helped(오늘 고양이 밥을 챙겨 준 사람), covered(늦은 아침 첫 고객을 붙잡아 준 사람),
       // workHelp(야근을 나눠 한 사람), borrowed(빌린 돈), gave(동기에게 넘긴 고객)
-      people: freshPeople(), dish: null, helped: null, covered: null, workHelp: null, borrowed: null, gave: null
+      people: freshPeople(), dish: null, helped: null, covered: null, workHelp: null, borrowed: null, gave: null,
+      // v7 휴대폰과 엄마: phone(대화와 통화 기록), sent(보낸 사진), box(빈 상자가 놓인 날), mom(엄마 줄기)
+      phone: null, sent: [], photoSeq: 0, box: null, mom: freshMom()
     };
     s.today = freshToday(s);
     return s;
   }
 
+  // 엄마 줄기: knows(일을 시작한 걸 아는지), parcel(반찬 택배가 오는 날), food(냉장고에 남은 엄마 반찬, 끼니),
+  // opened(택배를 연 날), promised(어버이날 전화하겠다고 했는지), called(엄마와 통화한 적이 있는지), hard('힘들었어'라고 말했는지),
+  // touch(갈래마다 마지막으로 닿은 날: photo 사진, talk 통화, reply 문자 답장), got(택배가 왔다고 엄마가 문자한 날)
+  function freshMom() { return { knows: false, parcel: null, food: 0, opened: null, promised: false, called: false, hard: false, touch: {}, got: null }; }
+  var MOM_FOOD = 4;              // 엄마 반찬 택배: 저녁 네 끼
+  // 엄마가 반찬을 부친다: 이틀 뒤, 그날이 쉬는 날이면 그다음 출근하는 날 저녁에 현관 앞에 와 있다 (5/8까지 못 오면 보내지 않는다)
+  function momSend(s) {
+    if (s.mom.parcel !== null) return null;
+    var d = s.day + 2; while (d < DAYS.length && DAYS[d].kind !== 'work') d++;
+    if (d >= DAYS.length || DAYS[d].final) return null;
+    s.mom.parcel = d; event(s, 'momSend'); return d;
+  }
+  // 엄마와 닿은 날: 사진(photo, sendPhoto가 센다), 통화(answer 받은 전화, call 건 전화), 문자 답장(reply).
+  // 같은 날 같은 갈래는 한 번만 한 칸 가까워진다. 통화는 10분이 든다.
+  function momTouch(s, kind) {
+    var m = s.mom, p = person(s, 'mom'); m.touch = m.touch || {};
+    var k = kind === 'answer' || kind === 'call' ? 'talk' : kind;
+    var up = m.touch[k] !== s.day; m.touch[k] = s.day;
+    if (up) p.bond = clamp(p.bond + 1, 0, 3);
+    p.met = true; p.last = s.day;
+    if (k === 'talk') m.called = true;
+    event(s, 'mom', { kind: kind });
+    return { ok: true, up: up, bond: p.bond, minutes: k === 'talk' && (homeTime(s) || s.phase === 'morning') ? spend(s, T.call) : 0 };
+  }
+  function momBond(s) { var p = person(s, 'mom'); return p ? p.bond : 0; }
+  function momOpen(s) {
+    if (s.mom.parcel === null || s.mom.opened !== null || s.day < s.mom.parcel) return { ok: false };
+    s.mom.opened = s.day; s.mom.food += MOM_FOOD; s.box = s.day; event(s, 'momParcel');
+    return { ok: true, food: s.mom.food };
+  }
   function event(s, key, extra) {
     var e = { day: s.day, key: key };
     if (extra) for (var k in extra) e[k] = extra[k];
@@ -1114,17 +1237,22 @@ var Life = (function () {
       s.bills[id] = 'deferred'; event(s, 'deferRent');
       return { ok: true, deferred: true };
     }
-    if (how === 'cash') {
-      if (!canCash(s)) return { ok: false, why: 'cashUsed' };
-      s.loan = { amount: CASH.amount, day: s.day };
-      s.wallet += CASH.amount;
-      s.today.earned.push({ key: 'cash', amount: CASH.amount });
-      event(s, 'cash');
+    if (how === 'cash' && s.wallet < b.amount) {
+      if (!cashService(s).ok) return { ok: false, why: 'cashUsed' };
     }
     if (s.wallet < b.amount) return { ok: false, why: 'money' };
     s.wallet -= b.amount; s.bills[id] = 'paid';
     s.today.spent.push({ item: 'bill', bill: id, amount: b.amount });
     return { ok: true, paid: b.amount };
+  }
+  // 카드 현금서비스: 은행 앱에서 한 번에 받는다. 누구에게도 아쉬운 소리를 하지 않아도 되는 가장 쉬운 길. 이자는 다음 카드값에.
+  function cashService(s) {
+    if (!canCash(s)) return { ok: false, why: 'cashUsed' };
+    s.loan = { amount: CASH.amount, day: s.day };
+    s.wallet += CASH.amount;
+    s.today.earned.push({ key: 'cash', amount: CASH.amount });
+    event(s, 'cash');
+    return { ok: true, amount: CASH.amount };
   }
   // 출금되지 않았거나 보내지 못한 날: 연체. 5/8에 연체료(lateFee, 게임용 고정 금액)를 더해 낸다.
   function lateBill(s, id) { if (s.bills[id] !== 'none') return false; s.bills[id] = 'late'; event(s, 'lateBill', { id: id }); return true; }
@@ -1363,24 +1491,44 @@ var Life = (function () {
   // ---------- 둘이라서 ----------
   var ALARM_HEARTS = 3;          // 4/20 아침, 이만큼 가까우면 고양이가 깨워 준다
   var KNEAD_NIGHTS = [2, 4, 9, 11, 16, 18, 22]; // 같이 잔 이 밤들의 새벽 5시에 얼굴을 꾹꾹 누른다
-  // 반짝이는 순간을 휴대폰으로 찍는다 (평일 저녁 두 장, 주말 세 장까지)
+  // 사진: 집에서는 휴대폰 카메라로 언제든 찍는다. 무엇을 찍었는지(kind)와 누구에게 보냈는지(to)가 남는다.
+  // kind: cat(고양이), room(고양이 없이), box(상자 속), sun(햇볕에 배를 드러냄), suit(정장 위에 웅크림)
+  // photoCap은 개발자 모드 봇이 하루에 찍는 장 수로만 쓴다.
   function photoCap(s) { return s.phase === 'weekend' ? 3 : 2; }
   function photosToday(s) { return s.photos.filter(function (p) { return p.day === s.day; }).length; }
-  function photo(s, pose) {
-    if (!homeTime(s) || s.hidden) return { ok: false, why: 'notNow' };
-    if (photosToday(s) >= photoCap(s)) return { ok: false, why: 'cap' };
-    s.photos.push({ day: s.day, pose: pose || 'sit' });
+  function photo(s, meta) {
+    if (!homeTime(s)) return { ok: false, why: 'notNow' };
+    meta = typeof meta === 'string' ? { kind: 'cat', pose: meta } : (meta || {});
+    var n = Math.max(s.photoSeq || 0, s.photos.length) + 1; s.photoSeq = n;
+    var p = { id: 'p' + n, day: s.day, minute: Math.round(s.minute), kind: meta.kind || (s.hidden ? 'room' : 'cat'), pose: meta.pose || null, to: [] };
+    s.photos.push(p);
     if (s.photos.length === 1) event(s, 'firstPhoto');
-    return { ok: true, n: s.photos.length, minutes: spend(s, T.photo) };
+    return { ok: true, id: p.id, n: s.photos.length, photo: p, minutes: spend(s, T.photo) };
+  }
+  // 사진을 보낸다. 엄마에게는 보낸 날마다 한 칸씩 가까워지고, 다른 사람에게는 처음 보낸 한 장만 손을 내민 것으로 센다.
+  function sendPhoto(s, id, who) {
+    var ph = s.photos.filter(function (x) { return x.id === id; })[0], p = person(s, who);
+    if (!ph || !p) return { ok: false };
+    s.sent = s.sent || [];
+    var before = s.sent.filter(function (e) { return e.who === who; }), sentToday = before.some(function (e) { return e.day === s.day; });
+    s.sent.push({ who: who, day: s.day, id: id, kind: ph.kind });
+    if (ph.to.indexOf(who) < 0) ph.to.push(who);
+    var up = who === 'mom' ? !sentToday : !before.length;
+    if (up) { p.bond = clamp(p.bond + 1, 0, 3); p.met = true; p.last = s.day; p.owe = null; }
+    if (who === 'mom') { s.mom.touch = s.mom.touch || {}; s.mom.touch.photo = s.day; }
+    event(s, 'photoSent', { who: who, kind: ph.kind });
+    var days = {}; s.sent.forEach(function (e) { if (e.who === who) days[e.day] = true; });
+    return { ok: true, up: up, bond: p.bond, first: !before.length, kind: ph.kind, days: Object.keys(days).length, today: sentToday };
   }
   // 내 저녁: 서서 삼각김밥(5분) 또는 차려 먹기(40분, 그날 밤 체력 +1). 주말에 같이 먹으면 마음 +1.
   function eatBlock(s) { if (!homeTime(s)) return 'notHome'; if (s.myMeal) return 'ate'; if (s.phase === 'weekend' && s.meal === 'am') return 'early'; return null; }
   function eat(s, kind) {
     var why = eatBlock(s); if (why) return { ok: false, why: why };
-    // banchan: 옆집 할머니가 준 반찬. 차려 먹은 것만큼 든든하다.
-    kind = kind === 'cook' || kind === 'banchan' ? kind : 'quick';
+    // banchan: 옆집 할머니가 준 반찬, mom: 엄마가 택배로 보낸 반찬. 차려 먹은 것만큼 든든하다.
+    kind = kind === 'cook' || kind === 'banchan' || kind === 'mom' ? kind : 'quick';
+    if (kind === 'mom') { if (!s.mom || !(s.mom.food > 0)) return { ok: false, why: 'none' }; s.mom.food--; }
     s.myMeal = kind; if (kind !== 'quick') s.cooked = true;
-    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : kind === 'banchan' ? T.banchan : T.quick) };
+    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : kind === 'quick' ? T.quick : T.banchan) };
     if (kind === 'cook' && s.phase === 'weekend' && !s.hidden) { heart(s, +1, 'mealTogether'); r.together = true; }
     return r;
   }
@@ -1422,13 +1570,14 @@ var Life = (function () {
   var PEOPLE = {
     grandma: { start: 0 }, // 옆집 할머니: 현관 비밀번호를 알려 드리면 늦는 날 고양이 밥을 챙겨 준다
     mate: { start: 0 },    // 입사 동기: 늦은 아침 첫 고객을 붙잡아 주고, 야근을 나눠 한다
-    boss: { start: 1 }     // 슈퍼 사장님: 프롤로그의 비 오는 밤에 나를 봤다. 급할 때 돈을 빌려준다
+    boss: { start: 1 },    // 슈퍼 사장님: 프롤로그의 비 오는 밤에 나를 봤다. 급할 때 돈을 빌려준다
+    mom: { start: 0, met: true, map: false } // 엄마: 피해 온 사람. 첫 답장은 고양이 사진 한 장이다 (동네 지도에는 없다)
   };
   // 내미는 손: [누구에게, 가까워지는 칸, 드는 시간(분), 드는 돈(원)]
   var REACH = {
     bow: ['grandma', 1, 10], parcel: ['grandma', 1, 10], dish: ['grandma', 1, 10], visit: ['grandma', 1, 20],
     talk: ['mate', 1, 0], lunch: ['mate', 1, 0, 9000], refer: ['mate', 2, 0],
-    job: ['boss', 1, 0], greet: ['boss', 1, 0]
+    job: ['boss', 1, 0], greet: ['boss', 1, 0],
   };
   // 청하는 손: 누가 들어줄 수 있는지 (가까운 정도, 현관 비밀번호)
   var ASK = {
@@ -1442,13 +1591,14 @@ var Life = (function () {
   var DISH_FROM = 8;           // 할머니와 가까워졌으면 이날(4/20)부터 문고리에 반찬통이 걸린다
   function freshPeople() {
     var p = {};
-    Object.keys(PEOPLE).forEach(function (k) { p[k] = { bond: PEOPLE[k].start, owe: null, key: false, last: -9, asked: 0, met: PEOPLE[k].start > 0 }; });
+    Object.keys(PEOPLE).forEach(function (k) { p[k] = freshPerson(k); });
     return p;
   }
+  function freshPerson(k) { return { bond: PEOPLE[k].start, owe: null, key: false, last: -9, asked: 0, met: PEOPLE[k].start > 0 || !!PEOPLE[k].met }; }
   function person(s, who) { return s.people && s.people[who]; }
   // 동네 지도의 창문: 0 꺼짐(모르는 사이), 1 희미함, 2 환함
   function windowOf(s, who) { var p = person(s, who); return !p || !p.met ? 0 : p.bond >= 2 ? 2 : 1; }
-  function litWindows(s) { return Object.keys(PEOPLE).filter(function (k) { return windowOf(s, k) > 0; }).length; }
+  function litWindows(s) { return Object.keys(PEOPLE).filter(function (k) { return PEOPLE[k].map !== false && windowOf(s, k) > 0; }).length; }
   function reachBlock(s, kind) {
     var r = REACH[kind]; if (!r) return 'unknown';
     var p = person(s, r[0]);
@@ -1517,6 +1667,15 @@ var Life = (function () {
       if (!s.seen) s.seen = {};
       if (!s.photos) s.photos = [];
       if (s.myMeal === undefined) { s.myMeal = null; s.cooked = false; s.out = null; s.alarm = null; s.lid = null; }
+      if (s.people) Object.keys(PEOPLE).forEach(function (k) { if (!s.people[k]) s.people[k] = freshPerson(k); });
+      if (!s.mom) s.mom = freshMom();
+      if (!s.mom.touch) s.mom.touch = {};
+      if (s.mom.got === undefined) s.mom.got = null;
+      if (!s.sent) s.sent = [];
+      if (s.phone === undefined) s.phone = null;
+      if (s.box === undefined) s.box = null;
+      s.photos.forEach(function (p, i) { if (!p.id) p.id = 'p' + (i + 1); if (!p.to) p.to = []; if (!p.kind) p.kind = 'cat'; });
+      if (!s.photoSeq) s.photoSeq = s.photos.length;
       return s;
     } catch (e) { return null; }
   }
@@ -1555,7 +1714,7 @@ var Life = (function () {
     ENDINGS: ENDINGS, GRADE: GRADE,
     arriveHome: arriveHome, napFirst: napFirst, nap: nap, toBed: toBed, setDoor: setDoor, needsPOV: needsPOV, unplayed: unplayed, sleepGain: sleepGain, sleep: sleep, morning: morning,
     evaluate: evaluate, ending: ending, CLEAN_FROM: CLEAN_FROM, DUST_FROM: DUST_FROM, outLate: outLate,
-    photo: photo, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
+    photo: photo, sendPhoto: sendPhoto, cashService: cashService, momSend: momSend, momOpen: momOpen, momTouch: momTouch, momBond: momBond, MOM_FOOD: MOM_FOOD, freshMom: freshMom, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
     ALARM_HEARTS: ALARM_HEARTS, KNEAD_NIGHTS: KNEAD_NIGHTS, PHOTO_GOOD: PHOTO_GOOD, PHOTO_FAMILY: PHOTO_FAMILY,
     habitReady: habitReady, HABIT_DAYS: HABIT_DAYS,
     PEOPLE: PEOPLE, REACH: REACH, ASK: ASK, LUNCH_DAYS: LUNCH_DAYS, DISH_FROM: DISH_FROM, DRIFT_DAYS: DRIFT_DAYS, VISIT_GAP: VISIT_GAP, WORK_HELP: WORK_HELP,
@@ -1638,7 +1797,10 @@ var Story = (function () {
     c18: { name: '홍재원', look: 'customerA', tint: 30 },
     c19: { name: '유가은', look: 'customerB', tint: 300 },
     c20: { name: '권도윤', look: 'customerA', tint: 160 },
-    c21: { name: '백승아', look: 'customerB', tint: 60 }
+    c21: { name: '백승아', look: 'customerB', tint: 60 },
+    // 소개로 오는 고객 (솔직하게 권하지 않은 고객이 소개해 준다)
+    r1: { name: '서유나', look: 'customerB', tint: 210 },
+    r2: { name: '문태오', look: 'customerC', tint: 90 }
   };
 
   var ORDINAL = ['첫', '두', '세', '네'];
@@ -1936,7 +2098,8 @@ var Story = (function () {
     leave: '그냥 둔다',
     deferText: { from: '집주인', body: '네, 8일까지는 기다릴게요. 그 뒤로는 어렵습니다.' },
     cashNote: '카드 현금서비스로 30만 원을 받았다. 다음 카드값에 이자까지 붙어서 나간다.',
-    late: '이대로면 연체다. 5/8에 연체료를 더해 내야 한다.'
+    late: '이대로면 연체다. 5/8에 연체료를 더해 내야 한다.',
+    cashSms: function (n) { return '[카드 현금서비스]\n' + Life.won(n) + '이 입금되었습니다.\n이자는 다음 카드 결제일에 함께 청구됩니다.'; }
   };
   function statement(s, p) {
     var l = [{ label: '4월 계약 수수료', amount: p.gross }];
@@ -2026,7 +2189,12 @@ var Story = (function () {
   // 사건은 꼭 일어나고, 플레이어의 손이 그 결과만 바꾼다. 설명하는 말은 줄이고 장면과 손짓으로 보여 준다.
   var BEAT = {
     meal: [{ who: 'me', text: '배고프다... 나도 뭘 좀 먹어야지.' }],
-    photo: function (s) { return [{ who: 'me', text: '지금 이 얼굴은 남겨 둬야 해.' }]; },
+    // 사진으로 남기고 싶은 순간을 처음 본 날
+    moment: {
+      suit: function (s) { return [{ who: 'me', text: '내 정장 위에서 자고 있네.' }, { who: 'me', text: '털 다 묻겠다... 그래도 이건 찍어 둬야지.' }]; },
+      sun: function (s) { return [{ who: 'me', text: '볕 드는 자리는 귀신같이 안다니까.' }]; },
+      box: function (s) { return [{ who: 'me', text: '반찬은 냉장고에 넣었고, 상자는 ' + j(s.cat, 'bare') + ' 차지네.' }]; }
+    },
     knead: function (s) { return [{ who: 'narr', text: '새벽 다섯 시. 얼굴 위에 말랑한 발이 꾹, 꾹.' }]; },
     kneadPet: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 골골거린다. 다시 잠들기는 글렀다.' }]; },
     kneadPush: function (s) { return [{ who: 'narr', text: '이불을 머리끝까지 덮었다. 발이 멈췄다.' }]; },
@@ -2037,10 +2205,7 @@ var Story = (function () {
     friday: function (s) { return [{ who: 'narr', text: s.contracts < 5 ? '금요일. 실적 그래프에서 내 칸이 제일 짧다. 지점장님은 아무 말 없이 다음 사람으로 넘어갔다.' : '금요일. 첫 주가 끝났다.' }]; },
     dinnerText: { from: '동기 단톡', time: '오후 5:52', preview: '금요일인데 다 같이 저녁 먹고 가요!',
       body: '금요일인데 다 같이 저녁 먹고 가요!\n\n제 친구가 여행자보험 알아본대서 소개해 줄게요 ㅎㅎ', yes: '갈게요!', no: '오늘은 먼저 갈게요' },
-    momText: { from: '엄마', time: '오후 9:40', preview: '회사는 다닐 만하니? 밥은 먹고 다니고?',
-      body: '회사는 다닐 만하니? 밥은 먹고 다니고?', replies: ['응, 괜찮아.'] },
-    momAfter: function (s) { return [{ who: 'narr', text: '몇 번을 썼다 지우고, 그 한 줄만 보냈다.' }, { who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' }]; },
-    alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'bare') + '.' }]; },
+    alarmCat: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다. 대신 얼굴 위에 말랑한 발이 꾹, 꾹.' }, { who: 'me', text: '...7시 40분. 고마워, ' + j(s.cat, 'call') + '.' }]; },
     alarmLate: function (s) { return [{ who: 'narr', text: '알람이 울리지 않았다.' }, { who: 'me', text: '8시 20분...?! 늦었다!' }]; },
     overtime: function (s) { return [{ who: 'lead', text: '첫 달 마감 전이니까요. 남을 사람은 남아서 한 건 더 해 봐요.' }, { who: 'me', text: '(집에서 ' + j(s.cat, 'subject') + ' 기다릴 텐데.)' }]; },
     waitedAsleep: function (s) { return [{ who: 'narr', text: j(s.cat, 'subject') + ' 현관 매트 위에서 웅크린 채 잠들어 있었다.' }]; },
@@ -2063,11 +2228,11 @@ var Story = (function () {
     knock: {
       sound: '똑똑똑. 누가 현관문을 두드린다.',
       open: function (s) { return [
-        { who: 'grandma', text: '옆집 사는 사람이야. 밤마다 애기 우는 소리가 나서 와 봤어.' },
+        { who: 'grandma', text: '옆집 사는 사람이야. 요 며칠 밤마다 애기 우는 소리가 나서 와 봤어.' },
         { who: 'grandma', text: '고양이지? 새벽에 그렇게 울면 나도 잠을 못 자.' }
       ]; },
       bow: function (s) { return [
-        { who: 'me', text: '죄송합니다. 데려온 지 얼마 안 돼서, 밤에 혼자 있으면 우나 봐요. 조심할게요.' },
+        { who: 'me', text: '죄송합니다. 제가 이번 주부터 출근을 해서, 낮에 혼자 있다 보니 밤에 우나 봐요. 조심할게요.' },
         { who: 'grandma', text: '...그래. 우리 영감 살아 있을 때는 개를 키웠어. 짐승은 혼자 두면 울어.' },
         { who: 'grandma', text: '방문 닫지 말고 같이 자 봐. 그럼 덜 울 거야.' }
       ]; },
@@ -2085,7 +2250,7 @@ var Story = (function () {
       // 4/14에 문을 닫아 버린 뒤 처음 마주 선 자리
       stranger: function (s) { return [
         { who: 'grandma', text: '아이고, 그게 거기 가 있었어? ...고마워.' },
-        { who: 'me', text: '저번엔 죄송했어요. 데려온 지 얼마 안 돼서 저도 정신이 없었어요.' },
+        { who: 'me', text: '저번엔 죄송했어요. 일을 막 시작해서 저도 정신이 없었어요.' },
         { who: 'grandma', text: '...그래. 처음엔 다 그래. 방문 열어 두고 같이 자 봐. 그럼 덜 울 거야.' }
       ]; },
       // 그날 밤 못 갖다드리면 다음 날 아침
@@ -2111,7 +2276,7 @@ var Story = (function () {
     // 현관 비밀번호: 가까운 사이가 되면 할머니가 먼저 꺼내는 말 (우리 집 현관은 도어락)
     key: {
       offer: [{ who: 'grandma', text: '혼자 살면서 고양이 키우기 쉽지 않지. 늦는 날 있으면 말해.' }, { who: 'grandma', text: '현관 비밀번호 알려 주면 밥은 내가 줄게.' }],
-      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야.' }]; },
+      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야. 늦는 날엔 문자 해.' }, { who: 'narr', text: '할머니 번호를 휴대폰에 저장했다.' }]; },
       keep: function (s) { return [{ who: 'me', text: '괜찮아요. 제가 어떻게든 해 볼게요.' }, { who: 'grandma', text: '그래. 마음 바뀌면 말해.' }]; }
     },
     // 늦게 들어온 밤, 할머니가 다녀간 흔적
@@ -2127,7 +2292,7 @@ var Story = (function () {
         { who: 'mate', text: '네! 오늘 첫 출근이에요. 혹시 같이 위촉되신...?' },
         { who: 'me', text: '네. ' + s.me + (Life.hasBatchim(s.me) ? '이에요.' : '예요.') },
         { who: 'mate', text: '저는 윤지안이에요. 근데 소매에 털이... 고양이 키우세요? 저희 본가에도 있어요.' },
-        { who: 'me', text: '아... 네. 며칠 됐어요.' }
+        { who: 'me', text: '아... 네. 겨울에 데려왔어요.' }
       ]; },
       brush: [{ who: 'narr', text: '소매를 털고 창밖을 봤다. 털은 반쯤 남았다.' }]
     },
@@ -2182,7 +2347,153 @@ var Story = (function () {
     // 동네 지도에서 처음 길을 고를 때
     mapHint: [{ who: 'me', text: '어디로 갈까.' }]
   };
-  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안' };
+
+  // ---------- 엄마 (v7) ----------
+  // 휴대폰 연락처 이름 (대화방 이름과 같다)
+  var CONTACT = { mom: '엄마', mate: '지안', grandma: '옆집 할머니', boss: '행복슈퍼 사장님' };
+  // 프롤로그 전부터 와 있던 엄마 문자 37개. 하나도 답하지 않은 채 쌓였다. [년, 월, 일, 시각, 글]
+  var MOM_UNREAD = [
+    [2025, 9, 15, '오후 8:12', '추석에 내려오니? 기차표 엄마가 끊어 줄까'],
+    [2025, 10, 4, '오전 9:30', '바쁘면 안 와도 된다. 송편 얼려서 보낼게'],
+    [2025, 10, 6, '오후 6:05', '추석 잘 보내라. 밥 꼭 챙겨 먹고'],
+    [2025, 10, 13, '오후 9:41', '택배 받았니? 송편이랑 김치 넣었다'],
+    [2025, 10, 20, '오후 9:15', '감 따서 보낼까'],
+    [2025, 10, 27, '오후 10:02', '요즘 날이 차다. 두꺼운 이불 꺼내 덮어라'],
+    [2025, 11, 3, '오전 7:50', '아침은 먹었니'],
+    [2025, 11, 10, '오후 8:30', '전화 한번 해라. 목소리 좀 듣자'],
+    [2025, 11, 13, '오전 8:15', '오늘 수능날이네. 너 시험 보던 날 생각난다'],
+    [2025, 11, 17, '오후 8:48', '엄마 휴대폰 바꿨다. 사진이 잘 나오네 ㅎㅎ'],
+    [2025, 11, 21, '오후 9:12', '바쁘구나. 답 안 해도 된다'],
+    [2025, 11, 30, '오후 7:44', '김장했다. 김치 보낼까'],
+    [2025, 12, 5, '오후 10:30', '보일러 아끼지 말고 틀어라. 감기 걸린다'],
+    [2025, 12, 12, '오전 8:30', '눈 온다더라. 미끄러지지 않게 조심해라'],
+    [2025, 12, 17, '오후 8:05', '엄마 꿈에 네가 나왔다. 별일 없지?'],
+    [2025, 12, 24, '오후 9:00', '크리스마스 이브네. 케이크라도 하나 사 먹어라'],
+    [2025, 12, 31, '오후 11:58', '올 한 해 고생 많았다'],
+    [2026, 1, 1, '오전 12:03', '새해 복 많이 받아라. 엄마는 너 건강한 게 제일이다'],
+    [2026, 1, 8, '오후 7:12', '많이 춥지. 수도 얼지 않게 물 조금 틀어 놓고 자라'],
+    [2026, 1, 13, '오후 10:40', '잘 자라'],
+    [2026, 1, 19, '오후 9:50', '목소리 듣고 싶다'],
+    [2026, 1, 28, '오후 6:40', '귤 한 상자 사 놨다. 오면 가져가라'],
+    [2026, 2, 5, '오후 8:20', '설에는 내려오니?'],
+    [2026, 2, 10, '오후 3:10', '떡국 떡 보냈다. 설에 꼭 끓여 먹어라'],
+    [2026, 2, 12, '오후 9:33', '안 와도 괜찮다. 엄마 서운하지 않다'],
+    [2026, 2, 17, '오전 9:00', '새해 복 많이 받아라'],
+    [2026, 2, 21, '오후 6:00', '엄마가 전화했었다'],
+    [2026, 2, 26, '오후 10:11', '요즘은 어떻게 지내니'],
+    [2026, 3, 3, '오전 8:00', '3월인데도 아직 쌀쌀하다. 옷 따뜻하게 입고 다녀라'],
+    [2026, 3, 11, '오후 9:05', '답 안 해도 되니까 읽기만 해라'],
+    [2026, 3, 15, '오후 8:12', '이번 주는 좀 따뜻하다더라'],
+    [2026, 3, 20, '오후 7:30', '엄마 요즘 노래 교실 다닌다 ㅎㅎ'],
+    [2026, 3, 24, '오후 7:20', '날이 풀려서 마당에 상추 모종 심었다'],
+    [2026, 3, 27, '오후 9:40', '밥은 먹고 다니니'],
+    [2026, 4, 2, '오후 8:15', '동네 개천에 벚꽃 폈다. 너 어릴 때 거기서 사진 찍은 거 기억나니'],
+    [2026, 4, 9, '오후 9:00', '보고 싶다'],
+    [2026, 4, 11, '오후 6:30', '주말인데 뭐 하니']
+  ];
+  // 받지 않은 엄마 전화 [년, 월, 일, 시각]
+  var MOM_MISSED = [[2026, 1, 1, '오전 12:05'], [2026, 2, 17, '오전 9:02'], [2026, 2, 21, '오후 5:52'], [2026, 3, 27, '오후 9:42']];
+  // 엄마가 고양이를 아는지: 고양이 사진을 한 장이라도 받았으면 안다
+  function catKnown(s) { return (s.sent || []).some(function (e) { return e.who === 'mom'; }); }
+  var MOM = {
+    unread: MOM_UNREAD, missed: MOM_MISSED,
+    // 4/17 금요일 밤 (아직 아무 답도 안 했으면 늘 하던 말, 답을 했으면 조금 더 아는 말)
+    // 아직 한 번도 답하지 않았으면(bond 0) 늘 하던 말에 짧은 답 하나, 이미 닿았으면 조금 더 아는 말에 답 둘. 답하지 않고 닫아도 된다.
+    text417: function (s, bond) {
+      if (bond < 1) return '요즘은 어떻게 지내니. 밥은 먹고 다니고?';
+      return s.mom.knows ? '금요일이네. 회사는 다닐 만하니? 밥은 먹고 다니고?' : catKnown(s) ? '금요일이네. 밥은 먹고 다니니? 고양이 사진 또 보내라 ㅎㅎ' : '금요일이네. 밥은 먹고 다니니?';
+    },
+    reply417: function (bond) { return bond < 1 ? ['응, 괜찮아.'] : ['응, 잘 먹고 다녀.', '그냥 그래.']; },
+    // 내 답에 엄마가 다시 보내는 문자 (답하지 않았으면 없다)
+    back417: function (s, bond, pick) {
+      if (pick == null) return null;
+      if (bond < 1) return '...그래. 답장해 줘서 고맙다. 밥 잘 챙겨 먹어라';
+      return pick === 0 ? '그래야지 ㅎㅎ 주말엔 푹 쉬어라' : '그래. 그런 날도 있다. 오늘은 일찍 자라';
+    },
+    after417: function (s, bond, pick) {
+      var l = bond < 1 ? (pick == null ? '답장 칸을 한참 보다가 휴대폰을 엎어 놓았다.' : '몇 번을 썼다 지우고, 그 한 줄만 보냈다.') : (pick === 1 ? '괜찮다고 하지 않은 건 처음이다.' : null);
+      var out = []; if (l) out.push({ who: 'narr', text: l });
+      out.push({ who: 'narr', text: j(s.cat, 'subject') + ' 말없이 옆에 와서 앉았다.' });
+      return out;
+    },
+    // 4/28 화요일 밤 (아직 한 번도 답하지 않았으면 답할 말이 뜨지 않는다)
+    text428: '어버이날에 내려오니? 바쁘면 안 와도 된다',
+    reply428: ['그날 일해서 못 가. 대신 전화할게.', '아직 잘 모르겠어.'],
+    back428: ['그래. 전화만 해도 엄마는 좋다', '그래. 바쁘면 안 와도 된다'],
+    // 사진을 받은 엄마의 답. r: Life.sendPhoto의 결과 (days: 엄마에게 사진을 보낸 날 수)
+    photoReply: function (s, r, fromParcel) {
+      if (r.today) return [['이쁘다 ㅎㅎ', '이것도 이쁘네', '엄마 이거 저장했다'][(r.days + s.sent.length) % 3]];
+      var k = r.kind;
+      if (k === 'box') return [fromParcel ? '엄마가 보낸 상자에 들어가 있네 ㅎㅎ 반찬보다 상자가 더 맘에 들었나 보다' : '상자에 쏙 들어갔네 ㅎㅎ 고양이들은 상자를 그렇게 좋아한다더라'];
+      if (k === 'sun') return ['햇볕 쬐는 거 보니 엄마도 따뜻하다. 너도 주말엔 볕 좀 쬐어라'];
+      if (k === 'suit') return [s.mom.knows ? '옷 위에서 자네 ㅎㅎ 털 붙겠다. 출근할 때 잘 털고 가라' : '옷 위에서 자네 ㅎㅎ 털 붙겠다'];
+      if (k === 'room') return ['이건 뭐니? 고양이는 어디 갔니 ㅎㅎ'];
+      if (r.days <= 2) return ['또 보냈네 ㅎㅎ 고양이가 너를 많이 따르나 보다. 너도 밥 잘 챙겨 먹어라'];
+      if (r.days === 3) return ['엄마가 사진 보고 또 봤다. 표정이 꼭 너 어릴 때 같다 ㅎㅎ'];
+      if (r.days === 4) return ['너는 어떠니. 요즘 잠은 잘 자니? 엄마는 노래 교실 다니는 재미로 산다 ㅎㅎ'];
+      return ['사진 볼 때마다 엄마도 기분이 좋다. 힘든 일 있으면 엄마한테 말해라. 엄마는 언제나 네 편이다'];
+    },
+    // 택배가 오는 날: 모레면 '모레쯤', 주말을 넘기면 그 요일
+    parcelText: function (s, day) { return '반찬 좀 보냈다. ' + (day === s.day + 2 ? '모레쯤' : Life.DAYS[day].wd + '요일쯤') + ' 도착할 거다. 오면 바로 냉장고에 넣어라'; },
+    declined: '바쁘구나. 고양이 참 이쁘다. 사진 또 보내라',
+    // 처음 사진을 보낸 날, 바로 걸려 오는 전화
+    firstCall: {
+      open: function (s) { return [
+        { who: 'mom', text: '...여보세요? 너니?' },
+        { who: 'me', text: '...응, 엄마.' },
+        { who: 'mom', text: '아이고, 이게 얼마 만이야. 사진 보고 깜짝 놀랐다. 고양이 키우니?' },
+        { who: 'me', text: '응. 겨울에 비 오는 날 데려왔어.' },
+        { who: 'mom', text: '그랬구나. 이름은?' },
+        { who: 'me', text: s.cat + '.' },
+        { who: 'mom', text: s.cat + '... 이쁘네. 너는? 밥은 먹고 다니니? 요즘은 뭐 하고 지내?' }
+      ]; },
+      picks: ['보험 회사 다녀. 설계사 일 시작했어.', '그냥... 이것저것 해.'],
+      told: [{ who: 'mom', text: '그래? 잘됐다... 처음이라 힘들 텐데, 몸 조심하고.' }],
+      hid: [{ who: 'mom', text: '그래. 말하기 싫으면 안 해도 된다. 밥만 잘 챙겨 먹어라.' }],
+      close: function (s, parcel) {
+        var l = [];
+        if (parcel) l.push({ who: 'mom', text: '반찬 좀 보내 줄게. 주소는 그대로지?' }, { who: 'me', text: '...응.' });
+        l.push({ who: 'mom', text: '사진 또 보내라. 엄마는 그거면 된다.' });
+        return l;
+      }
+    },
+    // 내가 거는 전화 (하루 한 번)
+    chat: [
+      function (s) {
+        var l = [{ who: 'mom', text: '웬일이야? 무슨 일 있니?' }, { who: 'me', text: '아니, 그냥.' }];
+        if (catKnown(s)) l.push({ who: 'mom', text: '그래... 목소리 들으니 좋다. ' + j(s.cat, 'bare') + '는 잘 있고?' }, { who: 'me', text: '응. 지금 옆에 있어.' }, { who: 'mom', text: '그래. 너도 일찍 자라.' });
+        else l.push({ who: 'mom', text: '그래... 목소리 들으니 좋다.' }, { who: 'mom', text: '일찍 자라.' });
+        return l;
+      },
+      function (s) { return [{ who: 'mom', text: '밥은 먹었니?' }, { who: 'me', text: s.myMeal ? '응, 먹었어.' : '이제 먹으려고.' }, { who: 'mom', text: '늦게 먹지 말고. 엄마는 오늘 노래 교실 다녀왔다.' }]; },
+      function (s) { return [{ who: 'mom', text: s.mom.knows ? '요즘 회사는 어때?' : '요즘 어떻게 지내?' }, { who: 'me', text: '그냥... 그럭저럭.' }, { who: 'mom', text: '그래. 그럭저럭이면 됐다. 무리하지 말고.' }]; }
+    ],
+    // 내가 건 전화에서 가까워졌을 때: 반찬을 부친다고 한다
+    parcelCall: [{ who: 'mom', text: '참, 반찬 좀 보내 줄게. 주소는 그대로지?' }, { who: 'me', text: '...응. 고마워.' }],
+    // 가까워지기 전에는 걸다가 끊는다
+    hesitate: [{ who: 'narr', text: '통화 버튼을 눌렀다가, 신호가 가기 전에 끊었다.' }],
+    // 반찬 택배
+    parcelNotice: [{ who: 'narr', text: '문 앞에 놓여 있던 상자를 들고 들어왔다. 보내는 사람: 엄마.' }],
+    parcelOpen: [{ who: 'narr', text: '김치, 멸치볶음, 장조림. 아이스팩은 반쯤 녹아 있다.' }, { who: 'narr', text: '반찬통 사이에 쪽지가 끼워져 있다. 「밥 꼭 챙겨 먹어라. -엄마」' }],
+    parcelGot: '잘 받았니? 김치는 금방 시니까 먼저 먹어라',
+    eat: [{ who: 'narr', text: '엄마 반찬을 꺼내 밥을 먹었다. 집에서 먹던 맛이다.' }],
+    // 5/8 어버이날
+    morning: function (s) { return [{ who: 'narr', text: '오늘은 어버이날이다.' }, { who: 'me', text: s.mom.promised ? '전화하겠다고 했지.' : '...엄마한테 전화해 볼까.' }]; },
+    parentsDay: {
+      // talked: 오늘 전에 엄마와 통화한 적이 있는지
+      open: function (s, bond, talked) {
+        if (bond < 1) return [{ who: 'mom', text: '...여보세요? 너니? 무슨 일 있니?' }, { who: 'me', text: '아니. 오늘 어버이날이잖아.' }, { who: 'mom', text: '...그래. 전화해 줘서 고맙다.' }, { who: 'mom', text: '요즘은 어떻게 지내?' }];
+        return [{ who: 'mom', text: talked ? '여보세요? 응, 엄마야.' : '여보세요? 아이고, 웬일로 전화를 다 하고.' }, { who: 'me', text: '엄마, 오늘 어버이날이잖아. 늘 고마워.' }, { who: 'mom', text: '고맙긴. ' + (s.mom.knows ? '회사는 어때? 힘들지는 않고?' : '요즘은 어때? 지낼 만하니?') }];
+      },
+      picks: function (bond) { return bond >= 2 ? ['응, 괜찮아.', '사실... 좀 힘들었어.'] : ['응, 괜찮아.']; },
+      fine: function (s, bond) { return bond < 1 ? [{ who: 'mom', text: '그래. 괜찮으면 됐다.' }, { who: 'narr', text: '괜찮다는 말이 오늘도 먼저 나왔다.' }] : [{ who: 'mom', text: '그래. 너는 늘 괜찮다고 하더라.' }, { who: 'mom', text: '엄마는 네 목소리 들으니 됐다.' }]; },
+      hard: function (s) { return [{ who: 'mom', text: '...그랬구나.' }, { who: 'mom', text: '말해 줘서 고맙다. 엄마는 그 말이 듣고 싶었다.' }, { who: 'me', text: '...응.' }, { who: 'mom', text: '힘들면 언제든 전화해라.' + (catKnown(s) ? ' ' + j(s.cat, 'to') + '도 안부 전하고.' : '') }]; }
+    },
+    noCall: '오늘 바쁘지? 엄마는 괜찮다. 밥 잘 챙겨 먹어라',
+    catKnown: catKnown
+  };
+
+  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안', mom: '엄마' };
 
   var ENDING = {
     family: { title: '우리 집', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '첫 수수료로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
@@ -2278,7 +2589,7 @@ var Story = (function () {
   }
 
   return {
-    opening: opening, phone: phone, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
+    opening: opening, phone: phone, MOM: MOM, CONTACT: CONTACT, PRODUCT: PRODUCT, SHORT: SHORT, ITEM: ITEM, ITEM_DESC: ITEM_DESC, CLIENT: CLIENT, ORDINAL: ORDINAL,
     MARK_NOTE: MARK_NOTE, COVER: COVER, coverName: coverName, TALK: TALK, QUESTIONS: QUESTIONS, EXPLAIN: EXPLAIN, DESIGN: DESIGN, APPLY: APPLY, SIGN: SIGN, CANCEL: CANCEL, CANCEL_SHORT: CANCEL_SHORT, bossTalk: bossTalk, BILL: BILL, billNotice: billNotice, MONEY: MONEY, statement: statement, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
     assembly: assembly, senior: senior, seniorSmell: seniorSmell, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
@@ -4022,211 +4333,13 @@ var UI = (function () {
   function blackOn() { $('blackScreen').hidden = false; $('blackText').textContent = ''; }
 
   // ---------- 휴대폰 ----------
-  var APPS = [
-    { id: 'msg', name: '메시지', bg: '#34c759', svg: '<path d="M12 4C6.5 4 2.5 7.4 2.5 11.6c0 2.4 1.3 4.5 3.4 5.9-.2 1.4-.9 2.6-1.9 3.5 2 0 3.8-.8 5-1.9.9.2 1.9.3 3 .3 5.5 0 9.5-3.4 9.5-7.6S17.5 4 12 4z" fill="#fff"/>' },
-    { id: 'call', name: '전화', bg: '#34c759', svg: '<path d="M7 3.5l3 3.6-1.8 2.2c1 2.2 2.6 3.9 4.6 4.8l2.2-1.8 3.5 3-1.6 3.2C10.6 18.2 5.8 13.4 3.5 6.8z" fill="#fff"/>' },
-    { id: 'photo', name: '사진', bg: '#fff', svg: '<g transform="translate(12 12)"><ellipse rx="3" ry="6" cy="-4" fill="#f9c440"/><ellipse rx="3" ry="6" cy="-4" fill="#f57b39" transform="rotate(60)"/><ellipse rx="3" ry="6" cy="-4" fill="#e9428a" transform="rotate(120)"/><ellipse rx="3" ry="6" cy="-4" fill="#9a5ce6" transform="rotate(180)"/><ellipse rx="3" ry="6" cy="-4" fill="#3d9bf0" transform="rotate(240)"/><ellipse rx="3" ry="6" cy="-4" fill="#4cc764" transform="rotate(300)"/></g>' },
-    { id: 'camera', name: '카메라', bg: 'linear-gradient(#d9dadc,#9a9ca0)', svg: '<rect x="3" y="7" width="18" height="12" rx="2" fill="#2c2c2e"/><rect x="8" y="5" width="8" height="3" rx="1" fill="#2c2c2e"/><circle cx="12" cy="13" r="4" fill="#5a5a5e" stroke="#c7c7cc" stroke-width="1.5"/>' },
-    { id: 'weather', name: '날씨', bg: 'linear-gradient(#4aa3f0,#2a6fd0)', svg: '<circle cx="9" cy="9" r="4" fill="#ffd60a"/><path d="M8 18h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.4 1.6A2.7 2.7 0 0 0 8 18z" fill="#fff"/>' },
-    { id: 'clock', name: '시계', bg: '#000', svg: '<circle cx="12" cy="12" r="8.5" fill="#fff"/><path d="M12 7v5l3.5 2" stroke="#000" stroke-width="1.6" fill="none"/>' },
-    { id: 'cal', name: '캘린더', bg: '#fff', svg: '<text x="12" y="8" font-size="5" text-anchor="middle" fill="#ff3b30" font-family="sans-serif">DAY</text><text x="12" y="19" font-size="11" text-anchor="middle" fill="#000" font-family="sans-serif">12</text>' },
-    { id: 'set', name: '설정', bg: 'linear-gradient(#b6b8bd,#8e9096)', svg: '<circle cx="12" cy="12" r="6.5" fill="none" stroke="#3a3a3c" stroke-width="3" stroke-dasharray="2.4 1.6"/><circle cx="12" cy="12" r="3" fill="#3a3a3c"/>' }
-  ];
-  var PH = { msgs: [], view: 'home', thread: null, waits: [], clock: '10:42' };
-  function phoneBadge() { var n = PH.msgs.filter(function (m) { return m.unread || (m.replies && m.reply == null); }).length; $('phoneBadge').hidden = !n; $('phoneBadge').textContent = '!'; return n; }
-  function ring(on) { $('phoneButton').classList.toggle('ring', !!on); }
-  function phoneHome() {
-    PH.view = 'home';
-    var unread = PH.msgs.filter(function (m) { return m.unread || (m.replies && m.reply == null); }).length;
-    $('iosHome').innerHTML = APPS.map(function (a) {
-      return '<button class="ios-app-icon" data-app="' + a.id + '"><span class="glyph" style="background:' + a.bg + '"><svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">' + a.svg + '</svg></span>' + esc(a.name) + (a.id === 'msg' && unread ? '<b>' + unread + '</b>' : '') + '</button>';
-    }).join('');
-    $('iosHome').hidden = false; $('iosList').hidden = true; $('iosThread').hidden = true;
-  }
-  function avatar(m) { return '<span class="ios-avatar">' + esc(m.from.charAt(0)) + '</span>'; }
-  function phoneList() {
-    PH.view = 'list';
-    $('iosList').innerHTML = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div><div class="ios-title">메시지</div>' +
-      PH.msgs.map(function (m, i) {
-        return '<button class="ios-row" data-msg="' + i + '">' + avatar(m) + '<span><span class="who">' + esc(m.from) + '<small>' + esc(m.time) + '</small></span><span class="pre">' + esc(m.preview || m.body) + '</span></span>' + (m.unread ? '<i class="unread"></i>' : '') + '</button>';
-      }).join('');
-    $('iosHome').hidden = true; $('iosList').hidden = false; $('iosThread').hidden = true;
-  }
-  function phoneThread(i) {
-    var m = PH.msgs[i]; if (!m) return;
-    PH.view = 'thread'; PH.thread = i;
-    m.unread = false;
-    var html = '<div class="ios-nav"><button data-nav="list">‹</button><span></span><span></span></div><div class="ios-head">' + avatar(m) + esc(m.from) + '</div><div class="ios-msgs"><div class="ios-day">' + esc(m.time) + '</div><div class="bubble in">' + esc(m.body) + '</div>' +
-      (m.reply != null ? '<div class="bubble out">' + esc(m.replies[m.reply]) + '</div>' : '') + '</div>';
-    if (m.replies && m.reply == null) html += '<div class="ios-replies">' + m.replies.map(function (r, k) { return '<button data-reply="' + k + '">' + esc(r) + '</button>'; }).join('') + '</div>';
-    $('iosThread').innerHTML = html;
-    $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = false;
-    phoneBadge();
-    // 가장 최근에 받은 문자의 첫 줄부터 보이게 (긴 문자가 화면이 낮은 가로 폰에서 잘리지 않게)
-    var box = $('iosThread').querySelector('.ios-msgs');
-    if (box) {
-      var ins = box.querySelectorAll('.bubble.in'), b = ins[ins.length - 1];
-      box.scrollTop = b ? Math.max(0, b.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 28) : box.scrollHeight;
-    }
-  }
-  function phoneOpen() {
-    if (!$('phone').hidden) return;
-    ring(false); point(null);
-    $('iosTime').textContent = PH.clock;
-    $('phone').hidden = false;
-    sfx('tap');
-    phoneHome();
-  }
-  function phoneClose() {
-    if (PH.ask) { askEnd(); return; }
-    $('phone').hidden = true;
-    var done = PH.waits.filter(function (w) { return !w.msg.unread && (!w.msg.replies || w.msg.reply != null); });
-    PH.waits = PH.waits.filter(function (w) { return done.indexOf(w) < 0; });
-    done.forEach(function (w) { w.resolve(w.msg.reply); });
-    if (PH.waits.length) { ring(true); }
-    phoneBadge();
-  }
-  // 새 문자가 오고, 그 문자를 읽고(답이 있으면 답하고) 휴대폰을 닫을 때까지 기다린다.
-  function phoneWait(msg, clock) {
-    msg.unread = true;
-    PH.msgs.unshift(msg);
-    if (clock) PH.clock = clock;
-    phoneBadge(); ring(true); sfx('buzz');
-    point($('phoneButton'));
-    return new Promise(function (resolve) { PH.waits.push({ msg: msg, resolve: resolve }); });
-  }
-  function phoneSeed(msgs) { PH.msgs = msgs.map(function (m) { m.unread = false; return m; }); phoneBadge(); }
-  function phoneMsgs() { return PH.msgs; }
-  function phoneSetClock(c) { PH.clock = c; }
-  function phoneClick(e) {
-    var b = e.target.closest('button'), screen = e.target.closest('.iphone');
-    if (!screen) { phoneClose(); return; }
-    if (PH.ask) { if (b) askClick(b); return; }
-    if (!b) return;
-    if (b.dataset.app === 'msg') { sfx('tap'); phoneList(); }
-    else if (b.dataset.app) { b.animate && b.animate([{ transform: 'scale(.94)' }, { transform: 'none' }], { duration: 160 }); }
-    else if (b.dataset.nav === 'home') { sfx('tap'); phoneHome(); }
-    else if (b.dataset.nav === 'list') { sfx('tap'); phoneList(); }
-    else if (b.dataset.msg != null) { sfx('tap'); phoneThread(+b.dataset.msg); }
-    else if (b.dataset.reply != null) {
-      var m = PH.msgs[PH.thread]; m.reply = +b.dataset.reply; sfx('tap');
-      phoneThread(PH.thread);
-      setTimeout(phoneClose, 900);
-    }
-  }
-
-  // ---------- 부탁하기 (청하는 손) ----------
-  // 휴대폰이 새 메시지 화면으로 열린다. 받는 사람 목록에는 지금 이 부탁을 들어줄 수 있는 사람만 뜬다.
-  // 글은 저절로 써지고, 보내기를 길게 눌러야 보내진다. 누르는 동안 쓴 글이 한 번 지워졌다가 다시 써진다.
-  // 손을 떼면 처음 쓴 글로 돌아간다. 다 보내면 답장이 오고, 휴대폰을 닫으면 끝난다.
-  // o: { list: [{ id, name }], draft(id) → { first, again, final }, reply(id) → 답장, clock }
-  // 돌려주는 값: 보낸 사람의 id, 아무에게도 안 보냈으면 null
-  var HOLD = 2.6;
-  function askEl() {
-    var el = $('iosAsk');
-    if (!el) { el = document.createElement('div'); el.id = 'iosAsk'; el.className = 'ios-app ios-ask'; el.hidden = true; $('iosThread').parentNode.insertBefore(el, $('iosHomebar')); }
-    return el;
-  }
-  function phoneAsk(o) {
-    return new Promise(function (resolve) {
-      PH.ask = { o: o, resolve: resolve, sent: null, to: null, timers: [] };
-      ring(false); point(null);
-      if (o.clock) PH.clock = o.clock;
-      $('iosTime').textContent = PH.clock;
-      $('phone').hidden = false;
-      $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = true;
-      askEl().hidden = false;
-      sfx('tap');
-      askList();
-    });
-  }
-  function askClear() { var a = PH.ask; if (!a) return; a.timers.forEach(clearTimeout); a.timers = []; if (a.hold) { cancelAnimationFrame(a.hold.raf); a.hold = null; } }
-  function askList() {
-    var a = PH.ask; askClear(); a.to = null;
-    var rows = a.o.list.map(function (p) {
-      return '<button class="ios-row" data-ask-to="' + esc(p.id) + '"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span><span><span class="who">' + esc(p.name) + '</span><span class="pre"></span></span></button>';
-    }).join('');
-    askEl().innerHTML = '<div class="ios-nav"><span></span><span>새 메시지</span><span></span></div><div class="ios-to">받는 사람:</div>' +
-      (rows || '<div class="ios-empty"></div>');
-  }
-  function askType(text, done, speed) {
-    var a = PH.ask, field = $('askText'), cur = field.textContent, i = 0;
-    // 지금 글과 새 글이 같은 앞부분까지는 두고, 나머지만 지우고 다시 쓴다
-    while (i < cur.length && i < text.length && cur[i] === text[i]) i++;
-    var steps = [];
-    for (var k = cur.length; k > i; k--) steps.push(cur.slice(0, k - 1));
-    for (var m = i + 1; m <= text.length; m++) steps.push(text.slice(0, m));
-    var n = 0;
-    (function next() {
-      if (!PH.ask || PH.ask !== a) return;
-      if (n >= steps.length) { if (done) done(); return; }
-      field.textContent = steps[n++];
-      a.timers.push(setTimeout(next, n <= cur.length - i ? 32 : (speed || 42)));
-    }());
-  }
-  function askCompose(id) {
-    var a = PH.ask, p = a.o.list.filter(function (x) { return x.id === id; })[0]; if (!p) return;
-    askClear(); a.to = id; a.d = a.o.draft(id);
-    askEl().innerHTML = '<div class="ios-nav"><button data-ask-nav="list">‹</button><span></span><span></span></div><div class="ios-head"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span>' + esc(p.name) + '</div>' +
-      '<div class="ios-msgs" id="askMsgs"></div><div class="ios-compose"><div class="ios-field" id="askText"></div><button class="ios-send" id="askSend" disabled aria-label="보내기"><i></i></button></div>';
-    var send = $('askSend');
-    send.addEventListener('pointerdown', askHoldStart);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { send.addEventListener(ev, askHoldStop); });
-    askType(a.d.first, function () { send.disabled = false; send.classList.add('ready'); });
-  }
-  function askHoldStart(e) {
-    var a = PH.ask; if (!a || a.sent || $('askSend').disabled) return;
-    e.preventDefault();
-    try { e.target.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ }
-    var t0 = performance.now(), send = $('askSend'), stage = 0;
-    a.hold = { raf: 0 };
-    (function frame(now) {
-      if (!a.hold) return;
-      var q = Math.min(1, (now - t0) / 1000 / HOLD);
-      send.style.setProperty('--p', (q * 100).toFixed(1) + '%');
-      // 누르고 있는 동안: 잠깐 멈칫, 쓴 글을 지우고, 다시 쓴다
-      if (stage === 0 && q > .18) { stage = 1; askType(a.d.again, null, 40); }
-      if (stage === 1 && q > .5) { stage = 2; askType(a.d.final, null, 30); }
-      if (q >= 1) { a.hold = null; askSent(); return; }
-      a.hold.raf = requestAnimationFrame(frame);
-    }(t0));
-  }
-  function askHoldStop() {
-    var a = PH.ask; if (!a || !a.hold || a.sent) return;
-    askClear();
-    var send = $('askSend'); send.style.setProperty('--p', '0%');
-    askType(a.d.first, null, 20); // 손을 떼면 처음 쓴 글로 돌아간다
-  }
-  function askSent() {
-    var a = PH.ask, msgs = $('askMsgs'), send = $('askSend');
-    askClear();
-    a.sent = a.to;
-    $('askText').textContent = ''; send.disabled = true; send.classList.remove('ready'); send.style.setProperty('--p', '0%');
-    msgs.innerHTML = '<div class="ios-day">' + esc(a.o.time || '') + '</div><div class="bubble out">' + esc(a.d.final) + '</div>';
-    sfx('tap');
-    var nav = askEl().querySelector('[data-ask-nav]'); if (nav) nav.remove();
-    a.timers.push(setTimeout(function () {
-      msgs.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>');
-      a.timers.push(setTimeout(function () {
-        var tp = msgs.querySelector('.typing'); if (tp) tp.remove();
-        msgs.insertAdjacentHTML('beforeend', '<div class="bubble in">' + esc(a.o.reply(a.sent)) + '</div>');
-        sfx('buzz'); a.replied = true;
-      }, 1500));
-    }, 700));
-  }
-  function askClick(b) {
-    var a = PH.ask;
-    if (b.dataset.askTo) { sfx('tap'); askCompose(b.dataset.askTo); }
-    else if (b.dataset.askNav === 'list' && !a.sent) { sfx('tap'); askList(); }
-  }
-  function askEnd() {
-    var a = PH.ask; if (!a) return;
-    if (a.sent && !a.replied) return; // 답장이 올 때까지는 닫히지 않는다
-    askClear(); PH.ask = null;
-    askEl().hidden = true; $('phone').hidden = true;
-    phoneBadge(); if (PH.waits.length) ring(true);
-    a.resolve(a.sent);
-  }
+  // 휴대폰은 life-phone.js(Phone)에 있다. 여기 이름들은 예전 부르는 곳을 위해 그대로 둔다.
+  function phoneWait(msg, clock) { return Phone.wait(msg, clock); }
+  function phoneAsk(o) { return Phone.ask(o); }
+  function phoneOpen() { return Phone.open(); }
+  function phoneClose() { return Phone.close(); }
+  function phoneSetClock(c) { return Phone.setClock(c); }
+  function ring(on) { return Phone.ring(on); }
 
   // ---------- 손가락 화살표 (HTML 쪽 대상) ----------
   function point(el) {
@@ -4324,7 +4437,7 @@ var UI = (function () {
     return new Promise(function (resolve) { $('retryShelf').onclick = function () { m.hidden = true; resolve(); }; });
   }
   function busy() {
-    return !!T || !$('phone').hidden || !$('receipt').hidden || !$('naming').hidden || !$('gameOver').hidden || !$('menu').hidden || !$('blackScreen').hidden || !$('dialogue').hidden;
+    return !!T || Phone.busy() || !$('receipt').hidden || !$('naming').hidden || !$('gameOver').hidden || !$('menu').hidden || !$('blackScreen').hidden || !$('dialogue').hidden;
   }
 
   function init() {
@@ -4332,13 +4445,11 @@ var UI = (function () {
     // 대화는 대화창이 아니라 화면 어디를 눌러도 넘어간다 (버튼과 휴대폰, 메뉴는 빼고)
     document.addEventListener('pointerdown', function (e) {
       if ($('dialogue').hidden || (e.button !== undefined && e.button > 0)) return;
-      if (e.target && e.target.closest && e.target.closest('button, input, #phone, #menu, #receipt, #naming, #blackScreen, #gameOver')) return;
+      if (e.target && e.target.closest && e.target.closest('button, input, #phone, #callBar, #menu, #receipt, #naming, #blackScreen, #gameOver')) return;
       if (advance()) sfx('tap');
     });
     $('blackScreen').addEventListener('click', function () { advance(); });
-    $('phone').addEventListener('click', phoneClick);
-    $('iosHomebar').addEventListener('click', function (e) { e.stopPropagation(); phoneClose(); });
-    $('phoneButton').addEventListener('click', phoneOpen);
+    Phone.init();
     $('soundButton').addEventListener('click', function () { setMuted(!muted); if (!muted) sfx('tap'); });
     document.addEventListener('keydown', function (e) {
       if ((e.key === ' ' || e.key === 'Enter') && T && !(e.target && e.target.tagName === 'INPUT')) { e.preventDefault(); advance(); }
@@ -4351,9 +4462,717 @@ var UI = (function () {
     hud: hud, hudReset: hudReset, float: float,
     say: say, talking: talking, setSpeakers: setSpeakers, advance: advance,
     black: black, blackOn: blackOn, blackOff: blackOff,
-    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
+    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSetClock: phoneSetClock, ring: ring,
     point: point, placePointer: placePointer, chips: chips,
     receipt: receipt, receiptHTML: receiptHTML, askName: askName, gameOver: gameOver, busy: busy, wait: wait, esc: esc, img: img
+  };
+}());
+
+</script>
+<script>
+/* 휴대폰: 실제로 쓰는 앱 다섯 개만 있다. 메시지, 전화, 카메라, 사진, 은행.
+   - 메시지는 사람마다 한 방에 쌓인다. 기록은 게임 상태(s.phone)에 저장되어 이어 하기에도 남는다.
+   - 사진은 사진첩에서 대화방으로 끌어다 놓으면 보내진다.
+   - 은행은 잔액, 나갈 돈, 들어올 수수료를 보여 주고, 요금이 모자랄 때 고르는 자리가 된다.
+   게임 쪽 일(누가 답장하는지, 사진을 찍으면 무엇이 남는지)은 setHooks로 받은 함수가 정한다. */
+var Phone = (function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(t) { return UI.esc(t); }
+  function sfx(n) { UI.sfx(n); }
+
+  var WD = ['일', '월', '화', '수', '목', '금', '토'];
+  var APPS = [
+    { id: 'msg', name: '메시지', bg: '#34c759', svg: '<path d="M12 4C6.5 4 2.5 7.4 2.5 11.6c0 2.4 1.3 4.5 3.4 5.9-.2 1.4-.9 2.6-1.9 3.5 2 0 3.8-.8 5-1.9.9.2 1.9.3 3 .3 5.5 0 9.5-3.4 9.5-7.6S17.5 4 12 4z" fill="#fff"/>' },
+    { id: 'call', name: '전화', bg: '#34c759', svg: '<path d="M7 3.5l3 3.6-1.8 2.2c1 2.2 2.6 3.9 4.6 4.8l2.2-1.8 3.5 3-1.6 3.2C10.6 18.2 5.8 13.4 3.5 6.8z" fill="#fff"/>' },
+    { id: 'camera', name: '카메라', bg: 'linear-gradient(#d9dadc,#9a9ca0)', svg: '<rect x="3" y="7" width="18" height="12" rx="2" fill="#2c2c2e"/><rect x="8" y="5" width="8" height="3" rx="1" fill="#2c2c2e"/><circle cx="12" cy="13" r="4" fill="#5a5a5e" stroke="#c7c7cc" stroke-width="1.5"/>' },
+    { id: 'photo', name: '사진', bg: '#fff', svg: '<g transform="translate(12 12)"><ellipse rx="3" ry="6" cy="-4" fill="#f9c440"/><ellipse rx="3" ry="6" cy="-4" fill="#f57b39" transform="rotate(60)"/><ellipse rx="3" ry="6" cy="-4" fill="#e9428a" transform="rotate(120)"/><ellipse rx="3" ry="6" cy="-4" fill="#9a5ce6" transform="rotate(180)"/><ellipse rx="3" ry="6" cy="-4" fill="#3d9bf0" transform="rotate(240)"/><ellipse rx="3" ry="6" cy="-4" fill="#4cc764" transform="rotate(300)"/></g>' },
+    { id: 'bank', name: '은행', bg: 'linear-gradient(#2f6fd6,#1d4fa8)', svg: '<path d="M4 9.5L12 5l8 4.5z" fill="#fff"/><rect x="5.5" y="10.5" width="2.2" height="6" fill="#fff"/><rect x="10.9" y="10.5" width="2.2" height="6" fill="#fff"/><rect x="16.3" y="10.5" width="2.2" height="6" fill="#fff"/><rect x="4" y="17.5" width="16" height="2" fill="#fff"/>' }
+  ];
+  var VIEWS = ['iosHome', 'iosList', 'iosThread', 'iosAsk', 'iosCalls', 'iosCam', 'iosPhotos', 'iosBank', 'iosCall'];
+
+  // log: { c(대화방 이름), ymd: [년, 월, 일], time('오후 7:05'), dir: 'in' | 'out', text, photo(사진 id), u(안 읽음), old(게임 전부터 쌓여 있던 글) }
+  // calls: { c, ymd, time, kind: 'missed' | 'in' | 'out', n, seen }
+  // 날짜가 오늘보다 뒤인 글과 통화는 아직 보이지 않는다 (프롤로그의 겨울에 봄에 올 문자가 미리 보이지 않게).
+  var P = { log: [], calls: [], waits: [], view: 'home', conv: null, clock: '10:42', ask: null, cam: null, viewer: null, bank: null, call: null, tray: false, sel: null, drag: null, rings: null };
+  var H = {
+    today: function () { return [2026, 4, 12]; },
+    contact: function () { return { face: false }; },    // { face: 얼굴이 보이는 사이인지, send: 사진을 보낼 수 있는 방인지 }
+    photos: function () { return []; },                   // [{ id, day, kind, to: [] }]
+    photoSent: null,                                      // (c, id) → Promise<[답장 글]>
+    canCamera: function () { return false; },
+    focus: function () { return { x: 320, y: 260 }; },
+    shot: function () { return null; },                   // → { id } 사진을 남겼으면
+    bank: function () { return null; },
+    cash: function () { return false; },
+    canCall: function () { return false; },
+    call: null                                            // (c) → Promise (전화 한 통의 이야기)
+  };
+  function setHooks(h) { for (var k in h) H[k] = h[k]; }
+
+  // ---------- 날짜 ----------
+  function sameYmd(a, b) { return a && b && a[0] === b[0] && a[1] === b[1] && a[2] === b[2]; }
+  function ymdNum(y) { return y ? y[0] * 10000 + y[1] * 100 + y[2] : 0; }
+  // 올해가 아닌 날짜에만 해를 붙인다
+  function dateLabel(ymd) {
+    if (!ymd) return '';
+    var d = new Date(ymd[0], ymd[1] - 1, ymd[2]);
+    return (ymd[0] !== today()[0] ? ymd[0] + '년 ' : '') + ymd[1] + '월 ' + ymd[2] + '일 ' + WD[d.getDay()] + '요일';
+  }
+  function shortDate(ymd) { return ymd ? (ymd[0] !== today()[0] ? (ymd[0] % 100) + '. ' : '') + ymd[1] + '. ' + ymd[2] + '.' : ''; }
+  function vis(m) { return !m.ymd || ymdNum(m.ymd) <= ymdNum(today()); }
+  function mins(t) { var k = /(오전|오후) (\d+):(\d+)/.exec(t || ''); if (!k) return 0; return ((+k[2] % 12) + (k[1] === '오후' ? 12 : 0)) * 60 + +k[3]; }
+
+  // ---------- 화면 고르기 ----------
+  function el(id) {
+    var e = $(id);
+    if (!e) {
+      e = document.createElement('div'); e.id = id; e.className = 'ios-app'; e.hidden = true;
+      $('iosHomebar').parentNode.insertBefore(e, $('iosHomebar'));
+    }
+    return e;
+  }
+  function show(id) {
+    VIEWS.forEach(function (v) { var e = v === 'iosHome' ? $('iosHome') : el(v); if (e) e.hidden = v !== id; });
+    if (id !== 'iosCam') camStop();
+  }
+  // 대화방 목록: 가장 최근 글이 온 방부터 (날짜와 시각으로, 같으면 나중에 들어온 글)
+  function convs() {
+    var best = {};
+    P.log.forEach(function (m, i) {
+      if (!vis(m)) return;
+      var k = [ymdNum(m.ymd), mins(m.time), i], b = best[m.c];
+      if (!b || k[0] > b[0] || (k[0] === b[0] && (k[1] > b[1] || (k[1] === b[1] && k[2] > b[2])))) best[m.c] = k;
+    });
+    return Object.keys(best).sort(function (a, b) { var x = best[a], y = best[b]; return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2]); });
+  }
+  function lastOf(c) { for (var i = P.log.length - 1; i >= 0; i--) if (P.log[i].c === c && vis(P.log[i])) return P.log[i]; return null; }
+  function unreadOf(c) { return P.log.filter(function (m) { return m.c === c && m.u && vis(m); }).length; }
+  function unreadAll() { return P.log.filter(function (m) { return m.u && vis(m); }).length; }
+  // 휴대폰 단추의 표시는 새로 온 글에만 뜬다 (오래 쌓인 엄마 문자는 메시지 앱 숫자로만 보인다)
+  function unreadNew() { return P.log.filter(function (m) { return m.u && !m.old && vis(m); }).length; }
+  function pendingReply() { return P.waits.some(function (w) { return w.replies && w.reply == null && !w.optional; }); }
+  function missed() { return P.calls.filter(function (x) { return x.kind === 'missed' && !x.seen && vis(x); }).length; }
+  function badge() {
+    var n = unreadNew() + (pendingReply() ? 1 : 0);
+    $('phoneBadge').hidden = !n && !P.rings; $('phoneBadge').textContent = '!';
+    return n;
+  }
+  function ring(on) { $('phoneButton').classList.toggle('ring', !!on); }
+
+  // 얼굴: 가까워지기 전에는 빈 실루엣, 가까워지면 그 사람 얼굴(그림 자리: 이름 첫 글자)
+  function avatar(c, big) {
+    var k = H.contact(c) || {};
+    if (k.face) return '<span class="ios-avatar face' + (big ? ' big' : '') + '" data-who="' + esc(k.id || '') + '">' + esc(c.charAt(0)) + '</span>';
+    if (k.person) return '<span class="ios-avatar sil' + (big ? ' big' : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4.2" fill="#fff"/><path d="M4 21c.6-4.2 3.8-6.6 8-6.6s7.4 2.4 8 6.6z" fill="#fff"/></svg></span>';
+    return '<span class="ios-avatar' + (big ? ' big' : '') + '">' + esc(c.charAt(0)) + '</span>';
+  }
+
+  // ---------- 홈 ----------
+  function home() {
+    P.view = 'home';
+    var counts = { msg: unreadAll(), call: missed() };
+    $('iosHome').innerHTML = APPS.map(function (a) {
+      var off = a.id === 'camera' && !H.canCamera();
+      return '<button class="ios-app-icon' + (off ? ' off' : '') + '" data-app="' + a.id + '"><span class="glyph" style="background:' + a.bg + '"><svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">' + a.svg + '</svg></span>' + esc(a.name) + (counts[a.id] ? '<b>' + counts[a.id] + '</b>' : '') + '</button>';
+    }).join('');
+    show('iosHome');
+  }
+
+  // ---------- 메시지 ----------
+  function list() {
+    P.view = 'list'; P.conv = null; P.tray = false;
+    el('iosList').innerHTML = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div><div class="ios-title">메시지</div><div class="ios-scroll">' +
+      convs().map(function (c) {
+        var m = lastOf(c), n = unreadOf(c);
+        var pre = m.photo ? '사진' : (m.text || '');
+        return '<button class="ios-row" data-conv="' + esc(c) + '">' + avatar(c) + '<span><span class="who">' + esc(c) + '<small>' + esc(sameYmd(m.ymd, H.today()) ? m.time : shortDate(m.ymd)) + '</small></span><span class="pre">' + esc(pre) + '</span></span>' + (n ? '<i class="unread">' + (n > 1 ? n : '') + '</i>' : '') + '</button>';
+      }).join('') + '</div>';
+    show('iosList');
+  }
+  function bubble(m) {
+    if (m.photo) return '<div class="bubble photo ' + m.dir + '">' + photoImg(m.photo) + '</div>';
+    return '<div class="bubble ' + m.dir + '">' + esc(m.text) + '</div>';
+  }
+  function thread(c, keepScroll) {
+    P.view = 'thread'; P.conv = c;
+    P.log.forEach(function (m) { if (m.c === c && vis(m)) m.u = false; });
+    P.waits.forEach(function (w) { if (w.c === c) w.read = true; });
+    var prev = null, html = '';
+    P.log.forEach(function (m) {
+      if (m.c !== c || !vis(m)) return;
+      if (!prev || !sameYmd(prev.ymd, m.ymd)) html += '<div class="ios-day">' + esc(dateLabel(m.ymd)) + (m.time ? ' ' + esc(m.time) : '') + '</div>';
+      html += bubble(m); prev = m;
+    });
+    var w = P.waits.filter(function (x) { return x.c === c && x.replies && x.reply == null; })[0];
+    var k = H.contact(c) || {}, canSend = k.send && H.photos().length > 0 && !w;
+    var out = '<div class="ios-nav"><button data-nav="list">‹</button><span></span><span></span></div><div class="ios-head">' + avatar(c, true) + esc(c) + '</div><div class="ios-msgs" id="threadMsgs">' + html + '</div>';
+    if (w) out += '<div class="ios-replies">' + w.replies.map(function (r, i) { return '<button data-reply="' + i + '">' + esc(r) + '</button>'; }).join('') + '</div>';
+    else if (canSend) out += '<div class="ios-compose photo-bar"><button class="ios-plus' + (P.tray ? ' on' : '') + '" data-tray="1" aria-label="사진"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M4 18l6-5 4 3 3-2 4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><div class="ios-field muted"></div></div>' + (P.tray ? trayHTML() : '');
+    var box0 = $('threadMsgs'), top0 = keepScroll && box0 ? box0.scrollTop : null;
+    el('iosThread').innerHTML = out;
+    show('iosThread');
+    badge();
+    var box = $('threadMsgs');
+    if (top0 !== null) box.scrollTop = top0;
+    else {
+      // 가장 최근에 받은 글의 첫 줄부터 보이게 (긴 문자가 화면이 낮은 가로 폰에서 잘리지 않게)
+      var ins = box.querySelectorAll('.bubble.in'), b = ins[ins.length - 1], lastOut = box.lastElementChild;
+      box.scrollTop = b && lastOut && lastOut.classList.contains('in') ? Math.max(0, b.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 28) : box.scrollHeight;
+    }
+  }
+  // 사진 고르는 줄: 엄지손톱만 한 사진을 끌어 위 대화창에 놓으면 보내진다
+  function trayHTML() {
+    var ps = H.photos().slice().reverse();
+    return '<div class="ios-tray">' + ps.map(function (p) { return '<span class="tray-thumb" data-thumb="' + esc(p.id) + '">' + photoImg(p.id) + '</span>'; }).join('') + '</div>';
+  }
+  function add(m) { P.log.push(m); return m; }
+  function today() { return H.today(); }
+  // 새 문자가 오고, 그 문자를 읽고(답이 있으면 답하고) 휴대폰을 닫을 때까지 기다린다.
+  // optional: 답할 말이 있어도 답하지 않고 닫을 수 있다 (그때는 undefined로 끝난다)
+  function wait(msg, clock) {
+    var e = add({ c: msg.from, ymd: msg.ymd || today(), time: msg.time || '', dir: 'in', text: msg.body, photo: msg.photo || null, u: true });
+    if (clock) setClock(clock);
+    sfx('buzz'); ring(true);
+    var p = new Promise(function (resolve) { P.waits.push({ c: e.c, entry: e, replies: msg.replies || null, optional: !!msg.optional, reply: null, read: false, resolve: resolve }); });
+    badge();
+    if (!$('phone').hidden) refresh(); else UI.point($('phoneButton'));
+    return p;
+  }
+  // 기다리지 않는 문자 (읽든 말든 흐름은 이어진다)
+  function drop(msg) {
+    var e = add({ c: msg.from, ymd: msg.ymd || today(), time: msg.time || '', dir: msg.dir || 'in', text: msg.body, photo: msg.photo || null, u: (msg.dir || 'in') === 'in' });
+    if (e.dir === 'in' && !msg.quiet) sfx('buzz');
+    badge(); if (!$('phone').hidden) refresh();
+    return e;
+  }
+  function refresh() {
+    if (P.view === 'home') home();
+    else if (P.view === 'list') list();
+    else if (P.view === 'thread') thread(P.conv, true);
+    else if (P.view === 'calls') calls();
+    else if (P.view === 'bank') bank();
+  }
+  function setClock(c) { P.clock = c; $('iosTime').textContent = c; }
+
+  // ---------- 열고 닫기 ----------
+  function open(view) {
+    if (!$('phone').hidden) return;
+    ring(false); UI.point(null);
+    var ck = H.clock && H.clock(); if (ck) P.clock = ck;   // 집에서는 지금 게임 시각
+    $('iosTime').textContent = P.clock;
+    $('phone').hidden = false;
+    sfx('tap');
+    if (P.rings) { incomingScreen(); return; }
+    if (view === 'camera') camera(); else home();
+  }
+  function close() {
+    if (P.ask) { askEnd(); return; }
+    if (P.call && P.call.screen) return;                  // 걸려 온 전화는 받거나 끊어야 닫힌다
+    if (P.bank && P.bank.must) return;                    // 보내기로 한 돈은 보내야 닫힌다
+    if (P.bank && P.bank.resolve) { var r = P.bank.resolve, how = P.bankPick || 'leave', o = P.bank.o; P.bank = null; if (!P.bankPick && o && o.pay) o.pay('leave'); r(how); }
+    P.bankPick = null; P.bank = null;
+    camStop(); viewerClose();
+    $('phone').hidden = true; P.tray = false; P.sel = null;
+    var done = P.waits.filter(function (w) { return w.read && (!w.replies || w.reply != null || w.optional); });
+    P.waits = P.waits.filter(function (w) { return done.indexOf(w) < 0; });
+    done.forEach(function (w) { w.resolve(w.reply == null ? undefined : w.reply); });
+    if (P.waits.length) ring(true);
+    badge();
+    var after = P.after || []; P.after = [];
+    after.forEach(function (f) { try { f(); } catch (e) { console.error(e); } });
+  }
+  // 휴대폰을 닫은 다음에 할 일 (사진을 보낸 뒤 걸려 오는 전화 같은 것)
+  function afterClose(f) { if ($('phone').hidden) { setTimeout(f, 0); return; } (P.after = P.after || []).push(f); }
+
+  // ---------- 부탁하기 (청하는 손) ----------
+  // 받는 사람 목록에는 지금 이 부탁을 들어줄 수 있는 사람만 뜬다. 글은 저절로 써지고, 보내기를 길게 눌러야 보내진다.
+  // 누르는 동안 쓴 글이 한 번 지워졌다가 다시 써진다. 손을 떼면 처음 쓴 글로 돌아간다.
+  // o: { list: [{ id, name }], draft(id) → { first, again, final }, reply(id) → 답장, clock, time } → 보낸 사람의 id (아무에게도 안 보냈으면 null)
+  var HOLD = 2.6;
+  function ask(o) {
+    return new Promise(function (resolve) {
+      P.ask = { o: o, resolve: resolve, sent: null, to: null, timers: [] };
+      ring(false); UI.point(null);
+      if (o.clock) P.clock = o.clock;
+      $('iosTime').textContent = P.clock;
+      $('phone').hidden = false;
+      sfx('tap');
+      askList();
+    });
+  }
+  function askClear() { var a = P.ask; if (!a) return; a.timers.forEach(clearTimeout); a.timers = []; if (a.hold) { cancelAnimationFrame(a.hold.raf); a.hold = null; } }
+  function askList() {
+    var a = P.ask; askClear(); a.to = null;
+    var rows = a.o.list.map(function (p) {
+      return '<button class="ios-row" data-ask-to="' + esc(p.id) + '">' + avatar(p.name) + '<span><span class="who">' + esc(p.name) + '</span><span class="pre"></span></span></button>';
+    }).join('');
+    el('iosAsk').className = 'ios-app ios-ask';
+    el('iosAsk').innerHTML = '<div class="ios-nav"><span></span><span>새 메시지</span><span></span></div><div class="ios-to">받는 사람:</div>' + (rows || '<div class="ios-empty"></div>');
+    show('iosAsk');
+  }
+  function askType(text, done, speed) {
+    var a = P.ask, field = $('askText'), cur = field.textContent, i = 0;
+    // 지금 글과 새 글이 같은 앞부분까지는 두고, 나머지만 지우고 다시 쓴다
+    while (i < cur.length && i < text.length && cur[i] === text[i]) i++;
+    var steps = [];
+    for (var k = cur.length; k > i; k--) steps.push(cur.slice(0, k - 1));
+    for (var m = i + 1; m <= text.length; m++) steps.push(text.slice(0, m));
+    var n = 0;
+    (function next() {
+      if (!P.ask || P.ask !== a) return;
+      if (n >= steps.length) { if (done) done(); return; }
+      field.textContent = steps[n++];
+      a.timers.push(setTimeout(next, n <= cur.length - i ? 32 : (speed || 42)));
+    }());
+  }
+  function askCompose(id) {
+    var a = P.ask, p = a.o.list.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    askClear(); a.to = id; a.name = p.name; a.d = a.o.draft(id);
+    // 그 사람과 나눈 글이 있으면 위에 보인다 (부탁은 그 대화에 이어진다)
+    var past = P.log.filter(function (m) { return m.c === p.name; }).slice(-4).map(bubble).join('');
+    el('iosAsk').innerHTML = '<div class="ios-nav"><button data-ask-nav="list">‹</button><span></span><span></span></div><div class="ios-head">' + avatar(p.name, true) + esc(p.name) + '</div>' +
+      '<div class="ios-msgs" id="askMsgs">' + past + '</div><div class="ios-compose"><div class="ios-field" id="askText"></div><button class="ios-send" id="askSend" disabled aria-label="보내기"><i></i></button></div>';
+    var box = $('askMsgs'); box.scrollTop = box.scrollHeight;
+    var send = $('askSend');
+    send.addEventListener('pointerdown', askHoldStart);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { send.addEventListener(ev, askHoldStop); });
+    askType(a.d.first, function () { send.disabled = false; send.classList.add('ready'); });
+  }
+  function askHoldStart(e) {
+    var a = P.ask; if (!a || a.sent || $('askSend').disabled) return;
+    e.preventDefault();
+    try { e.target.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ }
+    var t0 = performance.now(), send = $('askSend'), stage = 0;
+    a.hold = { raf: 0 };
+    (function frame(now) {
+      if (!a.hold) return;
+      var q = Math.min(1, (now - t0) / 1000 / HOLD);
+      send.style.setProperty('--p', (q * 100).toFixed(1) + '%');
+      // 누르고 있는 동안: 잠깐 멈칫, 쓴 글을 지우고, 다시 쓴다
+      if (stage === 0 && q > .18) { stage = 1; askType(a.d.again, null, 40); }
+      if (stage === 1 && q > .5) { stage = 2; askType(a.d.final, null, 30); }
+      if (q >= 1) { a.hold = null; askSent(); return; }
+      a.hold.raf = requestAnimationFrame(frame);
+    }(t0));
+  }
+  function askHoldStop() {
+    var a = P.ask; if (!a || !a.hold || a.sent) return;
+    askClear();
+    $('askSend').style.setProperty('--p', '0%');
+    askType(a.d.first, null, 20); // 손을 떼면 처음 쓴 글로 돌아간다
+  }
+  function askSent() {
+    var a = P.ask, msgs = $('askMsgs'), send = $('askSend');
+    askClear();
+    a.sent = a.to;
+    $('askText').textContent = ''; send.disabled = true; send.classList.remove('ready'); send.style.setProperty('--p', '0%');
+    var ymd = today();
+    add({ c: a.name, ymd: ymd, time: a.o.time || '', dir: 'out', text: a.d.final });
+    msgs.insertAdjacentHTML('beforeend', '<div class="ios-day">' + esc(a.o.time || '') + '</div><div class="bubble out">' + esc(a.d.final) + '</div>');
+    msgs.scrollTop = msgs.scrollHeight;
+    sfx('tap');
+    var nav = el('iosAsk').querySelector('[data-ask-nav]'); if (nav) nav.remove();
+    a.timers.push(setTimeout(function () {
+      msgs.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>');
+      msgs.scrollTop = msgs.scrollHeight;
+      a.timers.push(setTimeout(function () {
+        var tp = msgs.querySelector('.typing'); if (tp) tp.remove();
+        var rep = a.o.reply(a.sent);
+        add({ c: a.name, ymd: ymd, time: a.o.time || '', dir: 'in', text: rep });
+        msgs.insertAdjacentHTML('beforeend', '<div class="bubble in">' + esc(rep) + '</div>');
+        msgs.scrollTop = msgs.scrollHeight;
+        sfx('buzz'); a.replied = true;
+      }, 1500));
+    }, 700));
+  }
+  function askClick(b) {
+    var a = P.ask;
+    if (b.dataset.askTo) { sfx('tap'); askCompose(b.dataset.askTo); }
+    else if (b.dataset.askNav === 'list' && !a.sent) { sfx('tap'); askList(); }
+  }
+  function askEnd() {
+    var a = P.ask; if (!a) return;
+    if (a.sent && !a.replied) return; // 답장이 올 때까지는 닫히지 않는다
+    askClear(); P.ask = null;
+    el('iosAsk').hidden = true; $('phone').hidden = true;
+    badge(); if (P.waits.length) ring(true);
+    a.resolve(a.sent);
+  }
+
+  // ---------- 사진 저장소 ----------
+  // 찍은 사진의 그림은 이 기기 브라우저에만 남는다(게임 저장과 따로). 없으면 회색 자리와 날짜만 보인다.
+  var STORE = 'catdoor-claude-photos', IMG = null;
+  function store() {
+    if (IMG) return IMG;
+    try { IMG = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { IMG = {}; }
+    return IMG;
+  }
+  function storeSave() { try { localStorage.setItem(STORE, JSON.stringify(IMG || {})); } catch (e) { /* 꽉 찼으면 그림은 이번 판에만 */ } }
+  function storeClear() { IMG = {}; try { localStorage.removeItem(STORE); } catch (e) { /* 무시 */ } }
+  function photoImg(id) {
+    var src = store()[id];
+    if (src) return '<img alt="" src="' + src + '">';
+    var p = H.photos().filter(function (x) { return x.id === id; })[0];
+    return '<span class="ph-none">' + esc(p ? (Life.DAYS[p.day] || {}).date || '' : '') + '</span>';
+  }
+
+  // ---------- 카메라 ----------
+  // 집에서 언제든 열 수 있다. 뷰파인더는 지금 게임 화면에서 고양이(없으면 나) 둘레를 세로로 잘라 보여 준다.
+  var CW = 150, CH = 200;
+  function crop() {
+    var f = H.focus() || { x: 320, y: 260 };
+    var x = Math.max(0, Math.min(640 - CW, f.x - CW / 2)), y = Math.max(0, Math.min(360 - CH, f.y - CH * .62));
+    return { x: x, y: y };
+  }
+  function camera() {
+    if (!H.canCamera()) { nudge('camera'); return; }
+    P.view = 'camera';
+    var ps = H.photos(), last = ps[ps.length - 1];
+    el('iosCam').className = 'ios-app ios-cam';
+    el('iosCam').innerHTML = '<div class="ios-nav dark"><button data-nav="home">‹</button><span>사진</span><span></span></div><div class="cam-view"><canvas id="camView" width="' + CW * 2 + '" height="' + CH * 2 + '"></canvas><i class="cam-flash" id="camFlash"></i></div>' +
+      '<div class="cam-bar"><button class="cam-last" data-app="photo">' + (last ? photoImg(last.id) : '') + '</button><button class="cam-shutter" data-shutter="1" aria-label="찍기"></button><span></span></div>';
+    show('iosCam');
+    P.cam = { raf: 0 };
+    if (H.camOpen) H.camOpen();
+    (function loop() {
+      if (!P.cam) return;
+      var cv = $('camView'), w = $('world');
+      if (cv && w) {
+        var c = cv.getContext('2d'), r = w.width / 640, o = crop();
+        c.imageSmoothingEnabled = false;
+        c.fillStyle = '#000'; c.fillRect(0, 0, cv.width, cv.height);
+        try { c.drawImage(w, o.x * r, o.y * r, CW * r, CH * r, 0, 0, cv.width, cv.height); } catch (e) { /* 무시 */ }
+      }
+      P.cam.raf = requestAnimationFrame(loop);
+    }());
+  }
+  function camStop() { if (P.cam) { cancelAnimationFrame(P.cam.raf); P.cam = null; } }
+  function shoot() {
+    var cv = $('camView'); if (!cv) return;
+    var meta = H.shot(); if (!meta) { nudge('camera'); return; }
+    sfx('shutter');
+    var fl = $('camFlash'); if (fl) { fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on'); }
+    try {
+      var t = document.createElement('canvas'); t.width = CW; t.height = CH;
+      var tc = t.getContext('2d'); tc.imageSmoothingEnabled = false; tc.drawImage(cv, 0, 0, CW, CH);
+      var ids = Object.keys(store());
+      if (ids.length >= 60) delete IMG[ids[0]]; // 오래된 그림부터 비운다 (사진 기록은 남는다)
+      IMG[meta.id] = t.toDataURL('image/jpeg', .82); storeSave();
+    } catch (e) { /* 그림을 못 남겨도 사진 기록은 남는다 */ }
+    var lb = el('iosCam').querySelector('.cam-last'); if (lb) lb.innerHTML = photoImg(meta.id);
+  }
+
+  // ---------- 사진 ----------
+  function photos() {
+    P.view = 'photos';
+    var ps = H.photos().slice().reverse();
+    el('iosPhotos').innerHTML = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div><div class="ios-title">사진</div>' +
+      (ps.length ? '<div class="ios-grid">' + ps.map(function (p) { return '<button class="grid-thumb" data-photo="' + esc(p.id) + '">' + photoImg(p.id) + (p.to && p.to.length ? '<i class="sent"></i>' : '') + '</button>'; }).join('') + '</div>' : '<div class="ios-empty"></div>');
+    show('iosPhotos');
+  }
+  function viewer(id) {
+    var ps = H.photos(), i = ps.map(function (p) { return p.id; }).indexOf(id); if (i < 0) return;
+    var p = ps[i];
+    P.viewer = id;
+    var box = el('iosPhotos'), d = Life.DAYS[p.day] || {};
+    var ov = box.querySelector('.ios-viewer');
+    if (!ov) { ov = document.createElement('div'); ov.className = 'ios-viewer'; box.appendChild(ov); }
+    ov.innerHTML = '<div class="ios-nav dark"><button data-viewer="close">‹</button><span>' + esc(d.date ? d.date.replace('/', '월 ') + '일' : '') + '</span><span></span></div><div class="viewer-img">' + photoImg(id) + '</div>' +
+      '<div class="viewer-bar"><button data-viewer="prev"' + (i > 0 ? '' : ' disabled') + '>‹</button><span>' + (p.to || []).map(function (c) { return avatar(c); }).join('') + '</span><button data-viewer="next"' + (i < ps.length - 1 ? '' : ' disabled') + '>›</button></div>';
+  }
+  function viewerClose() { P.viewer = null; var ov = document.querySelector('.ios-viewer'); if (ov) ov.remove(); }
+  function viewerStep(d) { var ps = H.photos(), i = ps.map(function (p) { return p.id; }).indexOf(P.viewer) + d; if (i >= 0 && i < ps.length) viewer(ps[i].id); }
+
+  // 사진을 대화창에 놓았다: 보내고, 답장을 기다린다
+  function sendPhoto(c, id) {
+    var e = add({ c: c, ymd: today(), time: H.timeLabel ? H.timeLabel() : '', dir: 'out', photo: id });
+    P.tray = false; P.sel = null; sfx('tap');
+    thread(c);
+    var box = $('threadMsgs'); box.scrollTop = box.scrollHeight;
+    if (!H.photoSent) return;
+    Promise.resolve(H.photoSent(c, id, e)).then(function (replies) {
+      if (!replies || !replies.length) return;
+      var k = 0;
+      (function next() {
+        if (k >= replies.length) return;
+        var r = replies[k++];
+        setTimeout(function () {
+          var b = $('threadMsgs');
+          if (P.view === 'thread' && P.conv === c && b) { b.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>'); b.scrollTop = b.scrollHeight; }
+          setTimeout(function () {
+            var en = add({ c: c, ymd: today(), time: H.timeLabel ? H.timeLabel() : '', dir: 'in', text: r, u: true });
+            if (P.view === 'thread' && P.conv === c && !$('phone').hidden) thread(c); else en.u = true;
+            sfx('buzz'); badge(); next();
+          }, 1300);
+        }, 600);
+      }());
+    });
+  }
+  // 끌기: 엄지손톱 사진을 집어 대화창 위에서 놓으면 보낸다. 그냥 누르면 위로 살짝 들려 끌 수 있다고 알려 준다.
+  function dragStart(e) {
+    var t = e.target.closest('.tray-thumb'); if (!t) return;
+    e.preventDefault();
+    var g = t.cloneNode(true); g.className = 'tray-ghost'; document.body.appendChild(g);
+    P.drag = { id: t.dataset.thumb, ghost: g, x0: e.clientX, y0: e.clientY, src: t, moved: 0 };
+    t.classList.add('lifted');
+    dragMove(e);
+    window.addEventListener('pointermove', dragMove, { passive: false });
+    window.addEventListener('pointerup', dragEnd);
+    window.addEventListener('pointercancel', dragEnd);
+  }
+  function dragMove(e) {
+    var d = P.drag; if (!d) return;
+    d.moved = Math.max(d.moved, Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0));
+    d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px';
+    var box = $('threadMsgs'); if (box) box.classList.toggle('drop', overBox(e, box));
+    if (e.cancelable) e.preventDefault();
+  }
+  function overBox(e, box) { var r = box.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
+  function dragEnd(e) {
+    var d = P.drag; if (!d) return;
+    P.drag = null;
+    window.removeEventListener('pointermove', dragMove); window.removeEventListener('pointerup', dragEnd); window.removeEventListener('pointercancel', dragEnd);
+    d.ghost.remove(); d.src.classList.remove('lifted');
+    var box = $('threadMsgs'); if (box) box.classList.remove('drop');
+    if (box && d.moved > 12 && overBox(e, box)) { sendPhoto(P.conv, d.id); return; }
+    // 그냥 눌렀다: 사진이 위로 한 번 들썩인다
+    d.src.animate && d.src.animate([{ transform: 'none' }, { transform: 'translateY(-14px)' }, { transform: 'none' }], { duration: 420, easing: 'ease-out' });
+  }
+
+  // ---------- 은행 ----------
+  // model: { wallet, out: [{ date, name, amount, status, id }], pending(5/8에 들어올 수수료, 프롤로그에는 null), lost, borrowed: [{ when, name, amount, note }], canCash, cash }
+  function won(n) { return Life.won(n); }
+  var STATUS = { soon: '예정', due: '보내기 전', paid: '출금 완료', sent: '보냄', unpaid: '미출금', deferred: '5/8로 미룸', late: '연체' };
+  function bank() {
+    P.view = 'bank';
+    var m = H.bank(); if (!m) { nudge('bank'); return; }
+    var B = P.bank || {};
+    var rows = m.out.map(function (o) {
+      var hot = B.unpaid && B.unpaid === o.id && !P.bankPick;
+      return '<div class="bank-row' + (hot ? ' hot' : '') + (o.status === 'paid' || o.status === 'sent' ? ' done' : '') + '"><span class="d">' + esc(o.date) + '</span><span class="n">' + esc(o.name) + '<small class="st ' + o.status + '">' + esc(STATUS[o.status] || '') + '</small></span><b>' + won(o.amount) + '</b>' +
+        (hot ? '<div class="bank-pick">' + (B.canCash ? '<button data-bank="cash">현금서비스로 채우기</button>' : '') + '<button data-bank="leave" class="plain">그냥 두기</button></div>' : '') + '</div>';
+    }).join('');
+    var borrowed = m.borrowed.map(function (b) { return '<div class="bank-row"><span class="d">' + esc(b.when) + '</span><span class="n">' + esc(b.name) + '<small>' + esc(b.note || '') + '</small></span><b>' + won(b.amount) + '</b></div>'; }).join('');
+    var html = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div>' +
+      '<div class="bank-card"><small>입출금 통장</small><strong>' + won(m.wallet) + '</strong></div><div class="ios-scroll">' +
+      '<h5>이번 달 나갈 돈</h5>' + rows +
+      (m.pending ? '<h5>들어올 돈</h5><div class="bank-row"><span class="d">5/8</span><span class="n">수수료<small>예정</small></span><b>' + won(m.pending) + '</b></div>' : '') +
+      (m.lost ? '<div class="bank-row lost"><span class="d"></span><span class="n">철회·취소로 빠진 수수료</span><b>−' + won(m.lost) + '</b></div>' : '') +
+      (borrowed ? '<h5>갚을 돈</h5>' + borrowed : '') +
+      (m.canCash && !B.unpaid && !B.transfer && !P.bankPick ? '<button class="bank-ad" data-bank="ad"><b>카드 현금서비스</b><span>지금 바로 ' + won(m.cash) + ' 입금</span></button>' : '') +
+      '</div>';
+    if (B.ad) html += '<div class="bank-sheet"><p><b>카드 현금서비스</b></p><p class="big">' + won(m.cash) + '</p><p class="fine">다음 카드값에 이자가 붙어서 나갑니다.</p><button data-bank="take">받기</button><button data-bank="adClose" class="plain">닫기</button></div>';
+    if (B.transfer && !P.bankPick) {
+      var t = B.transfer, short = m.wallet < t.amount;
+      html += '<div class="bank-sheet"><p>받는 분 <b>' + esc(t.to) + '</b></p><p class="big">' + won(t.amount) + '</p><p class="fine">통장 잔액 ' + won(m.wallet) + '</p>' +
+        (short && t.cash ? '<p class="fine warn">모자란 돈은 카드 현금서비스 ' + won(m.cash) + '로 채웁니다. 다음 카드값에 이자가 붙어서 나갑니다.</p><button data-bank="cashSend">현금서비스 받고 보내기</button>' : '<button data-bank="send">보내기</button>') + '</div>';
+    }
+    el('iosBank').className = 'ios-app ios-bank';
+    el('iosBank').innerHTML = html;
+    show('iosBank');
+  }
+  // 고르는 은행 화면은 바로 열린다 (문자를 읽고 닫은 손이 그대로 은행 앱을 누른 것처럼)
+  function openBank(clock) {
+    if (clock) setClock(clock);
+    ring(false); UI.point(null);
+    $('iosTime').textContent = P.clock;
+    if ($('phone').hidden) { $('phone').hidden = false; sfx('tap'); }
+    bank();
+  }
+  // 요금이 통장에서 빠지지 못했다: 은행 앱의 그 줄에서 고른다. 고르지 않고 닫으면 그냥 둔다.
+  // o: { id, canCash, clock, pay(how) }: 고른 순간 pay('cash' | 'leave')가 불리고, 바뀐 잔액과 상태를 보여 준 뒤 닫힌다.
+  function bankUnpaid(o) {
+    return new Promise(function (resolve) {
+      P.bankPick = null;
+      P.bank = { unpaid: o.id, canCash: o.canCash, resolve: resolve, o: o };
+      openBank(o.clock);
+    });
+  }
+  // 돈을 보낸다 (월세): 은행 앱의 보내기 화면. 보내기 전에는 닫히지 않는다.
+  // o: { to, amount, cash(모자란 돈을 현금서비스로 채우는지), clock, pay(how) }
+  function bankTransfer(o) {
+    return new Promise(function (resolve) {
+      P.bankPick = null;
+      P.bank = { transfer: o, must: true, resolve: resolve, o: o };
+      openBank(o.clock);
+    });
+  }
+  function bankClick(b) {
+    var a = b.dataset.bank, B = P.bank || {};
+    if (P.bankPick) return;
+    sfx('tap');
+    if (a === 'ad') { P.bank = { ad: true }; bank(); return; }
+    if (a === 'adClose') { P.bank = null; bank(); return; }
+    if (a === 'take') { H.cash(); sfx('coin'); P.bank = null; bank(); return; }
+    var how = a === 'cash' || a === 'cashSend' ? 'cash' : a === 'send' ? 'pay' : a === 'leave' ? 'leave' : null;
+    if (!how || !B.resolve) return;
+    P.bankPick = how; B.must = false;
+    if (B.o && B.o.pay) B.o.pay(how);
+    if (how !== 'leave') sfx('coin');
+    bank();
+    setTimeout(function () { if (P.bank === B) close(); }, 1100);
+  }
+
+  // ---------- 전화 ----------
+  function calls() {
+    P.view = 'calls';
+    P.calls.forEach(function (x) { if (vis(x)) x.seen = true; });
+    var rows = P.calls.filter(vis).reverse().map(function (x) {
+      return '<button class="ios-row call-row" data-call="' + esc(x.c) + '">' + avatar(x.c) + '<span><span class="who' + (x.kind === 'missed' ? ' missed' : '') + '">' + esc(x.c) + (x.n > 1 ? ' (' + x.n + ')' : '') + '<small>' + esc(shortDate(x.ymd)) + '</small></span><span class="pre">' + esc({ missed: '부재중 전화', in: '받은 전화', out: '건 전화' }[x.kind]) + '</span></span></button>';
+    }).join('');
+    el('iosCalls').innerHTML = '<div class="ios-nav"><button data-nav="home">‹</button><span></span><span></span></div><div class="ios-title">최근 기록</div><div class="ios-scroll">' + rows + '</div>';
+    show('iosCalls');
+    badge();
+  }
+  function logCall(c, kind, ymd, time) {
+    var last = P.calls[P.calls.length - 1];
+    if (last && last.c === c && last.kind === kind && kind === 'missed') { last.n = (last.n || 1) + 1; last.ymd = ymd || today(); last.seen = false; return; }
+    P.calls.push({ c: c, kind: kind, ymd: ymd || today(), time: time || '', n: 1 });
+  }
+  // 걸려 오는 전화: 휴대폰이 울린다. 휴대폰을 열면 받기와 거절이 보인다. 한참 안 받으면 부재중이 된다.
+  function incoming(c, sec) {
+    return new Promise(function (resolve) {
+      P.rings = { c: c, resolve: resolve };
+      ring(true); badge(); UI.point($('phoneButton'));
+      var beep = setInterval(function () { if (!P.rings) { clearInterval(beep); return; } sfx('buzz'); }, 1400);
+      sfx('buzz');
+      P.rings.timer = setTimeout(function () {
+        if (!P.rings || P.rings.c !== c || P.call) return;
+        var r = P.rings; P.rings = null; clearInterval(beep);
+        logCall(c, 'missed'); ring(false); UI.point(null); badge();
+        if (!$('phone').hidden) refresh();
+        r.resolve('missed');
+      }, (sec || 25) * 1000);
+      if (!$('phone').hidden) incomingScreen();
+    });
+  }
+  function incomingScreen() {
+    var r = P.rings; if (!r) return;
+    P.call = { screen: true };
+    el('iosCall').className = 'ios-app ios-call';
+    el('iosCall').innerHTML = '<div class="call-top">' + avatar(r.c, true) + '<b>' + esc(r.c) + '</b><small>휴대전화</small></div><div class="call-btns"><button class="decline" data-ans="no" aria-label="거절"><svg viewBox="0 0 24 24"><path d="M3 13.5c5-4 13-4 18 0l-2 3-4-1v-2.5c-2-.6-4-.6-6 0V15.5l-4 1z" fill="#fff"/></svg></button><button class="accept" data-ans="yes" aria-label="받기"><svg viewBox="0 0 24 24"><path d="M7 3.5l3 3.6-1.8 2.2c1 2.2 2.6 3.9 4.6 4.8l2.2-1.8 3.5 3-1.6 3.2C10.6 18.2 5.8 13.4 3.5 6.8z" fill="#fff"/></svg></button></div>';
+    show('iosCall');
+  }
+  function answer(yes) {
+    var r = P.rings; if (!r) return;
+    clearTimeout(r.timer); P.rings = null; P.call = null;
+    ring(false); UI.point(null);
+    logCall(r.c, yes ? 'in' : 'missed');
+    sfx('tap');
+    $('phone').hidden = true; badge();
+    r.resolve(yes ? 'answer' : 'decline');
+  }
+  // 통화 중: 휴대폰은 닫히고 화면 위에 통화 막대가 뜬다. 대화는 대화창으로 이어진다.
+  function bar() {
+    var b = $('callBar');
+    if (!b) { b = document.createElement('div'); b.id = 'callBar'; b.className = 'call-bar'; b.hidden = true; ($('gameScreen') || document.body).appendChild(b); b.addEventListener('click', barClick); }
+    return b;
+  }
+  function callStart(c) {
+    var b = bar(); P.talk = { c: c, t0: Date.now(), timer: 0 };
+    b.innerHTML = '<span class="dot"></span><b>' + esc(c) + '</b><span id="callTime">0:00</span><div class="call-picks" id="callPicks"></div>';
+    b.hidden = false;
+    P.talk.timer = setInterval(function () { var s = Math.floor((Date.now() - P.talk.t0) / 1000), t = $('callTime'); if (t) t.textContent = Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + s % 60; }, 500);
+  }
+  function callEnd() {
+    if (P.talk) clearInterval(P.talk.timer);
+    P.talk = null; bar().hidden = true; sfx('tap');
+  }
+  // 통화 중에 할 말을 고른다
+  function callPick(options) {
+    return new Promise(function (resolve) {
+      var box = $('callPicks'); if (!box) { resolve(0); return; }
+      P.talkPick = resolve;
+      box.innerHTML = options.map(function (o, i) { return '<button data-pick="' + i + '">' + esc(o) + '</button>'; }).join('');
+    });
+  }
+  function barClick(e) {
+    var b = e.target.closest('button'); if (!b || b.dataset.pick == null || !P.talkPick) return;
+    var r = P.talkPick; P.talkPick = null; $('callPicks').innerHTML = ''; sfx('tap'); r(+b.dataset.pick);
+  }
+  function talking() { return !!P.talk; }
+  // 전화 앱에서 누른 사람에게 건다 (걸 수 있는 사람만)
+  function dial(c) {
+    if (!H.canCall(c) || !H.call) { nudge('call'); return; }
+    sfx('tap');
+    el('iosCall').className = 'ios-app ios-call';
+    el('iosCall').innerHTML = '<div class="call-top">' + avatar(c, true) + '<b>' + esc(c) + '</b><small>연결 중...</small></div>';
+    show('iosCall'); P.call = { screen: true };
+    setTimeout(function () {
+      P.call = null; $('phone').hidden = true; logCall(c, 'out'); badge();
+      Promise.resolve(H.call(c)).catch(function (e) { console.error(e); });
+    }, 1600);
+  }
+
+  // 눌러도 지금은 쓸 수 없는 앱: 살짝 흔들린다
+  function nudge(app) {
+    var b = document.querySelector('[data-app="' + app + '"]');
+    if (b && b.animate) b.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 240 });
+    sfx('bad');
+  }
+
+  // ---------- 누르기 ----------
+  function click(e) {
+    var b = e.target.closest('button'), screen = e.target.closest('.iphone');
+    if (!screen) { close(); return; }
+    if (P.ask) { if (b) askClick(b); return; }
+    if (!b) return;
+    var d = b.dataset;
+    if (d.ans) { answer(d.ans === 'yes'); return; }
+    if (P.call && P.call.screen) return;
+    if (d.app) {
+      if (d.app === 'msg') { sfx('tap'); list(); }
+      else if (d.app === 'call') { sfx('tap'); calls(); }
+      else if (d.app === 'camera') camera();
+      else if (d.app === 'photo') { sfx('tap'); photos(); }
+      else if (d.app === 'bank') { sfx('tap'); bank(); }
+      return;
+    }
+    if (d.nav === 'home') { if (P.bank && P.bank.must) return; sfx('tap'); home(); return; }
+    if (d.nav === 'list') { sfx('tap'); P.tray = false; list(); return; }
+    if (d.conv != null) { sfx('tap'); P.tray = false; thread(d.conv); return; }
+    if (d.reply != null) {
+      var w = P.waits.filter(function (x) { return x.c === P.conv && x.replies && x.reply == null; })[0]; if (!w) return;
+      w.reply = +d.reply; sfx('tap');
+      add({ c: w.c, ymd: today(), time: w.entry.time, dir: 'out', text: w.replies[w.reply] });
+      thread(P.conv);
+      setTimeout(close, 900);
+      return;
+    }
+    if (d.tray) { sfx('tap'); P.tray = !P.tray; thread(P.conv, true); return; }
+    if (d.shutter) { shoot(); return; }
+    if (d.photo) { sfx('tap'); viewer(d.photo); return; }
+    if (d.viewer === 'close') { sfx('tap'); viewerClose(); return; }
+    if (d.viewer === 'prev') { viewerStep(-1); return; }
+    if (d.viewer === 'next') { viewerStep(1); return; }
+    if (d.call) { dial(d.call); return; }
+    if (d.bank) { bankClick(b); return; }
+  }
+  function init() {
+    $('phone').addEventListener('click', click);
+    $('phone').addEventListener('pointerdown', dragStart);
+    $('iosHomebar').addEventListener('click', function (e) { e.stopPropagation(); if (P.bank && P.bank.must) return; if (P.call && P.call.screen) return; if ($('phone').hidden) return; if (P.view !== 'home' && !P.ask) { sfx('tap'); home(); return; } close(); });
+    $('phoneButton').addEventListener('click', function () { open(); });
+  }
+
+  // ---------- 저장과 불러오기 ----------
+  function exportState() { return JSON.parse(JSON.stringify({ log: P.log, calls: P.calls })); }
+  function load(o, opts) {
+    o = o ? JSON.parse(JSON.stringify(o)) : {};
+    P.log = o.log || []; P.calls = o.calls || [];
+    P.waits = []; P.rings = null; P.ask = null; P.bank = null; P.bankPick = null; P.call = null; P.after = [];
+    if (opts && opts.fresh) storeClear();
+    badge();
+  }
+  function busy() { return !$('phone').hidden || !!P.talk; }
+
+  return {
+    init: init, setHooks: setHooks, wait: wait, drop: drop, ask: ask, open: open, close: close, afterClose: afterClose, setClock: setClock,
+    bankUnpaid: bankUnpaid, bankTransfer: bankTransfer, incoming: incoming, callStart: callStart, callEnd: callEnd, callPick: callPick, talking: talking,
+    logCall: logCall, exportState: exportState, load: load, busy: busy, ring: ring, badge: badge, dateLabel: dateLabel,
+    camOn: function () { return !!P.cam && !$('phone').hidden; },
+    P: P
   };
 }());
 
@@ -4787,9 +5606,9 @@ var Home = (function () {
     var k = G.cat;
     if (!k.visible || k.room !== H.room) return;
     if (H.toy && H.toy.pounce) { View.cat(c, G, k.x, k.y, k.dir, G.t, 'jump', k.scale); return; }
+    if (Arc.momentDraw(c, k)) return;
     View.shadow(c, k.x, k.y + 1, 15);
     View.cat(c, G, k.x, k.y, k.dir, G.t, k.walking ? (k.run ? 'run' : 'walk') : k.pose, k.scale);
-    Arc.momentDraw(c, k);
   }
   function heroLook() { return H.pro ? 'hoodie' : (S() && S().wearing) || 'hoodie'; }
   function drawHero(c) {
@@ -4800,6 +5619,8 @@ var Home = (function () {
     // 정장이나 후드티에 붙은 털
     var fur = H.pro ? (H.proFur ? 2 : 0) : (S() && S().wearing === 'suit' ? S().fur : 0);
     if (fur > 0 && pose !== 'sit') furOn(c, h.x, h.y - 96 * h.scale / 2.35, fur, 1);
+    // 카메라를 연 동안: 고양이 쪽으로 휴대폰을 든다 (그림 자리: 회색 '폰' 상자)
+    if (Phone.camOn()) { var px = h.x + (h.dir >= 0 ? 14 : -30); View.box(c, px, h.y - 112, 16, 22, '#c9c6c0', '#55505a', 2); View.text(c, '폰', px + 8, h.y - 97, 8, '#55505a', 'center'); }
   }
   // 냄새: 구불구불한 줄이 피어올랐다 사라진다 (화장실 위, 냄새 밴 옷 위)
   function stinkLines(c, x, y, n, t) {
@@ -4851,6 +5672,8 @@ var Home = (function () {
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
     actors.push({ y: 190, f: Arc.drawKitchen });
     actors.push({ y: 300, f: Town.drawHome });
+    actors.push({ y: 300, f: Mom.drawHome });
+    actors.push({ y: 336, f: Arc.drawBox });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -4879,7 +5702,7 @@ var Home = (function () {
     }
     if (!H.pro && s.owned.roller && !(H.held && H.held.id === 'roller')) View.item(c, 'roller', P.roller.x, P.roller.y, .9);
     var wearing = H.pro ? 'hoodie' : s.wearing;
-    if (wearing !== 'suit' && !H.pro) View.hangerSuit(c, P.suitRack.x, P.suitRack.y, s.fur, t);
+    if (wearing !== 'suit' && !H.pro && !Arc.suitOnBed()) View.hangerSuit(c, P.suitRack.x, P.suitRack.y, s.fur, t);
     if (wearing !== 'hoodie' || H.hoodieHung) { View.item(c, 'hoodie', P.hoodieRack.x, P.hoodieRack.y, 1.45); if (H.proFur && H.hoodieHung) furOn(c, P.hoodieRack.x, P.hoodieRack.y - 44, 2, 1); }
     var dr = View.roomDoor(c, G, BR.door, night ? H.door : 1, 'living');
     H.handle = { x: dr.hx, y: dr.hy };
@@ -5474,7 +6297,7 @@ var Home = (function () {
     if (H.closeUp || H.mode === 'night') return list;
     // 반짝이는 순간에는 고양이 자리가 사진 자리로 바뀐다 (사료 봉지, 물병처럼 끄는 물건이 먼저 잡히게 같은 순서에 둔다)
     var ph = G.cat.room === H.room ? Arc.photoSpot() : null;
-    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room));
+    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room), Mom.homeSpots(H.room));
     if (ph) {
       // 사진 순간은 맨 위에서 누르기를 받되, 끌기는 그 아래 물건(사료 봉지, 쓰다듬기)에 넘긴다.
       var rest = list.filter(function (x) { return x.id !== 'cat'; }), cat = list.find(function (x) { return x.id === 'cat'; });
@@ -5708,7 +6531,7 @@ var Home = (function () {
   return {
     P: P, H: H, enter: enter, wait: wait, resolveWait: resolveWait, goRoom: goRoom, noticeNeeds: noticeNeeds, needs: needs, draw: draw,
     drawLiving: drawLiving, drawBedroom: drawBedroom, sky: sky, once: once, seen: seen, cMin: cMin, cBolt: cBolt, cHeart: cHeart,
-    openMemo: openMemo, openMail: openMail, furOn: furOn, stinkLines: stinkLines, mailWaiting: mailWaiting
+    openMemo: openMemo, openMail: openMail, furOn: furOn, stinkLines: stinkLines, mailWaiting: mailWaiting, queueLine: queueLine
   };
 }());
 
@@ -6295,7 +7118,7 @@ var Work = (function () {
             .then(function () { return res.goal ? goalParty() : null; });
         });
       }, Promise.resolve());
-    }).then(function () { return Town.lunch(); }).then(function () { return results; });
+    }).then(function () { return Town.lunch(); }).then(function () { return Mom.lunch(); }).then(function () { return results; });
   }
   // 4/16 저녁 8시 단체보험
   function groupEvening() {
@@ -6761,10 +7584,23 @@ var Arc = (function () {
   }
   function spent(m, x, y) { if (m) Engine.puff({ x: x || G.hero.x, y: y || 220, icon: 'clock', text: '+' + m + '분', px: 1 }); }
 
-  // ---------- 반짝이는 순간 (사진) ----------
-  // 저녁과 주말, 고양이가 가끔 사진 찍고 싶은 얼굴을 한다. 몇 초 안에 누르면 휴대폰에 남는다.
-  var M = { on: false, until: 0, next: 0, pose: 'sit', key: '', hint: false, rumble: -1 };
-  var POSES = ['sleep', 'groom', 'lookUp', 'purr'];
+  // ---------- 사진으로 남기고 싶은 순간 ----------
+  // 하루에 갈래마다 한 번, 고양이가 사진으로 남기고 싶은 자리에 간다. 고양이를 누르면 휴대폰 카메라가 열린다.
+  //   suit: 출근한 날 저녁, 침실. 벗어 둔 정장 위에 웅크린다 (그동안 옷걸이의 정장은 침대 위에 있다).
+  //   sun: 쉬는 날 낮 11시~4시, 거실. 창 아래 소파의 볕에서 배를 드러낸다.
+  //   box: 엄마 택배를 연 날과 그다음 날, 거실. 비워 둔 상자에 들어간다.
+  // 그림이 오기 전까지 고양이 자리는 회색 상자와 이름표로 둔다. 카메라는 이 순간이 아니어도 집에서는 언제든 열 수 있다.
+  var M = { on: null, ready: false, shot: false, until: 0, next: 0, key: '', hint: false, rumble: -1 };
+  var SPOT = {
+    suit: { room: 'bedroom', x: 128, y: 266, floor: 214, w: 80, h: 34, label: '정장 위 고양이' },
+    sun: { room: 'living', x: 468, y: 228, floor: 468, w: 78, h: 34, label: '볕 쬐는 고양이' },
+    box: { room: 'living', x: 512, y: 336, floor: 490, w: 56, h: 40, label: '상자 속 고양이' }
+  };
+  var BOX = { x: 484, y: 300, w: 56, h: 36 }; // 비워 둔 상자 (고양이가 없을 때)
+  function ph(c, x, y, w, h, label) {
+    View.box(c, x, y, w, h, '#c9c6c0', '#55505a', 2);
+    if (label) View.text(c, label, x + w / 2, y + h / 2 + 4, 10, '#55505a', 'center');
+  }
   function homeNow() {
     var s = S(), h = Home.H;
     return !!s && !h.pro && Life.homeTime(s) && h.mode !== 'night' && !h.closeUp && !h.arcHot && !h.clean && !h.toy && !h.held && !h.lock;
@@ -6773,63 +7609,93 @@ var Arc = (function () {
     var s = S(), h = Home.H, k = G.cat;
     return !s.hidden && k.visible && !k.walking && k.room === h.room && !h.catAct && !G.drag;
   }
+  function boxDay(s) { return s.box !== null && s.box !== undefined && (s.day === s.box || s.day === s.box + 1); }
+  // 지금 이 방에서 일어날 수 있는 순간 (그날 이미 지나간 갈래는 다시 오지 않는다)
+  function kindNow(s) {
+    var d = Life.day(s), room = Home.H.room, done = function (k) { return s.seen['moment:' + k + ':' + s.day]; };
+    if (boxDay(s) && room === 'living' && !done('box')) return 'box';
+    if (d.kind === 'off' && s.minute >= 660 && s.minute <= 960 && room === 'living' && !done('sun')) return 'sun';
+    if (d.kind === 'work' && s.phase === 'evening' && room === 'bedroom' && s.wearing !== 'suit' && !done('suit')) return 'suit';
+    return null;
+  }
   function tick(dt) {
     var s = S(); if (!s || !G.cat) return;
     var key = s.day + ':' + s.phase;
-    if (M.key !== key) { M.key = key; endMoment(); M.next = G.t + 6; }
+    if (M.key !== key) { M.key = key; endMoment(true); M.next = G.t + 8; }
     // 저녁 8시 반이 넘도록 내 저녁을 안 먹었으면 배에서 꼬르륵
     if (homeNow() && s.phase === 'evening' && s.day > 0 && !s.myMeal && s.minute >= 1230 && M.rumble !== s.day && !UI.busy()) {
       M.rumble = s.day; Engine.puff({ x: G.hero.x, y: G.hero.y - 110, icon: 'rice', px: 2, life: 1.6, rise: 10 });
     }
     if (M.on) {
-      if (UI.busy()) M.until += dt;
-      if (G.t > M.until || !homeNow() || G.cat.room !== Home.H.room || !G.cat.visible) endMoment();
+      var sp = SPOT[M.on];
+      if (UI.busy()) { M.until += dt; return; }
+      if (M.shot || G.t > M.until || Home.H.room !== sp.room || !Life.homeTime(s) || Home.H.mode === 'night' || !G.cat.visible) endMoment();
       return;
     }
-    if (G.t < M.next || UI.busy() || G.acting || !homeNow() || !catFree()) return;
-    if (s.day === 0 || Life.photosToday(s) >= Life.photoCap(s)) return;
-    startMoment();
+    if (G.t < M.next || UI.busy() || G.acting || !homeNow() || !catFree() || s.day === 0) return;
+    var kind = kindNow(s); if (kind) startMoment(kind);
   }
-  function startMoment() {
-    var s = S(), k = G.cat;
-    M.on = true; M.until = G.t + 7; M.pose = POSES[(s.photos.length + s.day) % POSES.length];
-    Home.H.catAct = 'still'; k.tx = null; k.pose = M.pose;
-    UI.sfx('purr');
-    if (!s.seen.photoHint) {
-      s.seen.photoHint = true; M.hint = true; M.until += 8;
-      G.hand = { x: k.x + 6, y: k.y - 64, tx: k.x + 6, ty: k.y - 34, period: 1.4, t0: G.t };
-      say(B().photo(s));
-    }
+  function startMoment(kind) {
+    var s = S(), k = G.cat, sp = SPOT[kind], H = Home.H;
+    M.on = kind; M.ready = false; M.shot = false; M.until = G.t + 40;
+    s.seen['moment:' + kind + ':' + s.day] = true;
+    H.catAct = 'still'; k.tx = null; k.pose = 'walk';
+    var go = Engine.catTo(sp.floor, { y: 336 });
+    go.then(function () {
+      if (M.on !== kind) return null;
+      return sp.y < 336 ? hop(sp.x, sp.y) : Engine.catTo(sp.x, { y: sp.y });
+    }).then(function () {
+      if (M.on !== kind) return;
+      k.pose = 'sleep'; M.ready = true; UI.sfx('purr');
+      if (!s.seen['momentHint:' + kind]) {
+        s.seen['momentHint:' + kind] = true; M.hint = true;
+        G.hand = { x: sp.x, y: sp.y - sp.h - 24, tx: sp.x, ty: sp.y - sp.h / 2, period: 1.4, t0: G.t };
+        say(B().moment[kind](s));
+      }
+    });
   }
-  function endMoment() {
+  function endMoment(quiet) {
     if (!M.on) return;
-    M.on = false;
+    var was = SPOT[M.on];
+    M.on = null; M.ready = false; M.shot = false;
     if (M.hint) { G.hand = null; M.hint = false; }
-    if (Home.H.catAct === 'still') Home.H.catAct = null;
-    M.next = G.t + 20 + Math.random() * 12;
-  }
-  function momentDraw(c, k) {
-    if (!M.on || k.walking) return;
-    var t = G.t;
-    for (var i = 0; i < 3; i++) {
-      var a = t * 1.6 + i * 2.1, q = (Math.sin(t * 5 + i * 2) + 1) / 2;
-      View.icon(c, 'sparkle', k.x + Math.cos(a) * 26, k.y - 26 + Math.sin(a) * 16, 1, { alpha: .45 + q * .55 });
+    var H = Home.H;
+    // 높은 자리(침대, 소파)에 있던 고양이는 바닥으로 폴짝 내려온다
+    if (!quiet && G.cat.visible && G.cat.y < 336 && was && G.cat.room === H.room) {
+      H.catAct = 'still';
+      hop(was.floor, 336).then(function () { if (H.catAct === 'still' && !M.on) H.catAct = null; });
+    } else {
+      if (H.catAct === 'still') H.catAct = null;
+      if (G.cat.y < 336 && was) { G.cat.y = 336; G.cat.x = was.floor; G.cat.pose = 'sit'; }
     }
-    View.icon(c, 'camera', k.x, k.y - 64 + Math.round(Math.sin(t * 4) * 2), 2);
+    M.next = G.t + 30;
   }
+  // 순간에는 고양이 그림 대신 그림 자리를 그린다 (그렸으면 true)
+  function momentDraw(c, k) {
+    if (!M.on || !M.ready || k.walking) return false;
+    var sp = SPOT[M.on];
+    ph(c, Math.round(k.x - sp.w / 2), Math.round(k.y - sp.h), sp.w, sp.h, sp.label);
+    return true;
+  }
+  // 비워 둔 상자: 고양이가 들어가 있지 않을 때 거실 바닥에
+  function drawBox(c) {
+    var s = S(), h = Home.H; if (!s || h.pro || h.room !== 'living' || !boxDay(s)) return;
+    if (M.on === 'box' && M.ready) return;
+    ph(c, BOX.x, BOX.y, BOX.w, BOX.h, '빈 상자');
+  }
+  // 정장 위 고양이가 있는 동안 옷걸이의 정장은 침대 위에 있다
+  function suitOnBed() { return M.on === 'suit' && M.ready; }
   function photoSpot() {
-    if (!M.on) return null;
-    var k = G.cat;
-    return { id: 'photo', x: k.x - 24, y: k.y - 80, w: 48, h: 82, glow: false, tap: snap };
+    if (!M.on || !M.ready) return null;
+    var k = G.cat, sp = SPOT[M.on];
+    return { id: 'photo', x: k.x - sp.w / 2 - 6, y: k.y - sp.h - 10, w: sp.w + 12, h: sp.h + 16, glow: false, tap: snap };
   }
   function snap() {
-    var s = S(), k = G.cat, r = Life.photo(s, M.pose);
-    if (!r.ok) { endMoment(); return null; }
-    UI.sfx('shutter'); G.flash = .55;
-    Engine.puff({ x: k.x, y: k.y - 60, icon: 'camera', text: r.n + '', px: 1, life: 1.2 });
-    endMoment();
-    return Engine.sleep(.4);
+    if (M.hint) { G.hand = null; M.hint = false; }
+    Phone.open('camera');
+    return null;
   }
+  function shotTaken() { M.shot = true; }
 
   // ---------- 내 저녁 ----------
   // 부엌 조리대: 삼각김밥(서서 5분)과 가스레인지(차려 먹기 40분, 그날 밤 체력 +1)
@@ -6932,17 +7798,8 @@ var Arc = (function () {
       await say(B().waitedAsleep(s));
       H.catAct = null;
     } else if (s.out === 'dinner' && !s.seen.lateHome) { s.seen.lateHome = true; await say(B().lateHome(s)); }
-    // 4/17 밤: 엄마 문자
-    if (d.mom && !s.seen.momText) {
-      s.seen.momText = true;
-      var m = B().momText;
-      await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body, replies: m.replies }, '9:40');
-      var lines = B().momAfter(s);
-      await say([lines[0]]);
-      if (!s.hidden) { await catWalk(Math.min(540, G.hero.x + 30)); k.dir = -1; k.pose = 'rub'; UI.sfx('purr'); }
-      await say([lines[1]]);
-      H.catAct = null;
-    }
+    // 4/17 밤: 엄마 문자 (답하지 않고 닫아도 된다)
+    if (d.mom && !s.seen.momText) { s.seen.momText = true; await Mom.text417(); }
     // 4/23: 발표 준비, 자판 위의 고양이
     if (d.eve && !s.lid) await lastPrep();
   }
@@ -7069,7 +7926,8 @@ var Arc = (function () {
       return homeBeats().then(function () { if (H.arcHot === none) H.arcHot = null; }, function (e) { if (H.arcHot === none) H.arcHot = null; throw e; });
     }, lastPrep: lastPrep,
     rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
-    moment: function () { return M.on ? { pose: M.pose, until: M.until } : null; }
+    drawBox: drawBox, suitOnBed: suitOnBed, shotTaken: shotTaken, SPOT: SPOT,
+    moment: function () { return M.on ? { kind: M.on, ready: M.ready, until: M.until } : null; }
   };
 }());
 
@@ -7495,7 +8353,7 @@ var Town = (function () {
   function askVia(kind, at) {
     var s = S(), A = PP().ask[kind], now = phoneTime(0, at);
     return UI.phoneAsk({
-      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: nameOf(w) }; }),
+      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: Story.CONTACT[w] }; }), // 휴대폰에 저장된 이름 (그 사람과 나눈 대화방에 이어진다)
       draft: function (w) { return A[w](s); },
       reply: function (w) { return A.reply[w]; },
       clock: now.clock, time: now.label
@@ -7548,6 +8406,304 @@ var Town = (function () {
     map: map, visit: visit, knock: knock, train: train, lunch: lunch, homeBeats: homeBeats, homeSpots: homeSpots, drawHome: drawHome,
     askCat: askCat, askCover: askCover, morningBeats: morningBeats, run: run, lateAsks: lateAsks, askMoney: askMoney, phoneTime: phoneTime,
     SPOT: SPOT
+  };
+}());
+
+</script>
+<script>
+/* 휴대폰과 게임을 잇는 곳, 그리고 엄마 줄기.
+   - Phone이 묻는 것(오늘 날짜, 누구와 나눈 대화인지, 사진, 은행)에 게임 상태로 답한다.
+   - 엄마: 답하지 않은 문자 37통이 쌓인 대화방. 고양이 사진 한 장이 첫 답장이 된다.
+     사진을 받은 엄마가 전화를 걸어 오고, 반찬을 부치고, 어버이날(5/8 금요일, 출근하는 날) 아침에 전화할 수 있다.
+   값은 Life(momTouch, momSend, momOpen), 글은 Story.MOM, 여기서는 장면과 휴대폰. */
+var Mom = (function () {
+  'use strict';
+  function S() { return G.s; }
+  function say(l) { return UI.say(l); }
+  function M() { return Story.MOM; }
+  function me(t) { return { who: 'me', text: t }; }
+  function narr(t) { return { who: 'narr', text: t }; }
+  function pro() { return !!(G.pro && G.pro.active); }
+  function atHome() { return G.place === 'living' || G.place === 'bedroom'; }
+  function now(add) { return Town.phoneTime(add || 0); }
+  // 그림 자리: 회색 상자와 이름표
+  function ph(c, x, y, w, h, label) {
+    View.box(c, x, y, w, h, '#c9c6c0', '#55505a', 2);
+    if (label) View.text(c, label, x + w / 2, y + h / 2 + 4, 10, '#55505a', 'center');
+  }
+
+  // ---------- 날짜 ----------
+  var PRO_REJECT = [2025, 12, 2], PRO_OFFER = [2026, 4, 8];
+  function today() {
+    if (pro()) return G.pro.ymd || PRO_REJECT;
+    var s = S(); if (!s) return [2026, 4, 12];
+    var d = Life.day(s).date.split('/'); return [2026, +d[0], +d[1]];
+  }
+  // 새 판의 휴대폰: 엄마의 문자와 부재중 전화가 쌓여 있다. played: 프롤로그를 이미 지난 저장이면 그때 받은 두 문자도 넣는다.
+  function fresh(me, played) {
+    var log = M().unread.map(function (m) { return { c: '엄마', ymd: [m[0], m[1], m[2]], time: m[3], dir: 'in', text: m[4], u: true, old: true }; });
+    var calls = M().missed.map(function (m) { return { c: '엄마', ymd: [m[0], m[1], m[2]], time: m[3], kind: 'missed', n: 1, old: true }; });
+    if (played) {
+      var rej = Story.phone.rejection(me), off = Story.phone.offer(me);
+      log.push({ c: rej.from, ymd: PRO_REJECT, time: rej.time, dir: 'in', text: rej.body });
+      log.push({ c: off.from, ymd: PRO_OFFER, time: off.time, dir: 'in', text: off.body });
+    }
+    return { log: log, calls: calls };
+  }
+
+  // ---------- 연락처 ----------
+  var PERSONS = ['집주인', '새솔지점 지점장', '윤순자 사장님'];
+  function idOf(c) { for (var k in Story.CONTACT) if (Story.CONTACT[k] === c) return k; return null; }
+  function contact(c) {
+    var id = idOf(c), s = S();
+    if (!id) return { person: PERSONS.indexOf(c) >= 0 };
+    if (!s || pro()) return { id: id, person: true };
+    var p = Life.person(s, id) || {};
+    // 사진을 보낼 수 있는 방: 엄마는 처음부터, 할머니는 번호를 저장한 뒤(현관 비밀번호를 알려 드린 날), 다른 사람은 알게 된 뒤
+    var send = id === 'mom' ? true : id === 'grandma' ? !!p.key : !!p.met;
+    return { id: id, person: true, face: p.bond >= 2, send: send };
+  }
+
+  // ---------- 카메라와 사진 ----------
+  function canCamera() {
+    var s = S(), h = Home.H;
+    return !!s && !pro() && atHome() && Life.homeTime(s) && h.mode !== 'night' && !h.closeUp && !h.lock && !h.pro;
+  }
+  function catInView() { var k = G.cat; return !!k && k.visible && k.room === Home.H.room && !S().hidden; }
+  function focus() {
+    if (catInView()) return { x: G.cat.x, y: G.cat.y - 14 };
+    return { x: G.hero.x, y: G.hero.y - 50 };
+  }
+  function camOpen() { if (catInView()) { G.hero.dir = G.cat.x >= G.hero.x ? 1 : -1; G.hero.pose = null; } }
+  function shot() {
+    var s = S(), mo = Arc.moment();
+    var kind = mo && mo.ready ? mo.kind : catInView() ? 'cat' : 'room';
+    var r = Life.photo(s, { kind: kind, pose: G.cat.pose });
+    if (!r.ok) return null;
+    if (mo && mo.ready) Arc.shotTaken();
+    if (r.n === 1) { Home.queueLine({ key: 'photoFirst', text: '잘 나왔다.' }); Home.queueLine({ key: 'photoWho', text: '...보여 줄 사람이 있나.' }); }
+    return { id: r.id };
+  }
+  // 사진을 보냈다. 엄마의 답은 Story.MOM.photoReply, 처음 한 장에는 문자 대신 전화가 온다.
+  var OTHER = {
+    mate: { first: '헐 너무 귀여워요ㅠㅠ 출근할 때 이 얼굴 두고 나오기 힘들겠어요', more: ['ㅋㅋㅋ 표정 뭐예요', '오늘도 귀엽네요ㅎㅎ', '이거 저장해도 돼요?'] },
+    grandma: { first: '아이고 이뻐라. 밥은 잘 먹지?', more: ['이쁘네', '잘 크는구나', '고양이도 주인 닮는다더니'] },
+    boss: { first: '잘 지내네ㅎㅎ 그때 비 맞던 그 녀석 맞지?', more: ['ㅎㅎ 좋네', '사료 떨어지면 가게 들러', '얼굴 좋아졌네'] }
+  };
+  function photoSent(c, id) {
+    var s = S(), k = contact(c); if (!k.id || pro()) return [];
+    var r = Life.sendPhoto(s, id, k.id); if (!r.ok) return [];
+    if (k.id !== 'mom') { var o = OTHER[k.id]; return [r.first ? o.first : o.more[(s.sent.length + s.day) % o.more.length]]; }
+    if (r.first) { Phone.afterClose(function () { setTimeout(firstCall, 1600); }); return []; }
+    var fromParcel = r.kind === 'box' && s.mom.opened !== null && s.box === s.mom.opened;
+    var lines = M().photoReply(s, r, fromParcel).slice();
+    if (r.up && r.bond >= 2 && s.mom.parcel === null) { var d = Life.momSend(s); if (d !== null) lines.push(M().parcelText(s, d)); }
+    return lines;
+  }
+
+  // ---------- 은행 ----------
+  var BILL_STATUS = { paid: 'paid', deferred: 'deferred', late: 'late' };
+  function bank() {
+    var s = S();
+    if (!s || pro()) return { wallet: G.pro ? G.pro.wallet : 0, out: [], pending: null, lost: 0, borrowed: [], canCash: false, cash: Life.CASH.amount };
+    var out = Life.BILLS.filter(function (b) { return s.day >= b.notice; }).map(function (b) {
+      var st = s.bills[b.id], status = st === 'none' ? (s.day >= b.due ? (b.auto ? 'unpaid' : 'due') : 'soon') : st === 'paid' ? (b.auto ? 'paid' : 'sent') : BILL_STATUS[st] || 'soon';
+      return { id: b.id, date: Life.DAYS[b.due].date, name: Story.BILL[b.id].name, amount: b.amount, status: status };
+    });
+    var lost = s.pending.reduce(function (n, e) { return n + (e.status !== 'active' ? e.amount : 0); }, 0);
+    var borrowed = [];
+    if (s.borrowed && !s.borrowed.back) borrowed.push({ when: Life.DAYS[s.borrowed.day].date, name: Story.CONTACT[s.borrowed.who] || '', note: '5/8에 갚기', amount: s.borrowed.amount });
+    if (s.loan && !s.paid) borrowed.push({ when: Life.DAYS[s.loan.day].date, name: '카드 현금서비스', note: '이자 포함, 다음 카드값', amount: s.loan.amount + Life.loanInterest(s) });
+    return { wallet: s.wallet, out: out, pending: s.paid ? 0 : Life.pendingTotal(s), lost: lost, borrowed: borrowed, canCash: Life.canCash(s) && !s.paid, cash: Life.CASH.amount };
+  }
+  function cashText() { Phone.drop({ from: '은행', time: now().label, body: Story.MONEY.cashSms(Life.CASH.amount) }); }
+  function cash() {
+    var s = S(); if (!s || pro()) return false;
+    var r = Life.cashService(s); if (!r.ok) return false;
+    cashText();
+    return true;
+  }
+
+  // ---------- 전화 ----------
+  function talkedToday(s) { return s.mom.touch && s.mom.touch.talk === s.day; }
+  function canCall(c) {
+    var s = S();
+    // 집에 있을 때 (출근 전 아침도), 하루 한 통
+    if (c !== '엄마' || !s || pro() || !atHome() || !(Life.homeTime(s) || s.phase === 'morning') || Home.H.mode === 'night') return false;
+    return !talkedToday(s);
+  }
+  function spentPuff(m) { if (m) Engine.puff({ x: G.hero.x, y: 220, icon: 'clock', text: '+' + m + '분', px: 1 }); }
+  // 통화 한 통: 통화 막대를 띄우고, 대사를 나누고, 끝나면 막대를 내린다
+  async function talk(run) {
+    Phone.callStart('엄마');
+    try { await run(); } finally { Phone.callEnd(); }
+  }
+  async function pick(options) { return Phone.callPick(options); }
+  // 내가 건다
+  async function call() {
+    var s = S(), bond = Life.momBond(s), d = Life.day(s);
+    if (d.final) return parentsDay();
+    if (bond < 1) { await say(M().hesitate); return; }
+    var r = null;
+    await talk(async function () {
+      // 첫 통화는 '웬일이야'로 시작하고, 그다음부터는 나머지 이야기를 돌아가며
+      var n = s.seen.momChats || 0, L = M().chat.length; s.seen.momChats = n + 1;
+      var lines = M().chat[n === 0 ? 0 : 1 + (n - 1) % (L - 1)](s);
+      r = Life.momTouch(s, 'call');
+      // 가까워져서 반찬을 부친다: 끊는 인사('...자라') 앞에 끼운다
+      if (r.bond >= 2 && s.mom.parcel === null && Life.momSend(s) !== null) {
+        var at = /자라\.$/.test(lines[lines.length - 1].text) ? lines.length - 1 : lines.length;
+        Array.prototype.splice.apply(lines, [at, 0].concat(M().parcelCall));
+      }
+      await say(lines);
+    });
+    spentPuff(r && r.minutes);
+  }
+  // 사진 한 장을 받은 엄마가 바로 전화를 걸어 온다. 안 받으면 문자가 온다.
+  async function firstCall() {
+    var s = S(); if (!s || pro()) return;
+    var r = await Phone.incoming('엄마', 25);
+    if (r !== 'answer') {
+      setTimeout(function () { Phone.drop({ from: '엄마', time: now(1).label, body: M().declined }); }, 2600);
+      return;
+    }
+    var F = M().firstCall;
+    await talk(async function () {
+      await say(F.open(s));
+      var k = await pick(F.picks);
+      s.mom.knows = k === 0;
+      await say(k === 0 ? F.told : F.hid);
+      var t = Life.momTouch(s, 'answer'), parcel = false;
+      if (t.bond >= 2 && s.mom.parcel === null) parcel = Life.momSend(s) !== null;
+      await say(F.close(s, parcel));
+      spentPuff(t.minutes);
+    });
+  }
+  // 5/8 어버이날 아침
+  async function parentsDay() {
+    var s = S(), bond = Life.momBond(s), talked = s.mom.called, P = M().parentsDay;
+    await talk(async function () {
+      await say(P.open(s, bond, talked));
+      var k = await pick(P.picks(bond));
+      s.mom.hard = k === 1;
+      await say(k === 1 ? P.hard(s) : P.fine(s, bond));
+    });
+    s.seen.parentsCall = true;
+    var r = Life.momTouch(s, 'call'); spentPuff(r.minutes);
+  }
+
+  // ---------- 문자 ----------
+  // 4/17 금요일 밤 (Arc.homeBeats에서): 답하지 않고 닫아도 된다
+  async function text417() {
+    var s = S(), H = Home.H, k = G.cat, bond = Life.momBond(s), t = now();
+    var pickN = await Phone.wait({ from: '엄마', time: t.label, body: M().text417(s, bond), replies: M().reply417(bond), optional: true }, t.clock);
+    if (pickN != null) Life.momTouch(s, 'reply');
+    var back = M().back417(s, bond, pickN);
+    if (back) setTimeout(function () { Phone.drop({ from: '엄마', time: now(2).label, body: back }); }, 3000);
+    var lines = M().after417(s, bond, pickN);
+    if (lines.length > 1) await say([lines[0]]);
+    if (!s.hidden) {
+      H.catAct = 'still'; k.pose = 'walk';
+      await Engine.catTo(Math.min(540, G.hero.x + 30), { y: 336 });
+      k.dir = -1; k.pose = 'rub'; UI.sfx('purr');
+      await say([lines[lines.length - 1]]);
+      H.catAct = null;
+    }
+  }
+  // 집에 돌아온 저녁 (Town.homeBeats 다음)
+  async function homeBeats() {
+    var s = S();
+    // 반찬 택배가 온 날: 상자를 들고 들어온다. 엄마는 낮에 배송 완료 문자를 받았다.
+    if (s.mom.parcel === s.day && s.mom.opened === null && s.mom.got !== s.day) {
+      s.mom.got = s.day;
+      await say(M().parcelNotice);
+      Phone.drop({ from: '엄마', time: '오후 2:40', body: M().parcelGot, quiet: true });
+    }
+    // 4/28 화요일 밤: 어버이날
+    if (s.day === 16 && !s.seen.mom428) {
+      s.seen.mom428 = true;
+      var t = now();
+      if (Life.momBond(s) < 1) { Phone.drop({ from: '엄마', time: t.label, body: M().text428 }); return; }
+      var k = await Phone.wait({ from: '엄마', time: t.label, body: M().text428, replies: M().reply428, optional: true }, t.clock);
+      if (k != null) {
+        Life.momTouch(s, 'reply');
+        if (k === 0) s.mom.promised = true;
+        setTimeout(function () { Phone.drop({ from: '엄마', time: now(2).label, body: M().back428[k] }); }, 3000);
+      }
+    }
+  }
+  // 5/8 아침: 오늘은 어버이날이다 (출근 전에 전화할 수 있다)
+  async function morningBeats() {
+    var s = S(); if (!Life.day(s).final || s.seen.parentsMorning) return;
+    s.seen.parentsMorning = true;
+    await say(M().morning(s));
+    UI.point($('phoneButton'));
+    setTimeout(function () { if ($('phone').hidden) UI.point(null); }, 6000);
+  }
+  function $(id) { return document.getElementById(id); }
+  // 5/8 점심: 전화하지 않았으면 엄마가 먼저 문자한다
+  function lunch() {
+    var s = S(); if (!Life.day(s).final || talkedToday(s) || s.seen.momNoCall) return Promise.resolve();
+    s.seen.momNoCall = true;
+    Phone.drop({ from: '엄마', time: '오후 12:20', body: M().noCall });
+    return Promise.resolve();
+  }
+
+  // ---------- 집: 반찬 택배와 냉장고 ----------
+  var PARCEL = { x: 40, y: 298, w: 46, h: 34 }, FRIDGE = { x: 314, y: 180, w: 62, h: 78 }; // 현관 매트 앞 바닥, 냉장고 아래 칸
+  function parcelHere(s) { return s.mom.parcel !== null && s.day >= s.mom.parcel && s.mom.opened === null && s.mom.got !== null; }
+  function drawHome(c) {
+    var s = S(), h = Home.H; if (!s || h.pro || h.room !== 'living') return;
+    if (parcelHere(s)) ph(c, PARCEL.x, PARCEL.y, PARCEL.w, PARCEL.h, '엄마 택배');
+  }
+  function homeSpots(room) {
+    var s = S(), h = Home.H, out = [];
+    if (!s || h.pro || room !== 'living' || !Life.homeTime(s)) return out;
+    if (parcelHere(s)) out.push({ id: 'momParcel', x: PARCEL.x - 4, y: PARCEL.y - 6, w: PARCEL.w + 8, h: PARCEL.h + 10, pulse: true, tap: openParcel });
+    if (s.mom.food > 0 && !Life.eatBlock(s)) out.push({ id: 'momFood', x: FRIDGE.x, y: FRIDGE.y, w: FRIDGE.w, h: FRIDGE.h, chips: [Home.cMin(Life.T.banchan), Home.cBolt(1)], tap: eatFood });
+    return out;
+  }
+  function openParcel() {
+    var s = S();
+    return Engine.walkTo(130).then(function () {
+      G.hero.dir = -1;
+      var r = Life.momOpen(s); if (!r.ok) return null;
+      UI.sfx('page');
+      return say(M().parcelOpen).then(function () { UI.sfx('good'); return say([me('냉장고에 넣어 두자.')]); });
+    });
+  }
+  function eatFood() {
+    var s = S();
+    return Engine.walkTo(FRIDGE.x + FRIDGE.w / 2).then(function () {
+      var r = Life.eat(s, 'mom'); if (!r.ok) return null;
+      G.hero.pose = 'back'; UI.sfx('tap');
+      return Engine.sleep(.8).then(function () {
+        G.hero.pose = null; spentPuff(r.minutes);
+        if (!s.seen.momEat) { s.seen.momEat = true; return say(M().eat); }
+        return null;
+      });
+    });
+  }
+
+  // ---------- 휴대폰에 잇기 ----------
+  function init() {
+    Phone.setHooks({
+      today: today,
+      timeLabel: function () { return S() && !pro() ? now().label : ''; },
+      clock: function () { var s = S(); return s && !pro() && atHome() ? now().clock : null; },
+      contact: contact,
+      photos: function () { var s = S(); return s && !pro() ? s.photos : []; },
+      photoSent: photoSent,
+      canCamera: canCamera, focus: focus, shot: shot, camOpen: camOpen,
+      bank: bank, cash: cash,
+      canCall: canCall, call: call
+    });
+  }
+
+  return {
+    init: init, fresh: fresh, today: today, PRO_REJECT: PRO_REJECT, PRO_OFFER: PRO_OFFER,
+    text417: text417, homeBeats: homeBeats, morningBeats: morningBeats, lunch: lunch,
+    drawHome: drawHome, homeSpots: homeSpots, cashText: cashText, firstCall: firstCall
   };
 }());
 
@@ -7769,7 +8925,8 @@ var Game = (function () {
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
     if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
     // 그림이 아직 없는 사람: 얼굴 칸은 회색 상자와 이름표
-    if (w === 'grandma' || w === 'mate' || w === 'boss') return { name: Story.NAMES[w === 'boss' ? 'owner' : w], face: { blank: Story.NAMES[w === 'boss' ? 'owner' : w] } };
+    if (w === 'boss') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } }; // 슈퍼 사장님과 같은 사람
+    if (w === 'grandma' || w === 'mate' || w === 'mom') return { name: Story.NAMES[w], face: { blank: Story.NAMES[w] } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -7802,7 +8959,7 @@ var Game = (function () {
   function hudAll(on) { G.hudShow = { date: on, clock: on, wallet: on, food: on, energy: on, hearts: on }; }
 
   // ---------- 저장 ----------
-  function checkpoint() { try { localStorage.setItem(KEY, Life.save(G.s)); } catch (e) { /* 저장소를 못 쓰면 건너뜀 */ } }
+  function checkpoint() { try { G.s.phone = Phone.exportState(); localStorage.setItem(KEY, Life.save(G.s)); } catch (e) { /* 저장소를 못 쓰면 건너뜀 */ } }
   function loadSave() { try { return Life.load(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function clearSave() { try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ } }
 
@@ -7838,8 +8995,9 @@ var Game = (function () {
     return s;
   }
   async function prologue(name) {
-    G.pro = { me: name, cat: '', wallet: 12000, active: true };
+    G.pro = { me: name, cat: '', wallet: 12000, active: true, ymd: Mom.PRO_REJECT };
     G.s = proState(name);
+    Phone.load(Mom.fresh(name), { fresh: true });
     hudAll(false);
     G.fade = 1;
     await UI.black(Story.opening);
@@ -8032,6 +9190,7 @@ var Game = (function () {
     Home.enter('bedroom', { mode: 'pro', heroX: 330, catRoom: 'bedroom', catX: 140, catY: 336 });
     H.lock = true;
     await Engine.fade(0, .8);
+    G.pro.ymd = Mom.PRO_OFFER;
     var off = Story.phone.offer(G.pro.me);
     await UI.phoneWait({ from: off.from, time: off.time, preview: off.preview, body: off.body }, '4:10');
     H.lock = false;
@@ -8155,6 +9314,7 @@ var Game = (function () {
     await Engine.walkTo(180);
     await moneyBeats();
     await Town.homeBeats();
+    await Mom.homeBeats();
     var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
     if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
     if (lonely && lonely.key === 'alone' && !s.locked) await say([me(Story.catLine('alone', s.cat))]);
@@ -8203,15 +9363,13 @@ var Game = (function () {
         Life.payBill(s, due.id, 'pay'); UI.sfx('coin');
         await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 출금] ' + Story.BILL[due.id].name, body: M.autoOut(due.id, due.amount, s.wallet) }, now.clock);
       } else if (due.auto) {
-        var body = M.autoFail(due.id, due.amount) + money;
-        if (!canCash) {
-          await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body }, now.clock);
-          Life.lateBill(s, due.id); await say([narr(M.late)]);
-        } else {
-          var k = await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: body, replies: [M.cash, M.leave] }, now.clock);
-          if (k === 0) { Life.payBill(s, due.id, 'cash'); UI.sfx('coin'); await say([narr(M.cashNote)]); }
-          else { Life.lateBill(s, due.id); await say([narr(M.late)]); }
-        }
+        // 미출금: 문자를 읽고 나면 은행 앱의 그 줄에서 고른다 (현금서비스로 채우기, 그냥 두기)
+        await UI.phoneWait({ from: '은행', time: now.label, preview: '[자동이체 미출금] ' + Story.BILL[due.id].name, body: M.autoFail(due.id, due.amount) + money }, now.clock);
+        var dueId = due.id;
+        var how0 = await Phone.bankUnpaid({ id: dueId, canCash: canCash, clock: now.clock, pay: function (how) {
+          if (how === 'cash') { Life.payBill(s, dueId, 'cash'); Mom.cashText(); } else Life.lateBill(s, dueId);
+        } });
+        await say([narr(how0 === 'cash' ? M.cashNote : M.late)]);
       } else {
         // 월세: 집주인 계좌로 보낸다. 모자라면 미뤄 달라고 하거나 현금서비스를 받는다.
         var opts = [], keys = [], short = s.wallet < due.amount;
@@ -8226,10 +9384,17 @@ var Game = (function () {
           Life.lateBill(s, due.id); await say([narr(M.late)]);
         } else {
           var pick = await UI.phoneWait({ from: Story.BILL[due.id].from, time: phoneNow(-30).label, preview: M.rentMsg, body: M.rentMsg, replies: opts }, now.clock);
-          var how = keys[pick] || keys[0], r = Life.payBill(s, due.id, how);
-          if (how === 'defer') await UI.phoneWait({ from: M.deferText.from, time: phoneNow(4).label, preview: M.deferText.body, body: M.deferText.body }, phoneNow(4).clock);
-          if (how === 'cash') await say([narr(M.cashNote)]);
-          if (r.ok && how !== 'defer') UI.sfx('coin');
+          var how = keys[pick] || keys[0], rentId = due.id;
+          if (how === 'defer') {
+            Life.payBill(s, rentId, 'defer');
+            await UI.phoneWait({ from: M.deferText.from, time: phoneNow(4).label, preview: M.deferText.body, body: M.deferText.body }, phoneNow(4).clock);
+          } else {
+            // 집주인 계좌로 보낸다: 은행 앱의 보내기 화면이 열린다 (보내기 전에는 닫히지 않는다)
+            await Phone.bankTransfer({ to: Story.BILL[rentId].from, amount: due.amount, cash: how === 'cash', clock: now.clock, pay: function (h) {
+              Life.payBill(s, rentId, h); if (h === 'cash') Mom.cashText();
+            } });
+            if (how === 'cash') await say([narr(M.cashNote)]);
+          }
         }
       }
       due = Life.billDue(s);
@@ -8375,6 +9540,7 @@ var Game = (function () {
     if (lines.length) await say(lines);
     // 늦은 아침: 동기에게 첫 고객님을 붙잡아 달라고 부탁할 수 있다
     await Town.morningBeats();
+    await Mom.morningBeats();
     if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
@@ -8582,8 +9748,8 @@ var Game = (function () {
   }
   var ready;
   function boot() {
-    UI.init(); Engine.init(); UI.setSpeakers(who, face);
-    UI.phoneSeed([]);
+    UI.init(); Engine.init(); UI.setSpeakers(who, face); Mom.init();
+    Phone.load(null);
     ready = Engine.loadAssets();
     setInterval(function () { if (!$('gameScreen').hidden) UI.hud(hudView()); }, 120);
     (function titleLoop() { drawTitle(); if (!$('titleScreen').hidden) requestAnimationFrame(titleLoop); }());
@@ -8598,7 +9764,7 @@ var Game = (function () {
     $('continueButton').onclick = function () {
       var s = loadSave(); if (!s) return;
       G.s = s; G.pro = { me: s.me, cat: s.cat, wallet: 0, active: false };
-      UI.phoneSeed([Story.phone.offer(s.me), Story.phone.rejection(s.me)].map(function (m) { return { from: m.from, time: m.time, preview: m.preview, body: m.body }; }));
+      Phone.load(s.phone || Mom.fresh(s.me, true));
       startGame(function () { if (s.ended) { endingScreen(); return null; } return mainLoop(); });
     };
     $('playerName').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('startButton').click(); });
@@ -8716,9 +9882,15 @@ var Dev = (function () {
     if (s.pantry.sand && Life.sandLow(s)) Life.refill(s);
     Life.pet(s);
   }
+  // 사진을 찍고, 사람들(people)과 지내는 방식이면 엄마에게 하루 한 장 보낸다. 처음 보낸 날 엄마 전화를 받는다.
   function photos(s, st) {
     if (!st.photos || s.day === 0) return;
     while (Life.photosToday(s) < Life.photoCap(s)) if (!Life.photo(s, 'sit').ok) break;
+    if (!st.people || !s.photos.length) return;
+    var r = Life.sendPhoto(s, s.photos[s.photos.length - 1].id, 'mom');
+    if (r.first) { Life.momTouch(s, 'answer'); s.mom.knows = true; }
+    if (Life.momBond(s) >= 2 && s.mom.parcel === null) Life.momSend(s);
+    if (s.mom.parcel !== null && s.day >= s.mom.parcel && s.mom.opened === null) { s.mom.got = s.day; Life.momOpen(s); }
   }
   function home(s, st) {
     care(s, st);
@@ -8840,7 +10012,7 @@ var Dev = (function () {
   }
   function start(s) {
     G.s = s; G.pro = { me: s.me, cat: s.cat, wallet: 0, active: false };
-    UI.phoneSeed([Story.phone.offer(s.me), Story.phone.rejection(s.me)].map(function (m) { return { from: m.from, time: m.time, preview: m.preview, body: m.body }; }));
+    Phone.load(Mom.fresh(s.me, true), { fresh: true });
     Game.checkpoint();
     Game.startGame(function () { Game.hudAll(true); return Game.mainLoop(); });
   }
