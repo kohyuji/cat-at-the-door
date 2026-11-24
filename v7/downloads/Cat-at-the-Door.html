@@ -149,6 +149,23 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .bubble.out { align-self: flex-end; background: #0a84ff; color: #fff; border-bottom-right-radius: 6px; }
 .ios-replies { display: flex; gap: 8px; padding: 8px 10px 26px; justify-content: center; flex-wrap: wrap; background: #f6f6f8; border-top: 1px solid #e5e5ea; }
 .ios-replies button { background: #fff; color: #007aff; border: 1px solid #c7c7cc; border-radius: 18px; box-shadow: none; padding: 8px 14px; min-height: 0; font-size: 15px; }
+/* 부탁하기: 새 메시지 화면과 길게 눌러 보내기 */
+.ios-ask .ios-nav span:nth-child(2) { color: #000; font-weight: 600; }
+.ios-to { padding: 8px 16px; color: #8e8e93; font-size: 14px; border-bottom: 1px solid #e5e5ea; }
+.ios-empty { flex: 1; }
+.ios-compose { display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px 26px; border-top: 1px solid #e5e5ea; background: #f6f6f8; }
+.ios-field { flex: 1; min-height: 34px; padding: 7px 12px; border: 1px solid #c7c7cc; border-radius: 18px; background: #fff; font-size: 15px; line-height: 1.35; white-space: pre-wrap; word-break: keep-all; }
+.ios-send { --p: 0%; position: relative; width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; border: 0; box-shadow: none; background: conic-gradient(#0a84ff var(--p), #b9c7d8 var(--p)); touch-action: none; }
+.ios-send i { position: absolute; inset: 4px; border-radius: 50%; background: #0a84ff; }
+.ios-send i::after { content: ''; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-left: 3px solid #fff; border-top: 3px solid #fff; transform: translate(-50%, -25%) rotate(45deg); }
+.ios-send:disabled i { background: #b9c7d8; }
+.ios-send.ready { animation: sendPulse 1.4s ease-in-out infinite; }
+@keyframes sendPulse { 50% { box-shadow: 0 0 0 5px rgba(10,132,255,.25); } }
+.bubble.typing { display: flex; gap: 4px; padding: 11px 14px; }
+.bubble.typing i { width: 7px; height: 7px; border-radius: 50%; background: #8e8e93; animation: typingDot 1s infinite; }
+.bubble.typing i:nth-child(2) { animation-delay: .15s; }
+.bubble.typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes typingDot { 50% { opacity: .3; } }
 .ios-homebar { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 110px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.75); z-index: 4; cursor: pointer; }
 .ios-homebar::before { content: ''; position: absolute; inset: -14px -30px; }
 
@@ -489,13 +506,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 var Life = (function () {
   'use strict';
 
-  var VERSION = 3;
+  var VERSION = 4;
   var GOAL = 12;           // 위촉 첫 달 기준 실적(계약 건수). 채우면 정착지원금이 나온다.
   var MAX = 5;             // 체력, 하트 칸 수
   var START_WALLET = 380000;
   var SETTLE = 500000;     // 신입 정착지원금 (기준 실적을 채운 달에만)
   var TAX = 0.033;         // 사업소득세 3.3% (설계사는 회사 직원이 아니라 위촉된 개인사업자)
   var CASH = { amount: 300000, rate: 0.18 }; // 현금서비스(단기카드대출): 연 18%로 계산
+  var WORK_HELP = 60;      // 동기가 야근을 나눠 하면 한 시간 일찍 나온다
 
   // 시계 (분)
   var T = {
@@ -504,7 +522,7 @@ var Life = (function () {
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, cook: 40, quick: 5, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
+    play: 40, rest: 60, cook: 40, quick: 5, banchan: 10, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
   };
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
@@ -611,7 +629,7 @@ var Life = (function () {
   }
   function day(s) { return DAYS[s.day] || DAYS[DAYS.length - 1]; }
   function clientsOn(d, s) {
-    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening && (!s || comes(s, id)); });
+    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening && (!s || (comes(s, id) && s.gave !== id)); });
   }
   function nextWorkDay(d) {
     for (var i = d + 1; i < DAYS.length; i++) if (DAYS[i].kind === 'work') return i;
@@ -649,7 +667,10 @@ var Life = (function () {
       photos: [], myMeal: null, cooked: false, out: null, alarm: null, lid: null,
       // v7: 들어올 수수료, 요금, 현금서비스, 소개, 손에 익은 일
       pending: [], bills: { phone: 'none', rent: 'none', loan: 'none' }, loan: null, refs: {}, paid: null,
-      habit: { care: 0, explain: 0 }
+      habit: { care: 0, explain: 0 },
+      // v7 동네: 손을 내민 사람들. helped(오늘 고양이 밥을 챙겨 준 사람), covered(늦은 아침 첫 고객을 붙잡아 준 사람),
+      // workHelp(야근을 나눠 한 사람), borrowed(빌린 돈), gave(동기에게 넘긴 고객)
+      people: freshPeople(), dish: null, helped: null, covered: null, workHelp: null, borrowed: null, gave: null
     };
     s.today = freshToday(s);
     return s;
@@ -830,6 +851,8 @@ var Life = (function () {
     s.today.earned.push({ key: 'job', amount: JOB.pay });
     heart(s, -1, 'jobAlone');
     event(s, 'job');
+    // 일손을 도운 날: 사장님과 한 칸 가까워진다 (빌린 돈이 있으면 그 고마움도 갚는다)
+    var b = person(s, 'boss'); if (b && b.last !== s.day) { b.met = true; b.bond = clamp(b.bond + 1, 0, 3); b.owe = null; b.last = s.day; event(s, 'reach', { who: 'boss', kind: 'job' }); }
     return { ok: true, minutes: minutes, pay: JOB.pay };
   }
 
@@ -870,7 +893,7 @@ var Life = (function () {
     var busy = c.mark === 'clock', first = id === firstClient(s) && !c.evening;
     var base = { id: id, product: c.product, budget: c.budget, needs: c.needs.slice(), mark: c.mark, ask: c.ask || null, evening: !!c.evening };
     // 늦으면 첫 고객은 기다리다 가 버린다
-    if (first && s.late > 0) { base.leaves = true; base.mood = 0; base.reasons = [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }]; return base; }
+    if (first && s.late > 0 && !s.covered) { base.leaves = true; base.mood = 0; base.reasons = [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }]; return base; }
     // 첫 주는 선배가 옆에 앉아 청약서와 서명을 함께 봐 준다
     var tutorial = week(s.day) === 1 && !c.evening;
     if (s.smell) { mood -= s.smell; reasons.push({ key: s.smell > 1 ? 'stink' : 'smell', delta: -s.smell }); }
@@ -1073,7 +1096,7 @@ var Life = (function () {
     var next = nextWorkDay(s.day);
     s.cards = next < 0 ? [] : clientsOn(next, s);
     s.phase = 'commute';
-    s.minute = wentGroup ? T.groupLeave : T.workEnd;
+    s.minute = wentGroup ? T.groupLeave - (s.workHelp ? WORK_HELP : 0) : T.workEnd;
     return { earned: s.today.earned.slice(), cards: s.cards.slice() };
   }
 
@@ -1118,6 +1141,7 @@ var Life = (function () {
     s.wallet += net;
     var out = [];
     if (s.loan) { var back = s.loan.amount + loanInterest(s); s.wallet -= back; out.push({ key: 'loan', amount: back, interest: loanInterest(s) }); }
+    if (s.borrowed && !s.borrowed.back) { s.wallet -= s.borrowed.amount; s.borrowed.back = true; out.push({ key: 'borrow', who: s.borrowed.who, amount: s.borrowed.amount }); }
     BILLS.forEach(function (b) {
       if (s.bills[b.id] === 'deferred') { s.wallet -= b.amount; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: b.amount }); }
       else if (s.bills[b.id] === 'late') { var a = b.amount + (b.lateFee || 0); s.wallet -= a; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: a, late: true }); }
@@ -1187,7 +1211,7 @@ var Life = (function () {
   function arriveHome(s) {
     var wentGroup = outLate(s);
     s.phase = 'evening';
-    s.minute = wentGroup ? T.groupHome : T.homeArrive + (s.shopped ? T.shopStop : 0);
+    s.minute = wentGroup ? T.groupHome - (s.workHelp ? WORK_HELP : 0) : T.homeArrive + (s.shopped ? T.shopStop : 0);
     s.meal = 'pm';
     if (s.bowl !== 'empty' && !s.fed.pm) s.bowl = 'empty';
     s.rested = 0;
@@ -1197,11 +1221,13 @@ var Life = (function () {
     s.hidden = !!day(s).storm; // 천둥 치는 밤에는 숨는다
     // 아침에 못 찾고 나간 날: 서랍 속에 하루 종일 갇혀 있었다. 찾아 줄 때까지 안 나온다.
     if (s.locked) { heart(s, -1, 'locked'); s.hidden = true; }
-    // 늦게 온 밤: 현관에서 기다리다 잠들었다
-    if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
+    // 늦게 온 밤: 부탁한 사람이 밥을 챙겨 주지 않았으면 현관에서 기다리다 잠들었다
+    var visit = wentGroup ? helperVisit(s) : null;
+    if (visit) event(s, 'helperFed', { who: visit.who });
+    else if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
     else if (s.out === 'dinner') heart(s, -1, 'lateHome');
     var gone = cancels(s);
-    return { locked: !!s.locked, late: wentGroup, cancels: gone, bill: billDue(s) };
+    return { locked: !!s.locked, late: wentGroup, cancels: gone, bill: billDue(s), helper: visit };
   }
   // 주말 오후 3시 전에 침대에 누우면 낮잠이다. 오후 3시에 깨고, 고양이 저녁 끼니가 시작된다.
   function napFirst(s) { return s.phase === 'weekend' && s.meal === 'am'; }
@@ -1274,6 +1300,8 @@ var Life = (function () {
     s.water = false; s.played = false; s.petted = false; s.rested = 0;
     s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0; s.smell = 0; s.locked = false; s.trips = 0;
     s.wearing = 'hoodie'; s.myMeal = null; s.cooked = false; s.out = null;
+    s.helped = null; s.covered = null; s.workHelp = null;
+    drift(s);
     s.hidden = !!d.hide;
     // 일은 하나씩 늘어난다: 첫 출근 날은 털(돌돌이)만, 사흘째(4/14)부터 화장실과 바닥 털, 4/16부터 먼지
     if (s.day >= CLEAN_FROM) s.litter.poop++;
@@ -1349,9 +1377,10 @@ var Life = (function () {
   function eatBlock(s) { if (!homeTime(s)) return 'notHome'; if (s.myMeal) return 'ate'; if (s.phase === 'weekend' && s.meal === 'am') return 'early'; return null; }
   function eat(s, kind) {
     var why = eatBlock(s); if (why) return { ok: false, why: why };
-    kind = kind === 'cook' ? 'cook' : 'quick';
-    s.myMeal = kind; if (kind === 'cook') s.cooked = true;
-    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : T.quick) };
+    // banchan: 옆집 할머니가 준 반찬. 차려 먹은 것만큼 든든하다.
+    kind = kind === 'cook' || kind === 'banchan' ? kind : 'quick';
+    s.myMeal = kind; if (kind !== 'quick') s.cooked = true;
+    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : kind === 'banchan' ? T.banchan : T.quick) };
     if (kind === 'cook' && s.phase === 'weekend' && !s.hidden) { heart(s, +1, 'mealTogether'); r.together = true; }
     return r;
   }
@@ -1385,6 +1414,98 @@ var Life = (function () {
     if (pick === 'work') { s.cards.forEach(function (id) { s.prepared[id] = true; }); heart(s, -1, 'moved'); event(s, 'moved'); }
     else { s.played = true; heart(s, +1, 'lid'); event(s, 'lid'); }
     return s.lid;
+  }
+
+  // ---------- 사람 ----------
+  // 손을 내민 만큼 가까워진다. bond 0 모르는 사이, 1 아는 사이, 2 가까운 사이, 3 기댈 수 있는 사이.
+  // 부탁(청하는 손)을 하면 빚이 남고, 다시 손을 내밀면 갚아진다. 갚지 않고 이레가 지나면 한 칸 멀어진다.
+  var PEOPLE = {
+    grandma: { start: 0 }, // 옆집 할머니: 현관 비밀번호를 알려 드리면 늦는 날 고양이 밥을 챙겨 준다
+    mate: { start: 0 },    // 입사 동기: 늦은 아침 첫 고객을 붙잡아 주고, 야근을 나눠 한다
+    boss: { start: 1 }     // 슈퍼 사장님: 프롤로그의 비 오는 밤에 나를 봤다. 급할 때 돈을 빌려준다
+  };
+  // 내미는 손: [누구에게, 가까워지는 칸, 드는 시간(분), 드는 돈(원)]
+  var REACH = {
+    bow: ['grandma', 1, 10], parcel: ['grandma', 1, 10], dish: ['grandma', 1, 10], visit: ['grandma', 1, 20],
+    talk: ['mate', 1, 0], lunch: ['mate', 1, 0, 9000], refer: ['mate', 2, 0],
+    job: ['boss', 1, 0], greet: ['boss', 1, 0]
+  };
+  // 청하는 손: 누가 들어줄 수 있는지 (가까운 정도, 현관 비밀번호)
+  var ASK = {
+    cat: { who: ['grandma'], min: 2, key: true },   // 늦는 날 고양이 밥과 물
+    cover: { who: ['mate'], min: 1 },               // 늦은 아침, 첫 고객님께 양해를 구하고 붙잡아 준다
+    work: { who: ['mate'], min: 2 },                // 야근을 나눠 해서 일찍 들어간다
+    money: { who: ['boss'], min: 2, amount: 100000 } // 5/8까지 10만 원
+  };
+  var DRIFT_DAYS = 7, VISIT_GAP = 3;
+  var LUNCH_DAYS = [3, 9, 22]; // 동기가 점심을 같이 먹자고 하는 날 (4/15, 4/21, 5/4)
+  var DISH_FROM = 8;           // 할머니와 가까워졌으면 이날(4/20)부터 문고리에 반찬통이 걸린다
+  function freshPeople() {
+    var p = {};
+    Object.keys(PEOPLE).forEach(function (k) { p[k] = { bond: PEOPLE[k].start, owe: null, key: false, last: -9, asked: 0, met: PEOPLE[k].start > 0 }; });
+    return p;
+  }
+  function person(s, who) { return s.people && s.people[who]; }
+  // 동네 지도의 창문: 0 꺼짐(모르는 사이), 1 희미함, 2 환함
+  function windowOf(s, who) { var p = person(s, who); return !p || !p.met ? 0 : p.bond >= 2 ? 2 : 1; }
+  function litWindows(s) { return Object.keys(PEOPLE).filter(function (k) { return windowOf(s, k) > 0; }).length; }
+  function reachBlock(s, kind) {
+    var r = REACH[kind]; if (!r) return 'unknown';
+    var p = person(s, r[0]);
+    if (kind === 'visit' && (!p.met || s.day - p.last < VISIT_GAP)) return p.met ? 'soon' : 'stranger';
+    if (r[3] && s.wallet < r[3]) return 'money';
+    if (p.last === s.day && kind !== 'refer') return 'today';
+    return null;
+  }
+  function reach(s, kind) {
+    var why = reachBlock(s, kind); if (why) return { ok: false, why: why };
+    var r = REACH[kind], who = r[0], p = person(s, who), first = !p.met;
+    p.met = true; p.bond = clamp(p.bond + r[1], 0, 3); p.last = s.day;
+    var repaid = !!p.owe; p.owe = null;
+    var minutes = r[2] ? spend(s, r[2]) : 0;
+    if (r[3]) { s.wallet -= r[3]; s.today.spent.push({ item: kind === 'lunch' ? 'lunchOut' : kind, amount: r[3] }); }
+    event(s, 'reach', { who: who, kind: kind });
+    return { ok: true, who: who, bond: p.bond, first: first, repaid: repaid, minutes: minutes };
+  }
+  // 현관 비밀번호(key): 가까운 사이가 된 할머니에게만 알려 드린다
+  function giveKey(s) {
+    var p = person(s, 'grandma');
+    if (p.bond < 2 || p.key) return { ok: false };
+    p.key = true; event(s, 'key');
+    return { ok: true };
+  }
+  // 지금 이 부탁을 들어줄 수 있는 사람들 (빚을 진 사람에게는 다시 부탁하지 못한다)
+  function helpers(s, kind) {
+    var a = ASK[kind]; if (!a) return [];
+    return a.who.filter(function (who) { var p = person(s, who); return p && p.met && p.bond >= a.min && !p.owe && (!a.key || p.key); });
+  }
+  function ask(s, kind, who) {
+    if (helpers(s, kind).indexOf(who) < 0) return { ok: false };
+    var p = person(s, who), r = { ok: true, who: who };
+    p.owe = { day: s.day, kind: kind }; p.asked++;
+    if (kind === 'cat') s.helped = who;
+    if (kind === 'cover') s.covered = who;
+    if (kind === 'work') s.workHelp = who;
+    if (kind === 'money') { var n = ASK.money.amount; s.wallet += n; s.borrowed = { who: who, amount: n, day: s.day }; s.today.earned.push({ key: 'borrow', who: who, amount: n }); r.amount = n; }
+    event(s, 'ask', { who: who, kind: kind });
+    return r;
+  }
+  // 아침마다: 부탁하고 이레 넘게 갚지 않은 사이는 한 칸 멀어진다
+  function drift(s) {
+    var out = [];
+    Object.keys(s.people || {}).forEach(function (who) {
+      var p = s.people[who];
+      if (p.owe && s.day - p.owe.day >= DRIFT_DAYS) { p.bond = Math.max(1, p.bond - 1); p.owe = null; out.push(who); event(s, 'drift', { who: who }); }
+    });
+    return out;
+  }
+  // 늦게 들어온 밤, 부탁받은 사람이 저녁 시간에 밥과 물을 챙겨 두었다
+  function helperVisit(s) {
+    if (!s.helped || s.fed.pm) return null;
+    var kind = s.food.dry > 0 ? 'dry' : s.food.wet > 0 ? 'wet' : null;
+    if (kind) { s.food[kind]--; s.fed.pm = true; s.bowl = 'ate'; s.bowlKind = kind; }
+    s.water = true;
+    return { who: s.helped, fed: !!kind };
   }
 
   // ---------- 저장 ----------
@@ -1437,6 +1558,8 @@ var Life = (function () {
     photo: photo, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
     ALARM_HEARTS: ALARM_HEARTS, KNEAD_NIGHTS: KNEAD_NIGHTS, PHOTO_GOOD: PHOTO_GOOD, PHOTO_FAMILY: PHOTO_FAMILY,
     habitReady: habitReady, HABIT_DAYS: HABIT_DAYS,
+    PEOPLE: PEOPLE, REACH: REACH, ASK: ASK, LUNCH_DAYS: LUNCH_DAYS, DISH_FROM: DISH_FROM, DRIFT_DAYS: DRIFT_DAYS, VISIT_GAP: VISIT_GAP, WORK_HELP: WORK_HELP,
+    person: person, windowOf: windowOf, litWindows: litWindows, reach: reach, reachBlock: reachBlock, giveKey: giveKey, helpers: helpers, ask: ask, drift: drift, helperVisit: helperVisit,
     save: save, load: load,
     hasBatchim: hasBatchim, nameForm: nameForm, josa: josa, clock: clock, won: won, cleanName: cleanName
   };
@@ -1474,7 +1597,7 @@ var Story = (function () {
 
   var PRODUCT = { dental: '치아보험', car: '운전자보험', travel: '여행자보험', home: '화재보험', pet: '펫보험', group: '단체상해보험' };
   var SHORT = { dental: '치아', car: '운전자', travel: '여행자', home: '화재', pet: '펫', group: '단체', price: '요금표', contract: '계약서' };
-  var ITEM = { dry: '건사료', wet: '습식 사료', sand: '모래', toy: '쥐돌이', tower: '캣타워', feeder: '자동 급식기', roller: '돌돌이', coffee: '커피', lunch: '도시락', charcoal: '번개탄', robot: '로봇청소기', autoToy: '자동 장난감' };
+  var ITEM = { dry: '건사료', wet: '습식 사료', sand: '모래', toy: '쥐돌이', tower: '캣타워', feeder: '자동 급식기', roller: '돌돌이', coffee: '커피', lunch: '도시락', lunchOut: '지안과 점심', charcoal: '번개탄', robot: '로봇청소기', autoToy: '자동 장난감' };
   // 슈퍼 진열대에 마우스를 대거나 한 번 누르면 뜨는 설명. 줄마다 한 문장.
   var ITEM_DESC = {
     dry: ['고양이 밥 여덟 끼. 아침저녁 두 번씩 나흘.'],
@@ -1933,7 +2056,133 @@ var Story = (function () {
     }
   };
 
-  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님' };
+  // ---------- 동네 사람들 (v7) ----------
+  // 옆집 할머니, 입사 동기 지안, 슈퍼 사장님. 처음 마주치는 순간, 내미는 손, 청하는 손.
+  var PEOPLE = {
+    // 4/14 밤: 고양이 우는 소리 때문에 옆집에서 문을 두드린다
+    knock: {
+      sound: '똑똑똑. 누가 현관문을 두드린다.',
+      open: function (s) { return [
+        { who: 'grandma', text: '옆집 사는 사람이야. 밤마다 애기 우는 소리가 나서 와 봤어.' },
+        { who: 'grandma', text: '고양이지? 새벽에 그렇게 울면 나도 잠을 못 자.' }
+      ]; },
+      bow: function (s) { return [
+        { who: 'me', text: '죄송합니다. 데려온 지 얼마 안 돼서, 밤에 혼자 있으면 우나 봐요. 조심할게요.' },
+        { who: 'grandma', text: '...그래. 우리 영감 살아 있을 때는 개를 키웠어. 짐승은 혼자 두면 울어.' },
+        { who: 'grandma', text: '방문 닫지 말고 같이 자 봐. 그럼 덜 울 거야.' }
+      ]; },
+      shut: function (s) { return [{ who: 'narr', text: '고개만 까딱하고 문을 닫았다. 복도에서 혀 차는 소리가 들리다가 멀어졌다.' }]; }
+    },
+    // 4/16 저녁: 옆집 택배가 우리 집 앞에 와 있다
+    parcel: {
+      notice: [{ who: 'narr', text: '문 앞에 놓여 있던 택배 상자를 들고 들어왔다. 받는 사람이 302호다.' }, { who: 'me', text: '옆집 거네. 잘못 왔나 보다.' }],
+      met: function (s) { return [
+        { who: 'grandma', text: '아이고, 그게 거기 가 있었어? 고마워.' },
+        { who: 'grandma', text: '들어와서 귤이라도 하나 먹고 가.' },
+        { who: 'me', text: '괜찮아요. ' + j(s.cat, 'subject') + ' 기다려서요.' },
+        { who: 'grandma', text: '그래, 어서 가 봐.' }
+      ]; },
+      // 4/14에 문을 닫아 버린 뒤 처음 마주 선 자리
+      stranger: function (s) { return [
+        { who: 'grandma', text: '아이고, 그게 거기 가 있었어? ...고마워.' },
+        { who: 'me', text: '저번엔 죄송했어요. 데려온 지 얼마 안 돼서 저도 정신이 없었어요.' },
+        { who: 'grandma', text: '...그래. 처음엔 다 그래. 방문 열어 두고 같이 자 봐. 그럼 덜 울 거야.' }
+      ]; },
+      // 그날 밤 못 갖다드리면 다음 날 아침
+      left: [{ who: 'me', text: '어젯밤에 못 갖다드린 택배... 나가는 길에 302호 문 앞에 두고 가자.' }]
+    },
+    // 가까워진 뒤 어느 저녁: 문고리에 걸린 반찬통
+    dish: {
+      notice: [{ who: 'narr', text: '현관문 손잡이에 봉지가 걸려 있다. 반찬통에 멸치볶음이 꽉 차 있다.' }, { who: 'narr', text: '쪽지가 붙어 있다. 「많이 했어. 먹어. -302호」' }],
+      eat: [{ who: 'narr', text: '밥에 멸치볶음을 얹어 먹었다. 누가 해 준 반찬은 오랜만이다.' }],
+      back: function (s) { return [
+        { who: 'grandma', text: '벌써 다 먹었어? 입에 맞았나 보네.' },
+        { who: 'me', text: '네, 정말 맛있었어요. 잘 먹었습니다.' }
+      ]; }
+    },
+    // 찾아가 인사드리기 (몇 번째인지에 따라)
+    visit: [
+      function (s) { return [{ who: 'grandma', text: '왔어? 고양이는 잘 있고?' }, { who: 'me', text: '네, 요즘은 밤에 덜 울어요.' }, { who: 'grandma', text: '다행이네. 짐승도 사람도 혼자 있으면 울어.' }]; },
+      function (s) { return [{ who: 'grandma', text: '오늘은 일찍 왔네. 회사는 다닐 만해?' }, { who: 'me', text: '아직 정신없어요.' }, { who: 'grandma', text: '처음엔 다 그래. 밥이나 잘 챙겨 먹어.' }]; },
+      function (s) { return [{ who: 'grandma', text: '시골 동생이 사과를 한 상자 보냈어. 두 개 가져가.' }, { who: 'narr', text: '손에 사과 두 알이 들렸다.' }]; },
+      function (s) { return [{ who: 'grandma', text: '요새 얼굴이 좀 폈네.' }, { who: 'me', text: '그래요?' }, { who: 'grandma', text: '그래. 처음 봤을 땐 다 죽어 가는 얼굴이더니.' }]; }
+    ],
+    repaid: { grandma: { who: 'grandma', text: '고양이 밥? 그거 일도 아니야. 또 늦으면 말해.' } },
+    // 현관 비밀번호: 가까운 사이가 되면 할머니가 먼저 꺼내는 말 (우리 집 현관은 도어락)
+    key: {
+      offer: [{ who: 'grandma', text: '혼자 살면서 고양이 키우기 쉽지 않지. 늦는 날 있으면 말해.' }, { who: 'grandma', text: '현관 비밀번호 알려 주면 밥은 내가 줄게.' }],
+      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야.' }]; },
+      keep: function (s) { return [{ who: 'me', text: '괜찮아요. 제가 어떻게든 해 볼게요.' }, { who: 'grandma', text: '그래. 마음 바뀌면 말해.' }]; }
+    },
+    // 늦게 들어온 밤, 할머니가 다녀간 흔적
+    fedNote: function (s) { return [
+      { who: 'narr', text: '밥그릇은 깨끗이 비어 있고, 물그릇에는 물이 찰랑인다. 신발장 위에 쪽지가 있다.' },
+      { who: 'narr', text: '「밥 주고 물 갈아 놨어. 잘 먹더라. -302호」' }
+    ]; },
+    // 4/13 첫 출근 지하철: 옆에 선 사람이 내 소매의 털을 본다
+    train: {
+      see: [{ who: 'narr', text: '옆에 선 사람이 자꾸 내 소매를 본다. 손에 든 서류 봉투에 우리 회사 로고가 찍혀 있다.' }],
+      talk: function (s) { return [
+        { who: 'me', text: '저... 혹시 새솔지점 가세요?' },
+        { who: 'mate', text: '네! 오늘 첫 출근이에요. 혹시 같이 위촉되신...?' },
+        { who: 'me', text: '네. ' + s.me + (Life.hasBatchim(s.me) ? '이에요.' : '예요.') },
+        { who: 'mate', text: '저는 윤지안이에요. 근데 소매에 털이... 고양이 키우세요? 저희 본가에도 있어요.' },
+        { who: 'me', text: '아... 네. 며칠 됐어요.' }
+      ]; },
+      brush: [{ who: 'narr', text: '소매를 털고 창밖을 봤다. 털은 반쯤 남았다.' }]
+    },
+    // 점심: 지안의 문자 (4/15, 4/21, 5/4)
+    lunch: {
+      text: function (s, first) { return { from: '지안', time: '오후 12:05', preview: '점심 같이 먹을래요?', body: (first ? '같은 날 위촉된 지안이에요! ' : '') + '점심 같이 먹을래요? 지점 앞 김치찌개집이요.', yes: '좋아요, 갈게요', no: '오늘은 도시락 먹을게요' }; },
+      after: [
+        [{ who: 'narr', text: '김치찌개 9,000원. 지안도 이번 달 목표가 열두 건이라고 했다. 나랑 같았다.' }],
+        [{ who: 'narr', text: '지안은 어제 고객님 앞에서 약관을 거꾸로 펼쳤다고 했다. 둘이서 한참 웃었다.' }],
+        [{ who: 'narr', text: '지안이 본가 고양이 사진을 보여 줬다. 나도 휴대폰을 꺼냈다.' }]
+      ]
+    },
+    // 4/27 저녁: 실적이 모자란 지안
+    refer: {
+      text: { from: '지안', time: '오후 8:10', preview: '이번 달 기준 실적까지 두 건 남았는데...', body: '이번 달 기준 실적까지 두 건 남았는데 다음 주가 마감이라 ㅠㅠ\n혹시 소개해 줄 만한 분 있으면 부탁해요...', yes: '내일 만나는 고객님 한 분 소개해 줄게요', no: '저도 빠듯해서요. 힘내요!' },
+      thanks: { from: '지안', time: '오후 8:16', preview: '진짜요? 고마워요...', body: '진짜요? 고마워요. 이건 꼭 갚을게요.' },
+      gave: [{ who: 'narr', text: '내일 오기로 한 고객님 한 분을 지안에게 넘겼다. 내 실적 그래프에는 스티커가 하나 덜 붙는다.' }]
+    },
+    // 부탁할 때 쓰는 글. first: 처음 써 둔 글, again: 보내기를 누르는 동안 지웠다가 남은 글, final: 보낸 글
+    ask: {
+      cat: {
+        grandma: function (s) { return { first: '할머니, 오늘 늦을 것 같은데 고양이 밥 좀', again: '할머니, 오늘', final: '할머니, 오늘 제가 늦을 것 같은데... 혹시 ' + j(s.cat, 'bare') + ' 저녁밥 좀 부탁드려도 될까요?' }; },
+        reply: { grandma: '그래, 걱정 말고 일 봐. 사료는 늘 두던 데 있지?' }
+      },
+      cover: {
+        mate: function (s) { return { first: '지안 씨, 저 오늘 조금 늦을 것 같아요', again: '지안 씨, 저', final: '지안 씨, 저 오늘 조금 늦을 것 같아요. 첫 고객님 오시면 조금만 기다려 주시라고 전해 줄 수 있어요?' }; },
+        reply: { mate: '네네, 걱정 말고 조심히 와요! 차 한 잔 드리고 있을게요.' }
+      },
+      work: {
+        mate: function (s) { return { first: '지안 씨, 혹시 오늘 야근 같이', again: '지안 씨, 혹시', final: '지안 씨, 혹시 오늘 청약서 정리만 같이 해 줄 수 있어요? 집에 고양이가 혼자 있어서요.' }; },
+        reply: { mate: '그래요, 저도 어차피 남아요. 서류는 제가 정리할게요. 상담만 해요!' }
+      },
+      money: {
+        boss: function (s) { return { first: '사장님, 죄송한데 혹시', again: '사장님', final: '사장님, 정말 죄송한데요... 8일에 수수료 들어오면 바로 갚을게요. 10만 원만 빌려주실 수 있을까요?' }; },
+        reply: { boss: '그래, 지금 보내 줄게. 갚는 건 들어오면 해.' }
+      }
+    },
+    // 부탁할 일이 생겼을 때 하는 혼잣말
+    think: {
+      cat: function (s) { return [{ who: 'me', text: '오늘은 늦게 들어간다. ' + j(s.cat, 'bare') + ' 저녁은...' }]; },
+      catNobody: function (s) { return [{ who: 'narr', text: '연락처를 끝까지 내려 봐도, 부탁할 사람이 없다.' }]; },
+      cover: [{ who: 'me', text: '이대로면 첫 고객님이 기다리다 가실 텐데...' }],
+      work: [{ who: 'me', text: '혼자 다 하면 10시는 넘겠다...' }],
+      money: function (s, name, amount) { return [{ who: 'me', text: name + ' ' + Life.won(amount) + '... 모자란다.' }, { who: 'me', text: '사장님께 부탁드려 볼까.' }]; }
+    },
+    // 부탁을 들어준 뒤
+    helped: {
+      cover: [{ who: 'narr', text: '지점에 도착하니 첫 고객님이 지안과 차를 마시며 기다리고 계셨다.' }],
+      work: [{ who: 'narr', text: '지안이 청약서를 정리해 준 덕분에 한 시간 일찍 나왔다.' }],
+      money: [{ who: 'narr', text: '사장님이 10만 원을 보내 주셨다. 5/8에 갚아야 할 돈이 하나 늘었다.' }]
+    },
+    // 동네 지도에서 처음 길을 고를 때
+    mapHint: [{ who: 'me', text: '어디로 갈까.' }]
+  };
+  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안' };
 
   var ENDING = {
     family: { title: '우리 집', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '첫 수수료로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
@@ -2012,6 +2261,7 @@ var Story = (function () {
       if (ev.indexOf('stormAlone') >= 0) parts.push('천둥이 무서워서 소파 밑에서 떨었다');
       if (ev.indexOf('catWoke') >= 0) parts.push('사람이 안 일어나길래 얼굴을 눌러 깨웠다');
       if (ev.indexOf('waitedAsleep') >= 0) parts.push('현관에서 기다리다 잠들었다');
+      if (ev.indexOf('helperFed') >= 0) parts.push('옆집 할머니가 와서 밥을 줬다. 손이 따뜻했다');
       if (ev.indexOf('lid') >= 0) parts.push('따뜻한 상자 위에 앉았더니 사람이 상자를 덮고 놀아 줬다');
       if (ev.indexOf('moved') >= 0) parts.push('따뜻한 상자 위에 앉았는데 사람이 나를 내려놓았다');
       if (d.photos) parts.push('사람이 나를 보고 웃으며 휴대폰을 들었다');
@@ -2032,7 +2282,7 @@ var Story = (function () {
     MARK_NOTE: MARK_NOTE, COVER: COVER, coverName: coverName, TALK: TALK, QUESTIONS: QUESTIONS, EXPLAIN: EXPLAIN, DESIGN: DESIGN, APPLY: APPLY, SIGN: SIGN, CANCEL: CANCEL, CANCEL_SHORT: CANCEL_SHORT, bossTalk: bossTalk, BILL: BILL, billNotice: billNotice, MONEY: MONEY, statement: statement, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
     assembly: assembly, senior: senior, seniorSmell: seniorSmell, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
-    evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
+    evaluation: evaluation, NAMES: NAMES, PEOPLE: PEOPLE, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());
 if (typeof module !== 'undefined' && module.exports) module.exports = Story;
@@ -3603,6 +3853,7 @@ var UI = (function () {
   }
   var SFX = {
     tap: function () { tone(740, .05, 'square', .03); },
+    knock: function () { [0, .2, .4].forEach(function (d) { tone(150, .07, 'square', .07, 0, d); }); },
     coin: function () { tone(988, .07, 'square', .045); tone(1319, .14, 'square', .045, 0, .07); },
     spend: function () { tone(660, .06, 'square', .035); tone(440, .1, 'square', .035, 0, .06); },
     meow: function () { tone(620, .14, 'triangle', .09, 980); tone(980, .26, 'triangle', .08, 520, .13); },
@@ -3827,6 +4078,7 @@ var UI = (function () {
     phoneHome();
   }
   function phoneClose() {
+    if (PH.ask) { askEnd(); return; }
     $('phone').hidden = true;
     var done = PH.waits.filter(function (w) { return !w.msg.unread && (!w.msg.replies || w.msg.reply != null); });
     PH.waits = PH.waits.filter(function (w) { return done.indexOf(w) < 0; });
@@ -3849,6 +4101,7 @@ var UI = (function () {
   function phoneClick(e) {
     var b = e.target.closest('button'), screen = e.target.closest('.iphone');
     if (!screen) { phoneClose(); return; }
+    if (PH.ask) { if (b) askClick(b); return; }
     if (!b) return;
     if (b.dataset.app === 'msg') { sfx('tap'); phoneList(); }
     else if (b.dataset.app) { b.animate && b.animate([{ transform: 'scale(.94)' }, { transform: 'none' }], { duration: 160 }); }
@@ -3860,6 +4113,119 @@ var UI = (function () {
       phoneThread(PH.thread);
       setTimeout(phoneClose, 900);
     }
+  }
+
+  // ---------- 부탁하기 (청하는 손) ----------
+  // 휴대폰이 새 메시지 화면으로 열린다. 받는 사람 목록에는 지금 이 부탁을 들어줄 수 있는 사람만 뜬다.
+  // 글은 저절로 써지고, 보내기를 길게 눌러야 보내진다. 누르는 동안 쓴 글이 한 번 지워졌다가 다시 써진다.
+  // 손을 떼면 처음 쓴 글로 돌아간다. 다 보내면 답장이 오고, 휴대폰을 닫으면 끝난다.
+  // o: { list: [{ id, name }], draft(id) → { first, again, final }, reply(id) → 답장, clock }
+  // 돌려주는 값: 보낸 사람의 id, 아무에게도 안 보냈으면 null
+  var HOLD = 2.6;
+  function askEl() {
+    var el = $('iosAsk');
+    if (!el) { el = document.createElement('div'); el.id = 'iosAsk'; el.className = 'ios-app ios-ask'; el.hidden = true; $('iosThread').parentNode.insertBefore(el, $('iosHomebar')); }
+    return el;
+  }
+  function phoneAsk(o) {
+    return new Promise(function (resolve) {
+      PH.ask = { o: o, resolve: resolve, sent: null, to: null, timers: [] };
+      ring(false); point(null);
+      if (o.clock) PH.clock = o.clock;
+      $('iosTime').textContent = PH.clock;
+      $('phone').hidden = false;
+      $('iosHome').hidden = true; $('iosList').hidden = true; $('iosThread').hidden = true;
+      askEl().hidden = false;
+      sfx('tap');
+      askList();
+    });
+  }
+  function askClear() { var a = PH.ask; if (!a) return; a.timers.forEach(clearTimeout); a.timers = []; if (a.hold) { cancelAnimationFrame(a.hold.raf); a.hold = null; } }
+  function askList() {
+    var a = PH.ask; askClear(); a.to = null;
+    var rows = a.o.list.map(function (p) {
+      return '<button class="ios-row" data-ask-to="' + esc(p.id) + '"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span><span><span class="who">' + esc(p.name) + '</span><span class="pre"></span></span></button>';
+    }).join('');
+    askEl().innerHTML = '<div class="ios-nav"><span></span><span>새 메시지</span><span></span></div><div class="ios-to">받는 사람:</div>' +
+      (rows || '<div class="ios-empty"></div>');
+  }
+  function askType(text, done, speed) {
+    var a = PH.ask, field = $('askText'), cur = field.textContent, i = 0;
+    // 지금 글과 새 글이 같은 앞부분까지는 두고, 나머지만 지우고 다시 쓴다
+    while (i < cur.length && i < text.length && cur[i] === text[i]) i++;
+    var steps = [];
+    for (var k = cur.length; k > i; k--) steps.push(cur.slice(0, k - 1));
+    for (var m = i + 1; m <= text.length; m++) steps.push(text.slice(0, m));
+    var n = 0;
+    (function next() {
+      if (!PH.ask || PH.ask !== a) return;
+      if (n >= steps.length) { if (done) done(); return; }
+      field.textContent = steps[n++];
+      a.timers.push(setTimeout(next, n <= cur.length - i ? 32 : (speed || 42)));
+    }());
+  }
+  function askCompose(id) {
+    var a = PH.ask, p = a.o.list.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    askClear(); a.to = id; a.d = a.o.draft(id);
+    askEl().innerHTML = '<div class="ios-nav"><button data-ask-nav="list">‹</button><span></span><span></span></div><div class="ios-head"><span class="ios-avatar">' + esc(p.name.charAt(0)) + '</span>' + esc(p.name) + '</div>' +
+      '<div class="ios-msgs" id="askMsgs"></div><div class="ios-compose"><div class="ios-field" id="askText"></div><button class="ios-send" id="askSend" disabled aria-label="보내기"><i></i></button></div>';
+    var send = $('askSend');
+    send.addEventListener('pointerdown', askHoldStart);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { send.addEventListener(ev, askHoldStop); });
+    askType(a.d.first, function () { send.disabled = false; send.classList.add('ready'); });
+  }
+  function askHoldStart(e) {
+    var a = PH.ask; if (!a || a.sent || $('askSend').disabled) return;
+    e.preventDefault();
+    try { e.target.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ }
+    var t0 = performance.now(), send = $('askSend'), stage = 0;
+    a.hold = { raf: 0 };
+    (function frame(now) {
+      if (!a.hold) return;
+      var q = Math.min(1, (now - t0) / 1000 / HOLD);
+      send.style.setProperty('--p', (q * 100).toFixed(1) + '%');
+      // 누르고 있는 동안: 잠깐 멈칫, 쓴 글을 지우고, 다시 쓴다
+      if (stage === 0 && q > .18) { stage = 1; askType(a.d.again, null, 40); }
+      if (stage === 1 && q > .5) { stage = 2; askType(a.d.final, null, 30); }
+      if (q >= 1) { a.hold = null; askSent(); return; }
+      a.hold.raf = requestAnimationFrame(frame);
+    }(t0));
+  }
+  function askHoldStop() {
+    var a = PH.ask; if (!a || !a.hold || a.sent) return;
+    askClear();
+    var send = $('askSend'); send.style.setProperty('--p', '0%');
+    askType(a.d.first, null, 20); // 손을 떼면 처음 쓴 글로 돌아간다
+  }
+  function askSent() {
+    var a = PH.ask, msgs = $('askMsgs'), send = $('askSend');
+    askClear();
+    a.sent = a.to;
+    $('askText').textContent = ''; send.disabled = true; send.classList.remove('ready'); send.style.setProperty('--p', '0%');
+    msgs.innerHTML = '<div class="ios-day">' + esc(a.o.time || '') + '</div><div class="bubble out">' + esc(a.d.final) + '</div>';
+    sfx('tap');
+    var nav = askEl().querySelector('[data-ask-nav]'); if (nav) nav.remove();
+    a.timers.push(setTimeout(function () {
+      msgs.insertAdjacentHTML('beforeend', '<div class="bubble in typing"><i></i><i></i><i></i></div>');
+      a.timers.push(setTimeout(function () {
+        var tp = msgs.querySelector('.typing'); if (tp) tp.remove();
+        msgs.insertAdjacentHTML('beforeend', '<div class="bubble in">' + esc(a.o.reply(a.sent)) + '</div>');
+        sfx('buzz'); a.replied = true;
+      }, 1500));
+    }, 700));
+  }
+  function askClick(b) {
+    var a = PH.ask;
+    if (b.dataset.askTo) { sfx('tap'); askCompose(b.dataset.askTo); }
+    else if (b.dataset.askNav === 'list' && !a.sent) { sfx('tap'); askList(); }
+  }
+  function askEnd() {
+    var a = PH.ask; if (!a) return;
+    if (a.sent && !a.replied) return; // 답장이 올 때까지는 닫히지 않는다
+    askClear(); PH.ask = null;
+    askEl().hidden = true; $('phone').hidden = true;
+    phoneBadge(); if (PH.waits.length) ring(true);
+    a.resolve(a.sent);
   }
 
   // ---------- 손가락 화살표 (HTML 쪽 대상) ----------
@@ -3897,6 +4263,7 @@ var UI = (function () {
     var earned = t.earned.map(function (e) {
       if (e.key === 'job') return line('슈퍼 알바', wonSigned(e.amount), 'plus', '진열 정리 4시간');
       if (e.key === 'cash') return line('현금서비스', wonSigned(e.amount), 'minus', '5/8에 이자와 함께 갚는다');
+      if (e.key === 'borrow') return line('사장님께 빌린 돈', wonSigned(e.amount), 'minus', '5/8에 갚는다');
       return '';
     }).join('');
     h += sec('coin', '들어온 돈', earned);
@@ -3984,7 +4351,7 @@ var UI = (function () {
     hud: hud, hudReset: hudReset, float: float,
     say: say, talking: talking, setSpeakers: setSpeakers, advance: advance,
     black: black, blackOn: blackOn, blackOff: blackOff,
-    phoneWait: phoneWait, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
+    phoneWait: phoneWait, phoneAsk: phoneAsk, phoneOpen: phoneOpen, phoneClose: phoneClose, phoneSeed: phoneSeed, phoneMsgs: phoneMsgs, phoneSetClock: phoneSetClock, ring: ring,
     point: point, placePointer: placePointer, chips: chips,
     receipt: receipt, receiptHTML: receiptHTML, askName: askName, gameOver: gameOver, busy: busy, wait: wait, esc: esc, img: img
   };
@@ -4156,7 +4523,12 @@ var Engine = (function () {
       var dx = h.tx - h.x, step = h.speed * dt;
       if (Math.abs(dx) <= step) { h.x = h.tx; h.tx = null; h.walking = false; var a = arrivals; arrivals = []; a.forEach(function (f) { f.resolve(); }); }
       else { h.x += Math.sign(dx) * step; h.dir = dx > 0 ? 1 : -1; h.walking = true; }
-    } else h.walking = false;
+    } else {
+      h.walking = false;
+      // 걷던 중에 장면이 바뀌어 목적지가 지워졌으면(tx = null), 기다리던 걸음은 그 자리에서 끝난 것으로 한다.
+      // (그대로 두면 그 걸음을 기다리던 행동이 영영 끝나지 않아 아무것도 누를 수 없게 된다)
+      if (arrivals.length) { var a0 = arrivals; arrivals = []; a0.forEach(function (f) { f.resolve(); }); }
+    }
     var k = G.cat;
     if (k.tx !== null && k.tx !== undefined) {
       var cx = k.tx - k.x, cs = (k.run ? 250 : k.speed) * dt;
@@ -4478,6 +4850,7 @@ var Home = (function () {
     var actors = [{ y: G.hero.y, f: drawHero }, { y: G.cat.y + (G.cat.y < 300 ? -100 : 0), f: drawCat }];
     if (H.extraDraw) actors.push({ y: 334.5, f: H.extraDraw });
     actors.push({ y: 190, f: Arc.drawKitchen });
+    actors.push({ y: 300, f: Town.drawHome });
     actors.sort(function (a, b) { return a.y - b.y; }).forEach(function (a) { a.f(c); });
     if (catHidden() && sky() === 'storm' && H.room === 'living') { // 소파 밑으로 보이는 꼬리 (번쩍이면 떤다)
       var shiver = G.flash > .05 ? Math.round(Math.sin(t * 60) * 2) : 0;
@@ -5101,7 +5474,7 @@ var Home = (function () {
     if (H.closeUp || H.mode === 'night') return list;
     // 반짝이는 순간에는 고양이 자리가 사진 자리로 바뀐다 (사료 봉지, 물병처럼 끄는 물건이 먼저 잡히게 같은 순서에 둔다)
     var ph = G.cat.room === H.room ? Arc.photoSpot() : null;
-    list = list.concat(Arc.homeSpots(H.room));
+    list = list.concat(Arc.homeSpots(H.room), Town.homeSpots(H.room));
     if (ph) {
       // 사진 순간은 맨 위에서 누르기를 받되, 끌기는 그 아래 물건(사료 봉지, 쓰다듬기)에 넘긴다.
       var rest = list.filter(function (x) { return x.id !== 'cat'; }), cat = list.find(function (x) { return x.id === 'cat'; });
@@ -5922,7 +6295,7 @@ var Work = (function () {
             .then(function () { return res.goal ? goalParty() : null; });
         });
       }, Promise.resolve());
-    }).then(function () { return results; });
+    }).then(function () { return Town.lunch(); }).then(function () { return results; });
   }
   // 4/16 저녁 8시 단체보험
   function groupEvening() {
@@ -5971,7 +6344,8 @@ var Work = (function () {
       var stay = pick === 'stay';
       Life.decideGroup(s, stay);
       if (!stay) return Engine.fade(1, .3);
-      return Engine.fade(1, .4).then(function () { Wk.dark = true; office({ night: true }); workClock(1200); return consult(id); })
+      // 남기로 했으면: 동기에게 서류를 나눠 달라고, 옆집에 고양이 밥을 부탁할 수 있다
+      return Town.lateAsks(true).then(function () { return Engine.fade(1, .4); }).then(function () { Wk.dark = true; office({ night: true }); workClock(1200); return consult(id); })
         .then(function (res) {
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office({ night: true }); return Engine.fade(0, .3); }).then(function () { return sticker(1); })
@@ -6349,7 +6723,7 @@ var Work = (function () {
     }).then(function () { var r = Wk.shop.pro ? Wk.shop.picked : Wk.shop.bought.slice(); return r; });
   }
 
-  return { Wk: Wk, commute: commute, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
+  return { Wk: Wk, commute: commute, drawTrain: drawTrain, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
     leaveOffice: leaveOffice, overtime: overtime, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT };
 }());
 
@@ -6538,8 +6912,11 @@ var Arc = (function () {
     var m = B().dinnerText;
     return UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body, replies: [m.yes, m.no] }, '5:52').then(function (reply) {
       var r = Life.dinner(s, reply === 0);
-      if (r && r.go) { UI.sfx('coin'); return say([{ who: 'narr', text: '동기 친구와 여행자보험을 계약했다. 집에는 9시 반이 넘어서 들어갔다.' }]); }
-      return null;
+      if (!r || !r.go) return null;
+      return Town.askCat(17 * 60 + 54).then(function () { // 단톡 답장(오후 5:52) 바로 뒤
+        UI.sfx('coin');
+        return say([{ who: 'narr', text: '동기 친구와 여행자보험을 계약했다. 집에는 9시 반이 넘어서 들어갔다.' }]);
+      });
     });
   }
 
@@ -6693,6 +7070,484 @@ var Arc = (function () {
     }, lastPrep: lastPrep,
     rainHome: rainHome, album: album, drawShot: drawShot, KITCHEN: KITCHEN,
     moment: function () { return M.on ? { pose: M.pose, until: M.until } : null; }
+  };
+}());
+
+</script>
+<script>
+/* 동네: 동네 지도, 빌라 복도, 지하철의 입사 동기, 부탁하기.
+   사람 셋(옆집 할머니, 입사 동기 지안, 슈퍼 사장님)은 모두 주인공의 손짓으로 가까워진다.
+   값은 Life(사람과 부탁), 대사는 Story.PEOPLE, 여기서는 장면과 손짓.
+   새 사람과 장소는 그림이 오기 전까지 회색 상자와 이름표로 둔다. */
+var Town = (function () {
+  'use strict';
+  function S() { return G.s; }
+  function say(l) { return UI.say(l); }
+  function PP() { return Story.PEOPLE; }
+  function narr(t) { return { who: 'narr', text: t }; }
+  // 그림 자리: 회색 상자와 이름표
+  function ph(c, x, y, w, h, label, fill, ink) {
+    View.box(c, x, y, w, h, fill || '#c9c6c0', ink || '#55505a', 2);
+    if (label) View.text(c, label, x + w / 2, y + h / 2 + 4, 10, ink || '#55505a', 'center');
+  }
+  function spent(m, x, y) { if (m) Engine.puff({ x: x || G.hero.x, y: y || 220, icon: 'clock', text: '+' + m + '분', px: 1 }); }
+  function heartPuff(x, y) { Engine.puff({ x: x, y: y, icon: 'heart', px: 1, life: 1.2 }); }
+  // 휴대폰 시계는 지금 게임 시각을 12시간제로 (at: 장면이 정한 시각(분). 지점 안에서는 게임 시계가 멈춰 있다)
+  function phoneTime(add, at) {
+    var m = Math.round((at === undefined || at === null ? S().minute : at) + (add || 0)), h = Math.floor(m / 60) % 24, mm = m % 60, hh = (h % 12) || 12, t = hh + ':' + (mm < 10 ? '0' : '') + mm;
+    return { clock: t, label: (h < 12 ? '오전 ' : '오후 ') + t };
+  }
+  function nameOf(who) { return Story.NAMES[who === 'boss' ? 'owner' : who]; }
+  function outline(sec) { G.outlineAll = true; setTimeout(function () { G.outlineAll = false; }, (sec || 2.4) * 1000); }
+  // 장면 안에서 고르기: 누른 자리의 id를 돌려준다
+  function pickFrom(holder, spots) {
+    var pick = null;
+    holder.spots = spots.map(function (sp) { var o = {}; for (var k in sp) o[k] = sp[k]; o.tap = function () { pick = sp.id; return null; }; return o; });
+    return Engine.until(function () { return pick; }).then(function () { holder.spots = []; return pick; });
+  }
+
+  // ---------- 동네 지도 ----------
+  // 내 인형을 끌어서 가고 싶은 곳에 놓는다 (눌러도 된다). 멀수록 시계가 더 흐른다.
+  // 창문: 모르는 사람의 창은 꺼져 있고, 아는 사람의 창은 희미하게, 가까운 사람의 창은 환하게 켜진다.
+  // 우리 집 창은 집을 오래 비울수록 어둡다.
+  var SPOT = {
+    home: { x: 66, y: 232, w: 62, h: 76, label: '301호' },
+    grandma: { x: 130, y: 232, w: 62, h: 76, label: '302호' },
+    station: { x: 286, y: 272, w: 96, h: 50, label: '역' },
+    shop: { x: 272, y: 150, w: 100, h: 64, label: '슈퍼' },
+    branch: { x: 500, y: 34, w: 112, h: 110, label: '새솔지점' }
+  };
+  var VILLA = { x: 58, y: 196, w: 142, h: 120 };
+  // 아직 모르는 곳: 사람을 알게 될 때마다 하나씩 밝아진다 (4단계)
+  var DARK = [{ x: 52, y: 44, w: 132, h: 84 }, { x: 212, y: 52, w: 84, h: 58 }, { x: 352, y: 58, w: 92, h: 58 }, { x: 414, y: 178, w: 86, h: 58 }, { x: 498, y: 228, w: 116, h: 90 }];
+  var ROADS = [['station', 'home'], ['station', 'shop'], ['shop', 'grandma'], ['station', 'branch']];
+  var WIN = { mine: { x: 89, y: 244 }, grandma: { x: 153, y: 244 }, boss: { x: 336, y: 158 }, mate: { x: 560, y: 52 } };
+  var MP = null;
+  function center(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
+  function foot(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h - 8 }; }
+  // 갈 수 있는 곳과 드는 시간(분). 저녁에 역에서 내리면 집, 슈퍼, 옆집. 집에서 나서면 슈퍼, 옆집, 그대로 집.
+  function routes(s, from) {
+    var out = { home: 0 };
+    if (from === 'station') out.shop = Life.T.shopStop;
+    else if (!Life.doBlock(s, 'shop')) out.shop = Life.T.shopTrip;
+    if (!Life.reachBlock(s, 'visit')) out.grandma = Life.REACH.visit[2];
+    return out;
+  }
+  function windowColor(level) { return level >= 2 ? '#ffd970' : level === 1 ? '#b59a5c' : '#4a4754'; }
+  function drawWindow(c, w, level, glow) {
+    if (glow && level >= 2) View.lampGlow(c, w.x + 8, w.y + 6, 26, .35);
+    View.box(c, w.x, w.y, 16, 12, windowColor(level), '#3a3640', 2);
+  }
+  function drawMap(c) {
+    var s = S(), t = G.t;
+    c.fillStyle = '#d9d6cf'; c.fillRect(0, 0, 640, 360);
+    View.text(c, '동네 지도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
+    c.lineCap = 'round';
+    ROADS.forEach(function (r) { var a = center(r[0]), b = center(r[1]); c.strokeStyle = '#f2efe8'; c.lineWidth = 14; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); });
+    DARK.forEach(function (d) { ph(c, d.x, d.y, d.w, d.h, '', '#8f8a92', '#6c6772'); });
+    ph(c, VILLA.x, VILLA.y, VILLA.w, VILLA.h, '', '#c9c6c0');
+    View.text(c, '우리 빌라', VILLA.x + VILLA.w / 2, VILLA.y + 18, 10, '#55505a', 'center');
+    Object.keys(SPOT).forEach(function (id) {
+      var r = SPOT[id], can = MP.to[id] !== undefined && id !== MP.at;
+      ph(c, r.x, r.y, r.w, r.h, '', can ? '#efeae0' : '#c9c6c0');
+      View.text(c, r.label, r.x + r.w / 2, r.y - 6, 10, '#55505a', 'center');
+    });
+    // 우리 집 창: 오래 비울수록 어둡다. 사람들의 창: 가까워진 만큼 밝다.
+    drawWindow(c, WIN.mine, MP.away > .6 ? 2 : MP.away > .25 ? 1 : 0, true);
+    drawWindow(c, WIN.grandma, Life.windowOf(s, 'grandma'), true);
+    drawWindow(c, WIN.boss, Life.windowOf(s, 'boss'), true);
+    drawWindow(c, WIN.mate, Life.windowOf(s, 'mate'), true);
+    // 내 인형
+    var p = MP.drag || MP.tok;
+    View.shadow(c, p.x, p.y + 2, 10);
+    View.person(c, G, p.x, p.y, s.wearing === 'suit' ? 'suit' : 'hoodie', 1, t, MP.drag || MP.moving ? 'walk' : 'stand', 1);
+    if (MP.view === 'evening') View.nightTint(c, .22);
+  }
+  function destAt(p) {
+    var hitId = null;
+    Object.keys(MP.to).forEach(function (id) {
+      if (id === MP.at) return;
+      var r = SPOT[id];
+      if (p.x >= r.x - 8 && p.x <= r.x + r.w + 8 && p.y >= r.y - 8 && p.y <= r.y + r.h + 8) hitId = id;
+    });
+    return hitId;
+  }
+  function goTo(id) {
+    if (MP.moving || MP.done) return null;
+    var from = { x: MP.tok.x, y: MP.tok.y }, to = foot(id), t0 = G.t, dur = .55;
+    MP.moving = true; MP.drag = null; G.hand = null;
+    return new Promise(function (resolve) {
+      (function step() {
+        var q = Math.min(1, (G.t - t0) / dur);
+        MP.tok = { x: from.x + (to.x - from.x) * q, y: from.y + (to.y - from.y) * q };
+        if (q < 1) setTimeout(step, 16); else { MP.moving = false; MP.done = id; resolve(); }
+      }());
+    });
+  }
+  function hotMap() {
+    if (!MP || MP.moving || MP.done) return [];
+    var list = [];
+    Object.keys(MP.to).forEach(function (id) {
+      if (id === MP.at) return;
+      var r = SPOT[id], m = MP.to[id];
+      list.push({ id: 'go-' + id, x: r.x, y: r.y, w: r.w, h: r.h, chips: m ? [Home.cMin(m)] : null, tap: function () { return goTo(id); } });
+    });
+    var p = MP.tok;
+    list.push({ id: 'me', x: p.x - 16, y: p.y - 46, w: 32, h: 50, pulse: !MP.moved, drag: {
+      start: function () { G.hand = null; },
+      move: function (d) { MP.drag = { x: d.x, y: d.y + 20 }; },
+      end: function (d) { MP.moved = true; var id = destAt({ x: d.x, y: d.y }); MP.drag = null; return id ? goTo(id) : null; },
+      cancel: function () { MP.drag = null; }
+    } });
+    return list;
+  }
+  // from: 'station'(퇴근길) 또는 'home'(집에서 나섬). 고른 곳의 id를 돌려준다.
+  function map(from) {
+    var s = S(), at = from === 'station' ? 'station' : 'home';
+    var away = from === 'station' ? Math.max(0, 1 - (Life.T.homeArrive - (s.left || Life.T.leaveBy)) / 720) : 1;
+    MP = { from: from, at: at, to: routes(s, from), tok: foot(at), done: null, drag: null, moving: false, moved: false, away: away, view: s.phase === 'evening' || from === 'station' ? 'evening' : 'day' };
+    Engine.setScene({ draw: drawMap, hot: hotMap, place: 'map' });
+    var first = !s.seen.mapHint;
+    return Engine.fade(0, .3).then(function () {
+      if (!first) return null;
+      s.seen.mapHint = true;
+      var a = MP.tok, b = foot('home');
+      G.hand = { x: a.x, y: a.y - 20, tx: b.x, ty: b.y - 20, period: 2.2, t0: G.t };
+      return say(PP().mapHint);
+    }).then(function () { return Engine.until(function () { return MP.done; }); })
+      .then(function (id) { G.hand = null; return Engine.sleep(.2).then(function () { return Engine.fade(1, .3); }).then(function () { return id; }); });
+  }
+
+  // ---------- 빌라 복도 ----------
+  var DOOR = { mine: { x: 150, y: 116, w: 74, h: 206 }, next: { x: 404, y: 116, w: 74, h: 206 } };
+  var CR = { spots: [] };
+  function drawCorridor(c) {
+    var s = S(), t = G.t, h = G.hero;
+    c.fillStyle = '#d8d4cc'; c.fillRect(0, 0, 640, 360);
+    View.text(c, '빌라 복도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
+    c.fillStyle = '#b7b1a6'; c.fillRect(0, 322, 640, 38);
+    ph(c, DOOR.mine.x, DOOR.mine.y, DOOR.mine.w, DOOR.mine.h, '301호', CR.mineOpen ? '#6f6a64' : '#c9c6c0');
+    ph(c, DOOR.next.x, DOOR.next.y, DOOR.next.w, DOOR.next.h, '302호', CR.nextOpen ? '#6f6a64' : '#c9c6c0');
+    ph(c, 584, 120, 56, 202, '계단', '#bdb7ad');
+    if (CR.gm) ph(c, CR.gm.x - 22, 214, 44, 108, '할머니', '#bfb6c9');
+    if (h.visible) {
+      View.shadow(c, h.x, 343, 20);
+      View.person(c, G, h.x, 342 + (CR.bow ? 5 : 0), s.wearing === 'suit' ? 'suit' : 'hoodie', h.dir, t, h.walking ? 'walk' : 'stand', 2.35);
+    }
+    if (CR.carry) ph(c, h.x + 6 * h.dir - 16, 250, 32, 24, CR.carry, '#d9c39a');
+    if (CR.key) { var k = CR.key; ph(c, k.x - 14, k.y - 10, 28, 20, '쪽지', '#f3e48a'); }
+    if (Home.H.mode === 'evening' || Home.H.mode === 'night') View.nightTint(c, .12);
+  }
+  function enterCorridor(o) {
+    CR = { mineOpen: !!o.mineOpen, nextOpen: false, gm: null, spots: [], carry: o.carry || null, key: null, bow: false };
+    G.hero.x = o.heroX; G.hero.dir = o.dir || 1; G.hero.tx = null; G.hero.visible = true; G.hero.pose = null;
+    Engine.setScene({ draw: drawCorridor, hot: function () { return CR.spots; }, place: 'corridor' });
+  }
+  function backHome() {
+    return Engine.fade(1, .3).then(function () {
+      Home.enter('living', { mode: Home.H.mode, heroX: 130 });
+      G.hero.dir = 1;
+      return Engine.fade(0, .3);
+    });
+  }
+  // 302호 문을 두드리면 할머니가 나온다
+  async function callNext() {
+    await Engine.walkTo(DOOR.next.x - 30); G.hero.dir = 1;
+    UI.sfx('knock'); await Engine.sleep(.9);
+    CR.nextOpen = true; UI.sfx('door'); CR.gm = { x: DOOR.next.x + DOOR.next.w / 2 };
+    await Engine.sleep(.3);
+  }
+  function gmGoesIn() {
+    var gm = CR.gm; if (!gm) return Promise.resolve();
+    var x0 = gm.x, x1 = DOOR.next.x + DOOR.next.w / 2, t0 = G.t;
+    return new Promise(function (resolve) {
+      (function step() {
+        var q = Math.min(1, (G.t - t0) / .7); gm.x = x0 + (x1 - x0) * q;
+        if (q < 1) setTimeout(step, 16); else { CR.gm = null; CR.nextOpen = false; UI.sfx('door'); resolve(); }
+      }());
+    });
+  }
+  // 현관 비밀번호: 가까운 사이가 된 할머니가 먼저 말을 꺼낸다. 비밀번호 쪽지를 건네거나, 내 문으로 돌아선다. (두 번까지 묻는다)
+  async function keyOffer() {
+    var s = S(), p = Life.person(s, 'grandma');
+    if (p.key || p.bond < 2 || (s.seen.keyOffers || 0) >= 2 || !CR.gm) return;
+    s.seen.keyOffers = (s.seen.keyOffers || 0) + 1;
+    await say(PP().key.offer);
+    CR.key = { x: G.hero.x + 26, y: 250 };
+    outline();
+    var pick = await pickFrom(CR, [
+      { id: 'giveKey', x: CR.key.x - 18, y: CR.key.y - 16, w: 36, h: 32, pulse: true },
+      { id: 'keepKey', x: DOOR.mine.x, y: DOOR.mine.y, w: DOOR.mine.w, h: DOOR.mine.h, pulse: true }
+    ]);
+    if (pick === 'giveKey') {
+      var k = CR.key, x0 = k.x, x1 = CR.gm.x - 14, t0 = G.t;
+      await new Promise(function (resolve) { (function step() { var q = Math.min(1, (G.t - t0) / .5); k.x = x0 + (x1 - x0) * q; if (q < 1) setTimeout(step, 16); else resolve(); }()); });
+      CR.key = null; Life.giveKey(s); UI.sfx('tap');
+      await say(PP().key.give(s));
+      heartPuff(CR.gm.x, 200);
+    } else {
+      CR.key = null;
+      await say(PP().key.keep(s));
+    }
+  }
+
+  // 4/14 밤: 옆집에서 문을 두드린다. 고개를 숙여 사과하거나, 문을 닫는다.
+  async function knock() {
+    var s = S();
+    UI.sfx('knock');
+    await say([narr(PP().knock.sound)]);
+    await Engine.fade(1, .3);
+    enterCorridor({ heroX: DOOR.mine.x + DOOR.mine.w / 2 + 34, mineOpen: true });
+    CR.gm = { x: DOOR.mine.x + DOOR.mine.w + 96 };
+    await Engine.fade(0, .3);
+    await say(PP().knock.open(s));
+    outline(2.6);
+    var pick = await pickFrom(CR, [
+      { id: 'bow', x: G.hero.x - 24, y: 206, w: 48, h: 132, pulse: true },
+      { id: 'shut', x: DOOR.mine.x, y: DOOR.mine.y, w: DOOR.mine.w, h: DOOR.mine.h, pulse: true }
+    ]);
+    if (pick === 'bow') {
+      CR.bow = true; UI.sfx('tap'); await Engine.sleep(.7); CR.bow = false;
+      var r = Life.reach(s, 'bow');
+      await say(PP().knock.bow(s));
+      heartPuff(CR.gm.x, 200); spent(r.minutes, G.hero.x, 200);
+      await gmGoesIn();
+      await Engine.sleep(.3);
+    } else {
+      await Engine.walkTo(DOOR.mine.x + DOOR.mine.w / 2);
+      G.hero.visible = false; CR.mineOpen = false; UI.sfx('door');
+      await say(PP().knock.shut(s));
+    }
+    await backHome();
+  }
+  // 옆집 택배를 대신 전해 드린다 (처음 만나는 자리가 되기도 한다)
+  async function deliverParcel() {
+    var s = S();
+    s.seen.parcelAt = null;
+    await Engine.fade(1, .3);
+    enterCorridor({ heroX: DOOR.mine.x + DOOR.mine.w / 2 + 30, carry: '택배' });
+    await Engine.fade(0, .3);
+    await callNext();
+    var first = !Life.person(s, 'grandma').met, r = Life.reach(s, 'parcel');
+    CR.carry = null;
+    await say(first ? PP().parcel.stranger(s) : PP().parcel.met(s));
+    if (r.ok) { heartPuff(CR.gm.x, 200); spent(r.minutes, G.hero.x, 200); }
+    await keyOffer();
+    await gmGoesIn();
+    await Engine.walkTo(DOOR.mine.x + DOOR.mine.w / 2);
+    await backHome();
+  }
+  // 빈 반찬통을 돌려드린다
+  async function returnDish() {
+    var s = S();
+    s.dish = null;
+    await Engine.fade(1, .3);
+    enterCorridor({ heroX: DOOR.mine.x + DOOR.mine.w / 2 + 30, carry: '반찬통' });
+    await Engine.fade(0, .3);
+    await callNext();
+    var owed = !!Life.person(s, 'grandma').owe, r = Life.reach(s, 'dish');
+    CR.carry = null;
+    if (owed) await say([PP().repaid.grandma]);
+    await say(PP().dish.back(s));
+    if (r.ok) { heartPuff(CR.gm.x, 200); spent(r.minutes, G.hero.x, 200); }
+    await keyOffer();
+    await gmGoesIn();
+    await Engine.walkTo(DOOR.mine.x + DOOR.mine.w / 2);
+    await backHome();
+  }
+  // 찾아가 인사드리기 (지도에서 302호). outside: 퇴근길에 집에 들어가기 전에 들른다
+  async function visit(outside) {
+    var s = S(), owed = !!Life.person(s, 'grandma').owe;
+    enterCorridor({ heroX: outside ? 600 : DOOR.mine.x + DOOR.mine.w / 2 + 30, dir: outside ? -1 : 1 });
+    await Engine.fade(0, .3);
+    await callNext();
+    var r = Life.reach(s, 'visit'), n = s.seen.visits || 0;
+    s.seen.visits = n + 1;
+    if (owed) await say([PP().repaid.grandma]);
+    await say(PP().visit[n % PP().visit.length](s));
+    if (r.ok) { heartPuff(CR.gm.x, 200); spent(r.minutes, G.hero.x, 200); }
+    await keyOffer();
+    await gmGoesIn();
+    await Engine.walkTo(DOOR.mine.x + DOOR.mine.w / 2);
+    if (outside) { G.hero.pose = 'back'; UI.sfx('door'); await Engine.fade(1, .3); G.hero.pose = null; return; }
+    await backHome();
+  }
+
+  // ---------- 우리 집 현관에 놓이는 것 ----------
+  // 택배 상자(4/16 그날 저녁만), 할머니의 반찬통(가득 / 빈 통)
+  var HOME_SPOT = { parcel: { x: 58, y: 304 }, dish: { x: 92, y: 300 } };
+  function homeOK() { var s = S(), H = Home.H; return !!s && !H.pro && Life.homeTime(s) && H.mode !== 'night' && !H.closeUp; }
+  function drawHome(c) {
+    var s = S(), H = Home.H; if (!s || H.pro || H.room !== 'living') return;
+    if (s.seen.parcelAt) ph(c, HOME_SPOT.parcel.x - 18, HOME_SPOT.parcel.y - 22, 36, 26, '택배', '#d9c39a');
+    if (s.dish) ph(c, HOME_SPOT.dish.x - 16, HOME_SPOT.dish.y - 16, 32, 18, s.dish === 'full' ? '반찬' : '빈 통', s.dish === 'full' ? '#e7d0a6' : '#e4e0d8');
+  }
+  // 복도로 나가는 일(택배, 빈 통)은 저녁 기다림을 'town'으로 끝내고, 저녁 흐름이 run()으로 이어 간다.
+  // (누른 행동 안에서 복도 장면을 열면, 복도에서 또 눌러야 하는 곳이 막힌다)
+  var GO = { next: null };
+  function outTo(kind, x) {
+    return function () {
+      return Engine.walkTo(x).then(function () { GO.next = kind; if (!Home.resolveWait('town')) GO.next = null; });
+    };
+  }
+  function homeSpots(room) {
+    var s = S(), H = Home.H; if (room !== 'living' || !homeOK()) return [];
+    var list = [], out = !!H.waiter && H.waiter.types.indexOf('town') >= 0;
+    if (out && s.seen.parcelAt === s.day) list.push({ id: 'parcel', x: HOME_SPOT.parcel.x - 20, y: HOME_SPOT.parcel.y - 26, w: 40, h: 30, chips: [Home.cMin(Life.REACH.parcel[2])], tap: outTo('parcel', HOME_SPOT.parcel.x + 20) });
+    if (s.dish === 'full' && !Life.eatBlock(s)) list.push({ id: 'dish', x: HOME_SPOT.dish.x - 18, y: HOME_SPOT.dish.y - 20, w: 36, h: 24, chips: [Home.cMin(Life.T.banchan), Home.cBolt(1)], tap: eatDish });
+    if (out && s.dish === 'empty' && !Life.reachBlock(s, 'dish')) list.push({ id: 'dishBack', x: HOME_SPOT.dish.x - 18, y: HOME_SPOT.dish.y - 20, w: 36, h: 24, chips: [Home.cMin(Life.REACH.dish[2])], tap: outTo('dish', HOME_SPOT.dish.x + 20) });
+    return list;
+  }
+  // 저녁 흐름에서 부른다: 방금 고른 복도 일을 한다
+  function run() {
+    var k = GO.next; GO.next = null;
+    if (k === 'parcel') return deliverParcel();
+    if (k === 'dish') return returnDish();
+    return Promise.resolve();
+  }
+  function eatDish() {
+    var s = S();
+    return Engine.walkTo(HOME_SPOT.dish.x + 24).then(function () {
+      var r = Life.eat(s, 'banchan'); if (!r.ok) return null;
+      s.dish = 'empty'; UI.sfx('tap');
+      spent(r.minutes, HOME_SPOT.dish.x, 250);
+      return say(PP().dish.eat);
+    });
+  }
+
+  // ---------- 집에 돌아온 저녁의 사람 일 ----------
+  async function homeBeats() {
+    var s = S(), H = Home.H;
+    // 늦게 들어온 밤에 다녀간 흔적
+    if (s.events.some(function (e) { return e.key === 'helperFed' && e.day === s.day; }) && !s.seen['fedNote' + s.day]) {
+      s.seen['fedNote' + s.day] = true;
+      await say(PP().fedNote(s));
+    }
+    // 4/14: 문 두드리는 소리
+    if (s.day === 2 && !s.seen.knock) { s.seen.knock = true; await knock(); }
+    // 4/16: 잘못 온 택배
+    if (s.day === 4 && !s.seen.parcel) { s.seen.parcel = true; s.seen.parcelAt = s.day; await say(PP().parcel.notice); }
+    // 가까워진 뒤: 문고리에 걸린 반찬통
+    if (s.day >= Life.DISH_FROM && !s.seen.dish && Life.person(s, 'grandma').bond >= 2 && Life.day(s).kind === 'work') {
+      s.seen.dish = true; s.dish = 'full'; UI.sfx('page'); await say(PP().dish.notice);
+    }
+    // 4/27: 실적이 모자란 동기
+    if (s.day === 15 && !s.seen.refer && Life.person(s, 'mate').met) { s.seen.refer = true; await referText(); }
+  }
+  async function referText() {
+    var s = S(), m = PP().refer.text, next = Life.nextWorkDay(s.day), give = next > 0 ? Life.clientsOn(next, s)[0] : null;
+    var now = phoneTime();
+    var k = await UI.phoneWait({ from: m.from, time: now.label, preview: m.preview, body: m.body, replies: give ? [m.yes, m.no] : [m.no] }, now.clock);
+    if (!give || k !== 0) return;
+    s.gave = give; s.cards = (s.cards || []).filter(function (id) { return id !== give; });
+    Life.reach(s, 'refer');
+    var t = PP().refer.thanks, later = phoneTime(4);
+    await UI.phoneWait({ from: t.from, time: later.label, preview: t.preview, body: t.body }, later.clock);
+    await say(PP().refer.gave);
+  }
+
+  // ---------- 지하철: 4/13 첫 출근 ----------
+  // 옆에 선 사람(우리 회사 서류 봉투)이 내 소매의 털을 본다. 먼저 말을 걸거나, 소매를 털고 창밖을 본다.
+  var TR = { spots: [] };
+  async function train() {
+    var s = S(), mateX = 354;
+    G.hero.x = 300; G.hero.tx = null; G.hero.dir = 1; Work.Wk.dark = false;
+    TR = { spots: [] };
+    Engine.setScene({
+      place: 'train',
+      draw: function (c) { Work.drawTrain(c); ph(c, mateX - 20, 216, 40, 128, '동기', '#bfb6c9'); },
+      hot: function () { return TR.spots; }
+    });
+    await Engine.fade(0, .35);
+    await Engine.sleep(.6);
+    await say(PP().train.see);
+    outline(2.6);
+    var pick = await pickFrom(TR, [
+      { id: 'mate', x: mateX - 22, y: 214, w: 44, h: 132, pulse: true },
+      { id: 'sleeve', x: G.hero.x - 6, y: 236, w: 34, h: 44, pulse: true }
+    ]);
+    if (pick === 'mate') {
+      Life.reach(s, 'talk');
+      await say(PP().train.talk(s));
+      heartPuff(mateX, 200);
+    } else await say(PP().train.brush);
+    await Engine.sleep(.4);
+    await Engine.fade(1, .35);
+  }
+
+  // ---------- 점심: 지안의 문자 ----------
+  async function lunch() {
+    var s = S();
+    if (Life.LUNCH_DAYS.indexOf(s.day) < 0 || s.seen['lunch' + s.day]) return;
+    s.seen['lunch' + s.day] = true;
+    Work.office(); s.minute = Math.max(s.minute, 725);
+    await Engine.fade(0, .3);
+    var p = Life.person(s, 'mate'), m = PP().lunch.text(s, !p.met), can = !Life.reachBlock(s, 'lunch');
+    var k = await UI.phoneWait({ from: m.from, time: m.time, preview: m.preview, body: m.body, replies: can ? [m.yes, m.no] : [m.no] }, '12:05');
+    if (can && k === 0) {
+      var r = Life.reach(s, 'lunch');
+      if (r.ok) { UI.sfx('spend'); var n = s.seen.lunches || 0; s.seen.lunches = n + 1; await say(PP().lunch.after[n % PP().lunch.after.length]); }
+    }
+    await Engine.fade(1, .3);
+  }
+
+  // ---------- 부탁하기 (청하는 손) ----------
+  function askVia(kind, at) {
+    var s = S(), A = PP().ask[kind], now = phoneTime(0, at);
+    return UI.phoneAsk({
+      list: Life.helpers(s, kind).map(function (w) { return { id: w, name: nameOf(w) }; }),
+      draft: function (w) { return A[w](s); },
+      reply: function (w) { return A.reply[w]; },
+      clock: now.clock, time: now.label
+    }).then(function (who) {
+      if (!who) return null;
+      return Life.ask(s, kind, who).ok ? who : null;
+    });
+  }
+  // 늦는 밤: 고양이 저녁을 부탁한다. 부탁할 사람이 없으면 연락처가 비어 있다.
+  async function askCat(at) {
+    var s = S(), none = !Life.helpers(s, 'cat').length;
+    await say(PP().think.cat(s));
+    var who = await askVia('cat', at);
+    if (!who && none) await say(PP().think.catNobody(s));
+    return who;
+  }
+  // 아침: 어젯밤 못 갖다드린 택배는 나가는 길에 옆집 문 앞에 둔다
+  async function morningBeats() {
+    var s = S();
+    if (s.seen.parcelAt && s.seen.parcelAt < s.day) { s.seen.parcelAt = null; await say(PP().parcel.left); }
+    await askCover();
+  }
+  // 4/20 알람이 고장 난 아침: 동기에게 첫 고객님을 붙잡아 달라고 한다
+  async function askCover() {
+    var s = S();
+    if (s.alarm !== 'late' || !Life.helpers(s, 'cover').length) return null;
+    await say(PP().think.cover);
+    return askVia('cover');
+  }
+  // 4/29 야근: 남기로 한 뒤, 동기에게 서류를 나눠 달라고 하고, 고양이 밥을 부탁한다
+  async function lateAsks(work) {
+    var s = S();
+    if (work && Life.helpers(s, 'work').length) {
+      await say(PP().think.work);
+      if (await askVia('work')) await say(PP().helped.work);
+    }
+    await askCat();
+  }
+  // 요금 날 돈이 모자라면: 사장님께 빌려 달라고 해 볼 수 있다
+  async function askMoney(bill) {
+    var s = S();
+    if (s.wallet >= bill.amount || !Life.helpers(s, 'money').length) return null;
+    await say(PP().think.money(s, Story.BILL[bill.id].name, bill.amount));
+    var who = await askVia('money');
+    if (who) { UI.sfx('coin'); await say(PP().helped.money); }
+    return who;
+  }
+
+  return {
+    map: map, visit: visit, knock: knock, train: train, lunch: lunch, homeBeats: homeBeats, homeSpots: homeSpots, drawHome: drawHome,
+    askCat: askCat, askCover: askCover, morningBeats: morningBeats, run: run, lateAsks: lateAsks, askMoney: askMoney, phoneTime: phoneTime,
+    SPOT: SPOT
   };
 }());
 
@@ -6913,6 +7768,8 @@ var Game = (function () {
     if (w === 'lead') return { name: Story.NAMES.lead, face: { variant: 'lead' } };
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
     if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
+    // 그림이 아직 없는 사람: 얼굴 칸은 회색 상자와 이름표
+    if (w === 'grandma' || w === 'mate' || w === 'boss') return { name: Story.NAMES[w === 'boss' ? 'owner' : w], face: { blank: Story.NAMES[w === 'boss' ? 'owner' : w] } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -6921,6 +7778,14 @@ var Game = (function () {
     var c = canvas.getContext('2d');
     c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
     c.fillStyle = '#e9dfcc'; c.fillRect(0, 0, canvas.width, canvas.height);
+    if (f.blank) {
+      var w = canvas.width, h = canvas.height, k = Math.max(1, Math.round(w / 96));
+      c.fillStyle = '#55505a'; c.fillRect(k * 4, k * 4, w - k * 8, h - k * 8);
+      c.fillStyle = '#c9c6c0'; c.fillRect(k * 6, k * 6, w - k * 12, h - k * 12);
+      c.fillStyle = '#55505a'; c.font = Math.round(11 * k) + "px 'NeoDunggeunmo', monospace"; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(f.blank, w / 2, h / 2);
+      return;
+    }
     View.portrait(c, G, f.variant, 0, 0, canvas.width, canvas.height, f.hue);
   }
 
@@ -7260,8 +8125,9 @@ var Game = (function () {
     }
     if (s.minute >= Life.T.bedtime) guideBed();
     while (true) {
-      var r = await Home.wait(['bed', 'shop']);
+      var r = await Home.wait(['bed', 'shop', 'town']);
       if (r === 'shop') { await goShop(); continue; }
+      if (r === 'town') { await Town.run(); continue; }
       G.guide = null;
       var slept = await night();
       if (slept) return;
@@ -7288,6 +8154,7 @@ var Game = (function () {
     if (storm) { UI.sfx('thunder'); G.flash = .9; }
     await Engine.walkTo(180);
     await moneyBeats();
+    await Town.homeBeats();
     var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
     if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
     if (lonely && lonely.key === 'alone' && !s.locked) await say([me(Story.catLine('alone', s.cat))]);
@@ -7328,6 +8195,7 @@ var Game = (function () {
     }
     var due = Life.billDue(s);
     while (due) {
+      await Town.askMoney(due);
       var M = Story.MONEY, money = '\n\n통장 잔액 ' + Life.won(s.wallet) + '\n들어올 수수료 ' + Life.won(Life.pendingTotal(s)) + ' (5/8)';
       var canCash = Life.canCash(s) && s.wallet + Life.CASH.amount >= due.amount;
       if (due.auto && s.wallet >= due.amount) {
@@ -7505,24 +8373,30 @@ var Game = (function () {
     // 4/20 알람이 고장 난 아침
     if (s.alarm && !s.seen.alarmSaid) { s.seen.alarmSaid = true; (s.alarm === 'cat' ? Story.BEAT.alarmCat(s) : Story.BEAT.alarmLate(s)).forEach(function (l) { lines.push(l); }); }
     if (lines.length) await say(lines);
+    // 늦은 아침: 동기에게 첫 고객님을 붙잡아 달라고 부탁할 수 있다
+    await Town.morningBeats();
     if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
     // 화면이 다 어두워진 뒤에 집을 나선다 (그 사이 창밖이 밤으로 바뀌어 보이지 않게)
     await Engine.fade(1, .4);
     Life.leaveHome(s);
-    await Work.commute(false);
+    if (Life.day(s).first && !s.seen.train) { s.seen.train = true; await Town.train(); }
+    else await Work.commute(false);
+    if (s.covered) { Work.office(); await Engine.fade(0, .3); await say(Story.PEOPLE.helped.cover); }
     await Work.workDay();
     if (Life.day(s).group) await (Life.day(s).overtime ? Work.overtime() : Work.groupEvening());
     if (Life.day(s).final) { await evaluation(); await Arc.rainHome(); return; }
     if (Life.day(s).dinner) await Arc.dinnerOffer();
     await Work.leaveOffice();
     await Work.commute(true);
-    var choice = await Work.walkHome();
+    // 역에서 내리면 동네 지도: 집으로, 슈퍼에 들렀다가, 옆집에 먼저 들렀다가
+    var choice = await Town.map('station');
     if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
     H.stormGuide = false;
     Life.arriveHome(s);
     checkpoint();
+    if (choice === 'grandma') await Town.visit(true);
     await arriveHome();
     await evening();
   }
@@ -7549,9 +8423,13 @@ var Game = (function () {
   }
   // 집에서 다시 나가 슈퍼에 다녀온다 (저녁이든 주말이든 몇 번이든. 한 번에 40분, 밤 11시 넘으면 심야 할증)
   async function goShop() {
-    var s = G.s, mode = H.mode, r = Life.act(s, 'shop');
-    if (!r.ok) return;
-    await Engine.fade(1, .35);
+    var s = G.s, mode = H.mode;
+    await Engine.fade(1, .3);
+    var dest = await Town.map('home');
+    if (dest === 'grandma') { await Town.visit(false); return; }
+    if (dest !== 'shop') { Home.enter('living', { mode: mode, heroX: 110 }); if (!s.hidden) G.cat.room = 'living'; await Engine.fade(0, .3); return; }
+    var r = Life.act(s, 'shop');
+    if (!r.ok) { Home.enter('living', { mode: mode, heroX: 110 }); await Engine.fade(0, .3); return; }
     var dark = s.phase === 'evening' || s.minute >= 1080;
     Work.street({ hot: null, walk: null, dusk: !dark && s.minute >= 900, night: dark });
     G.hero.x = 560; G.hero.dir = -1;
@@ -7590,7 +8468,7 @@ var Game = (function () {
     await UI.phoneWait({ from: '늘봄손해보험', time: '오후 5:30', preview: '[수수료 지급명세서] 4월 실적', body: '[수수료 지급명세서] 4월 실적\n\n' + body }, '5:30');
     if (!p.out.length) return;
     // 미뤄 둔 돈을 갚는다
-    var outs = p.out.map(function (o) { return (o.key === 'loan' ? '카드 현금서비스 상환 (이자 ' + Life.won(o.interest) + ' 포함)' : Story.BILL[o.bill].name + (o.late ? ' (연체료 포함)' : '')) + '  −' + Life.won(o.amount); }).join('\n');
+    var outs = p.out.map(function (o) { return (o.key === 'loan' ? '카드 현금서비스 상환 (이자 ' + Life.won(o.interest) + ' 포함)' : o.key === 'borrow' ? '사장님께 빌린 돈' : Story.BILL[o.bill].name + (o.late ? ' (연체료 포함)' : '')) + '  −' + Life.won(o.amount); }).join('\n');
     await UI.phoneWait({ from: '은행', time: '오후 5:42', preview: '미뤄 둔 돈을 보냈다', body: outs + '\n\n통장 잔액 ' + Life.won(p.wallet) }, '5:42');
   }
 
@@ -7761,10 +8639,10 @@ var Dev = (function () {
 
   // ---------- 플레이 방식 ----------
   var STYLES = {
-    balance: { label: '일도 고양이도', door: true, play: true, photos: true, prep: true, cook: 'weekend', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' },
+    balance: { label: '일도 고양이도', people: true, door: true, play: true, photos: true, prep: true, cook: 'weekend', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' },
     work: { label: '일만', door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
     greedy: { label: '실적만 (무리하게 권함)', greedy: true, door: false, play: false, photos: false, prep: true, cook: 'never', knead: 'push', dinner: true, overtime: true, lastPrep: 'work' },
-    cat: { label: '고양이만', door: true, play: true, photos: true, prep: false, cook: 'always', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' }
+    cat: { label: '고양이만', people: true, door: true, play: true, photos: true, prep: false, cook: 'always', knead: 'pet', dinner: false, overtime: false, lastPrep: 'lid' }
   };
 
   var flip = 0;
@@ -7799,9 +8677,23 @@ var Dev = (function () {
     if (!c.done) Life.sign(p, c);
     return Life.finish(s, p, c);
   }
-  function bills(s) {
+  // 동네 사람: people이면 먼저 말 걸고, 사과하고, 택배를 전하고, 점심을 같이 먹고, 현관 비밀번호를 알려 드리고, 늦는 날 부탁한다
+  function ask(s, kind) { var h = Life.helpers(s, kind); return h.length ? Life.ask(s, kind, h[0]).ok : false; }
+  function evening(s, st) {
+    if (!st.people) return;
+    if (s.day === 2) Life.reach(s, 'bow');
+    if (s.day === 4) Life.reach(s, 'parcel');
+    if (s.day >= Life.DISH_FROM && !s.seen.dish && Life.person(s, 'grandma').bond >= 2 && Life.day(s).kind === 'work') { s.seen.dish = true; s.dish = 'full'; }
+    if (s.dish === 'full' && !Life.eatBlock(s)) { Life.eat(s, 'banchan'); s.dish = 'empty'; }
+    else if (s.dish === 'empty' && Life.reach(s, 'dish').ok) s.dish = null;
+    if (Life.person(s, 'grandma').owe && !Life.reachBlock(s, 'visit')) Life.reach(s, 'visit');
+    Life.giveKey(s);
+    if (s.day === 15 && Life.person(s, 'mate').met && st.label === STYLES.balance.label) { var next = Life.clientsOn(Life.nextWorkDay(s.day), s)[0]; if (next) { s.gave = next; Life.reach(s, 'refer'); } }
+  }
+  function bills(s, st) {
     var due = Life.billDue(s);
     while (due) {
+      if (st && st.people && s.wallet < due.amount) ask(s, 'money');
       if (s.wallet >= due.amount) Life.payBill(s, due.id, 'pay');
       else if (due.defer) Life.payBill(s, due.id, 'defer');
       else if (Life.canCash(s)) Life.payBill(s, due.id, 'cash');
@@ -7846,15 +8738,22 @@ var Dev = (function () {
     Life.dress(s);
     if (s.fur && s.owned.roller) Life.roll(s);
     Life.feed(s, 'dry'); Life.scoop(s); Life.water(s);
+    if (st.people && s.alarm === 'late') ask(s, 'cover');
     Life.leaveHome(s);
+    if (st.people && Life.day(s).first) Life.reach(s, 'talk');
     Life.clientsOn(s.day, s).forEach(function (id) { consult(s, id, st); });
+    if (st.people && Life.LUNCH_DAYS.indexOf(s.day) >= 0 && s.wallet >= 120000) Life.reach(s, 'lunch');
     var d = Life.day(s);
-    if (d.group) { var go = d.overtime ? st.overtime : st.play === false; Life.decideGroup(s, go); if (go) consult(s, 'c6', st); }
-    if (d.dinner) Life.dinner(s, st.dinner);
+    if (d.group) {
+      var go = d.overtime ? st.overtime : st.play === false; Life.decideGroup(s, go);
+      if (go && st.people) { ask(s, 'work'); ask(s, 'cat'); }
+      if (go) consult(s, 'c6', st);
+    }
+    if (d.dinner) { Life.dinner(s, st.dinner); if (st.dinner && st.people) ask(s, 'cat'); }
     Life.leaveOffice(s);
     shopping(s).forEach(function (k) { Life.buy(s, k); });
     Life.arriveHome(s);
-    bills(s);
+    bills(s, st);
   }
   function weekend(s, st) {
     care(s, st);
@@ -7883,9 +8782,14 @@ var Dev = (function () {
       weekday(s, st);
       if (d.final) { Life.evaluate(s); break; }
       if (s.day === day) break; // 퇴근해서 집에 막 들어온 저녁
-      home(s, st); sleep(s, st);
+      evening(s, st); home(s, st); sleep(s, st);
     }
     s.seen.eveClock = true; s.seen.mealIntro = true; s.seen.packed = true;
+    if (s.day > 1) { s.seen.train = true; s.seen.mapHint = true; }
+    if (s.day > 2) s.seen.knock = true;
+    if (s.day > 4) s.seen.parcel = true;
+    if (s.day > 15) s.seen.refer = true;
+    Life.LUNCH_DAYS.forEach(function (d) { if (d < s.day || (d === s.day && when === 'evening')) s.seen['lunch' + d] = true; });
     s.seen.memoDay = s.day - 1;
     return s;
   }

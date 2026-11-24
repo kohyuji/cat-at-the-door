@@ -27,7 +27,7 @@ var Story = (function () {
 
   var PRODUCT = { dental: '치아보험', car: '운전자보험', travel: '여행자보험', home: '화재보험', pet: '펫보험', group: '단체상해보험' };
   var SHORT = { dental: '치아', car: '운전자', travel: '여행자', home: '화재', pet: '펫', group: '단체', price: '요금표', contract: '계약서' };
-  var ITEM = { dry: '건사료', wet: '습식 사료', sand: '모래', toy: '쥐돌이', tower: '캣타워', feeder: '자동 급식기', roller: '돌돌이', coffee: '커피', lunch: '도시락', charcoal: '번개탄', robot: '로봇청소기', autoToy: '자동 장난감' };
+  var ITEM = { dry: '건사료', wet: '습식 사료', sand: '모래', toy: '쥐돌이', tower: '캣타워', feeder: '자동 급식기', roller: '돌돌이', coffee: '커피', lunch: '도시락', lunchOut: '지안과 점심', charcoal: '번개탄', robot: '로봇청소기', autoToy: '자동 장난감' };
   // 슈퍼 진열대에 마우스를 대거나 한 번 누르면 뜨는 설명. 줄마다 한 문장.
   var ITEM_DESC = {
     dry: ['고양이 밥 여덟 끼. 아침저녁 두 번씩 나흘.'],
@@ -486,7 +486,133 @@ var Story = (function () {
     }
   };
 
-  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님' };
+  // ---------- 동네 사람들 (v7) ----------
+  // 옆집 할머니, 입사 동기 지안, 슈퍼 사장님. 처음 마주치는 순간, 내미는 손, 청하는 손.
+  var PEOPLE = {
+    // 4/14 밤: 고양이 우는 소리 때문에 옆집에서 문을 두드린다
+    knock: {
+      sound: '똑똑똑. 누가 현관문을 두드린다.',
+      open: function (s) { return [
+        { who: 'grandma', text: '옆집 사는 사람이야. 밤마다 애기 우는 소리가 나서 와 봤어.' },
+        { who: 'grandma', text: '고양이지? 새벽에 그렇게 울면 나도 잠을 못 자.' }
+      ]; },
+      bow: function (s) { return [
+        { who: 'me', text: '죄송합니다. 데려온 지 얼마 안 돼서, 밤에 혼자 있으면 우나 봐요. 조심할게요.' },
+        { who: 'grandma', text: '...그래. 우리 영감 살아 있을 때는 개를 키웠어. 짐승은 혼자 두면 울어.' },
+        { who: 'grandma', text: '방문 닫지 말고 같이 자 봐. 그럼 덜 울 거야.' }
+      ]; },
+      shut: function (s) { return [{ who: 'narr', text: '고개만 까딱하고 문을 닫았다. 복도에서 혀 차는 소리가 들리다가 멀어졌다.' }]; }
+    },
+    // 4/16 저녁: 옆집 택배가 우리 집 앞에 와 있다
+    parcel: {
+      notice: [{ who: 'narr', text: '문 앞에 놓여 있던 택배 상자를 들고 들어왔다. 받는 사람이 302호다.' }, { who: 'me', text: '옆집 거네. 잘못 왔나 보다.' }],
+      met: function (s) { return [
+        { who: 'grandma', text: '아이고, 그게 거기 가 있었어? 고마워.' },
+        { who: 'grandma', text: '들어와서 귤이라도 하나 먹고 가.' },
+        { who: 'me', text: '괜찮아요. ' + j(s.cat, 'subject') + ' 기다려서요.' },
+        { who: 'grandma', text: '그래, 어서 가 봐.' }
+      ]; },
+      // 4/14에 문을 닫아 버린 뒤 처음 마주 선 자리
+      stranger: function (s) { return [
+        { who: 'grandma', text: '아이고, 그게 거기 가 있었어? ...고마워.' },
+        { who: 'me', text: '저번엔 죄송했어요. 데려온 지 얼마 안 돼서 저도 정신이 없었어요.' },
+        { who: 'grandma', text: '...그래. 처음엔 다 그래. 방문 열어 두고 같이 자 봐. 그럼 덜 울 거야.' }
+      ]; },
+      // 그날 밤 못 갖다드리면 다음 날 아침
+      left: [{ who: 'me', text: '어젯밤에 못 갖다드린 택배... 나가는 길에 302호 문 앞에 두고 가자.' }]
+    },
+    // 가까워진 뒤 어느 저녁: 문고리에 걸린 반찬통
+    dish: {
+      notice: [{ who: 'narr', text: '현관문 손잡이에 봉지가 걸려 있다. 반찬통에 멸치볶음이 꽉 차 있다.' }, { who: 'narr', text: '쪽지가 붙어 있다. 「많이 했어. 먹어. -302호」' }],
+      eat: [{ who: 'narr', text: '밥에 멸치볶음을 얹어 먹었다. 누가 해 준 반찬은 오랜만이다.' }],
+      back: function (s) { return [
+        { who: 'grandma', text: '벌써 다 먹었어? 입에 맞았나 보네.' },
+        { who: 'me', text: '네, 정말 맛있었어요. 잘 먹었습니다.' }
+      ]; }
+    },
+    // 찾아가 인사드리기 (몇 번째인지에 따라)
+    visit: [
+      function (s) { return [{ who: 'grandma', text: '왔어? 고양이는 잘 있고?' }, { who: 'me', text: '네, 요즘은 밤에 덜 울어요.' }, { who: 'grandma', text: '다행이네. 짐승도 사람도 혼자 있으면 울어.' }]; },
+      function (s) { return [{ who: 'grandma', text: '오늘은 일찍 왔네. 회사는 다닐 만해?' }, { who: 'me', text: '아직 정신없어요.' }, { who: 'grandma', text: '처음엔 다 그래. 밥이나 잘 챙겨 먹어.' }]; },
+      function (s) { return [{ who: 'grandma', text: '시골 동생이 사과를 한 상자 보냈어. 두 개 가져가.' }, { who: 'narr', text: '손에 사과 두 알이 들렸다.' }]; },
+      function (s) { return [{ who: 'grandma', text: '요새 얼굴이 좀 폈네.' }, { who: 'me', text: '그래요?' }, { who: 'grandma', text: '그래. 처음 봤을 땐 다 죽어 가는 얼굴이더니.' }]; }
+    ],
+    repaid: { grandma: { who: 'grandma', text: '고양이 밥? 그거 일도 아니야. 또 늦으면 말해.' } },
+    // 현관 비밀번호: 가까운 사이가 되면 할머니가 먼저 꺼내는 말 (우리 집 현관은 도어락)
+    key: {
+      offer: [{ who: 'grandma', text: '혼자 살면서 고양이 키우기 쉽지 않지. 늦는 날 있으면 말해.' }, { who: 'grandma', text: '현관 비밀번호 알려 주면 밥은 내가 줄게.' }],
+      give: function (s) { return [{ who: 'me', text: '그럼... 부탁드려도 될까요?' }, { who: 'narr', text: '쪽지에 현관 비밀번호를 적어 드렸다.' }, { who: 'grandma', text: '그럼. 이웃 좋다는 게 뭐야.' }]; },
+      keep: function (s) { return [{ who: 'me', text: '괜찮아요. 제가 어떻게든 해 볼게요.' }, { who: 'grandma', text: '그래. 마음 바뀌면 말해.' }]; }
+    },
+    // 늦게 들어온 밤, 할머니가 다녀간 흔적
+    fedNote: function (s) { return [
+      { who: 'narr', text: '밥그릇은 깨끗이 비어 있고, 물그릇에는 물이 찰랑인다. 신발장 위에 쪽지가 있다.' },
+      { who: 'narr', text: '「밥 주고 물 갈아 놨어. 잘 먹더라. -302호」' }
+    ]; },
+    // 4/13 첫 출근 지하철: 옆에 선 사람이 내 소매의 털을 본다
+    train: {
+      see: [{ who: 'narr', text: '옆에 선 사람이 자꾸 내 소매를 본다. 손에 든 서류 봉투에 우리 회사 로고가 찍혀 있다.' }],
+      talk: function (s) { return [
+        { who: 'me', text: '저... 혹시 새솔지점 가세요?' },
+        { who: 'mate', text: '네! 오늘 첫 출근이에요. 혹시 같이 위촉되신...?' },
+        { who: 'me', text: '네. ' + s.me + (Life.hasBatchim(s.me) ? '이에요.' : '예요.') },
+        { who: 'mate', text: '저는 윤지안이에요. 근데 소매에 털이... 고양이 키우세요? 저희 본가에도 있어요.' },
+        { who: 'me', text: '아... 네. 며칠 됐어요.' }
+      ]; },
+      brush: [{ who: 'narr', text: '소매를 털고 창밖을 봤다. 털은 반쯤 남았다.' }]
+    },
+    // 점심: 지안의 문자 (4/15, 4/21, 5/4)
+    lunch: {
+      text: function (s, first) { return { from: '지안', time: '오후 12:05', preview: '점심 같이 먹을래요?', body: (first ? '같은 날 위촉된 지안이에요! ' : '') + '점심 같이 먹을래요? 지점 앞 김치찌개집이요.', yes: '좋아요, 갈게요', no: '오늘은 도시락 먹을게요' }; },
+      after: [
+        [{ who: 'narr', text: '김치찌개 9,000원. 지안도 이번 달 목표가 열두 건이라고 했다. 나랑 같았다.' }],
+        [{ who: 'narr', text: '지안은 어제 고객님 앞에서 약관을 거꾸로 펼쳤다고 했다. 둘이서 한참 웃었다.' }],
+        [{ who: 'narr', text: '지안이 본가 고양이 사진을 보여 줬다. 나도 휴대폰을 꺼냈다.' }]
+      ]
+    },
+    // 4/27 저녁: 실적이 모자란 지안
+    refer: {
+      text: { from: '지안', time: '오후 8:10', preview: '이번 달 기준 실적까지 두 건 남았는데...', body: '이번 달 기준 실적까지 두 건 남았는데 다음 주가 마감이라 ㅠㅠ\n혹시 소개해 줄 만한 분 있으면 부탁해요...', yes: '내일 만나는 고객님 한 분 소개해 줄게요', no: '저도 빠듯해서요. 힘내요!' },
+      thanks: { from: '지안', time: '오후 8:16', preview: '진짜요? 고마워요...', body: '진짜요? 고마워요. 이건 꼭 갚을게요.' },
+      gave: [{ who: 'narr', text: '내일 오기로 한 고객님 한 분을 지안에게 넘겼다. 내 실적 그래프에는 스티커가 하나 덜 붙는다.' }]
+    },
+    // 부탁할 때 쓰는 글. first: 처음 써 둔 글, again: 보내기를 누르는 동안 지웠다가 남은 글, final: 보낸 글
+    ask: {
+      cat: {
+        grandma: function (s) { return { first: '할머니, 오늘 늦을 것 같은데 고양이 밥 좀', again: '할머니, 오늘', final: '할머니, 오늘 제가 늦을 것 같은데... 혹시 ' + j(s.cat, 'bare') + ' 저녁밥 좀 부탁드려도 될까요?' }; },
+        reply: { grandma: '그래, 걱정 말고 일 봐. 사료는 늘 두던 데 있지?' }
+      },
+      cover: {
+        mate: function (s) { return { first: '지안 씨, 저 오늘 조금 늦을 것 같아요', again: '지안 씨, 저', final: '지안 씨, 저 오늘 조금 늦을 것 같아요. 첫 고객님 오시면 조금만 기다려 주시라고 전해 줄 수 있어요?' }; },
+        reply: { mate: '네네, 걱정 말고 조심히 와요! 차 한 잔 드리고 있을게요.' }
+      },
+      work: {
+        mate: function (s) { return { first: '지안 씨, 혹시 오늘 야근 같이', again: '지안 씨, 혹시', final: '지안 씨, 혹시 오늘 청약서 정리만 같이 해 줄 수 있어요? 집에 고양이가 혼자 있어서요.' }; },
+        reply: { mate: '그래요, 저도 어차피 남아요. 서류는 제가 정리할게요. 상담만 해요!' }
+      },
+      money: {
+        boss: function (s) { return { first: '사장님, 죄송한데 혹시', again: '사장님', final: '사장님, 정말 죄송한데요... 8일에 수수료 들어오면 바로 갚을게요. 10만 원만 빌려주실 수 있을까요?' }; },
+        reply: { boss: '그래, 지금 보내 줄게. 갚는 건 들어오면 해.' }
+      }
+    },
+    // 부탁할 일이 생겼을 때 하는 혼잣말
+    think: {
+      cat: function (s) { return [{ who: 'me', text: '오늘은 늦게 들어간다. ' + j(s.cat, 'bare') + ' 저녁은...' }]; },
+      catNobody: function (s) { return [{ who: 'narr', text: '연락처를 끝까지 내려 봐도, 부탁할 사람이 없다.' }]; },
+      cover: [{ who: 'me', text: '이대로면 첫 고객님이 기다리다 가실 텐데...' }],
+      work: [{ who: 'me', text: '혼자 다 하면 10시는 넘겠다...' }],
+      money: function (s, name, amount) { return [{ who: 'me', text: name + ' ' + Life.won(amount) + '... 모자란다.' }, { who: 'me', text: '사장님께 부탁드려 볼까.' }]; }
+    },
+    // 부탁을 들어준 뒤
+    helped: {
+      cover: [{ who: 'narr', text: '지점에 도착하니 첫 고객님이 지안과 차를 마시며 기다리고 계셨다.' }],
+      work: [{ who: 'narr', text: '지안이 청약서를 정리해 준 덕분에 한 시간 일찍 나왔다.' }],
+      money: [{ who: 'narr', text: '사장님이 10만 원을 보내 주셨다. 5/8에 갚아야 할 돈이 하나 늘었다.' }]
+    },
+    // 동네 지도에서 처음 길을 고를 때
+    mapHint: [{ who: 'me', text: '어디로 갈까.' }]
+  };
+  var NAMES = { me: null, lead: '지점장님', peer: '선배', cat: null, owner: '슈퍼 사장님', grandma: '옆집 할머니', mate: '지안' };
 
   var ENDING = {
     family: { title: '우리 집', body: function (s) { return ['첫 달 기준 실적을 채웠다.', '첫 수수료로 ' + j(s.cat, 'of') + ' 펫보험을 들었다. 계약서 맨 위에 처음으로 우리 집 주소를 적었다.', '천둥 치던 밤도, 서랍 속 아침도 다 지나갔다. 이제 이 집은 우리 집이다.']; } },
@@ -565,6 +691,7 @@ var Story = (function () {
       if (ev.indexOf('stormAlone') >= 0) parts.push('천둥이 무서워서 소파 밑에서 떨었다');
       if (ev.indexOf('catWoke') >= 0) parts.push('사람이 안 일어나길래 얼굴을 눌러 깨웠다');
       if (ev.indexOf('waitedAsleep') >= 0) parts.push('현관에서 기다리다 잠들었다');
+      if (ev.indexOf('helperFed') >= 0) parts.push('옆집 할머니가 와서 밥을 줬다. 손이 따뜻했다');
       if (ev.indexOf('lid') >= 0) parts.push('따뜻한 상자 위에 앉았더니 사람이 상자를 덮고 놀아 줬다');
       if (ev.indexOf('moved') >= 0) parts.push('따뜻한 상자 위에 앉았는데 사람이 나를 내려놓았다');
       if (d.photos) parts.push('사람이 나를 보고 웃으며 휴대폰을 들었다');
@@ -585,7 +712,7 @@ var Story = (function () {
     MARK_NOTE: MARK_NOTE, COVER: COVER, coverName: coverName, TALK: TALK, QUESTIONS: QUESTIONS, EXPLAIN: EXPLAIN, DESIGN: DESIGN, APPLY: APPLY, SIGN: SIGN, CANCEL: CANCEL, CANCEL_SHORT: CANCEL_SHORT, bossTalk: bossTalk, BILL: BILL, billNotice: billNotice, MONEY: MONEY, statement: statement, officeTip: officeTip, goalReached: goalReached, careNote: careNote, careFresh: careFresh,
     CAUSE: CAUSE, LOST: LOST, HEART: HEART, morningNote: morningNote, catLine: catLine, DAY_INTRO: DAY_INTRO,
     assembly: assembly, senior: senior, seniorSmell: seniorSmell, TUTORIAL: TUTORIAL, CONSULT: CONSULT, leaveOffice: leaveOffice, groupOffer: groupOffer,
-    evaluation: evaluation, NAMES: NAMES, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
+    evaluation: evaluation, NAMES: NAMES, PEOPLE: PEOPLE, ENDING: ENDING, endingTitle: endingTitle, endingArc: endingArc, BEAT: BEAT, GRADE_NAME: GRADE_NAME, ENDING_HINT: ENDING_HINT, memory: memory, epilogue: epilogue
   };
 }());
 if (typeof module !== 'undefined' && module.exports) module.exports = Story;

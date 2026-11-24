@@ -143,6 +143,23 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .bubble.out { align-self: flex-end; background: #0a84ff; color: #fff; border-bottom-right-radius: 6px; }
 .ios-replies { display: flex; gap: 8px; padding: 8px 10px 26px; justify-content: center; flex-wrap: wrap; background: #f6f6f8; border-top: 1px solid #e5e5ea; }
 .ios-replies button { background: #fff; color: #007aff; border: 1px solid #c7c7cc; border-radius: 18px; box-shadow: none; padding: 8px 14px; min-height: 0; font-size: 15px; }
+/* 부탁하기: 새 메시지 화면과 길게 눌러 보내기 */
+.ios-ask .ios-nav span:nth-child(2) { color: #000; font-weight: 600; }
+.ios-to { padding: 8px 16px; color: #8e8e93; font-size: 14px; border-bottom: 1px solid #e5e5ea; }
+.ios-empty { flex: 1; }
+.ios-compose { display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px 26px; border-top: 1px solid #e5e5ea; background: #f6f6f8; }
+.ios-field { flex: 1; min-height: 34px; padding: 7px 12px; border: 1px solid #c7c7cc; border-radius: 18px; background: #fff; font-size: 15px; line-height: 1.35; white-space: pre-wrap; word-break: keep-all; }
+.ios-send { --p: 0%; position: relative; width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; border: 0; box-shadow: none; background: conic-gradient(#0a84ff var(--p), #b9c7d8 var(--p)); touch-action: none; }
+.ios-send i { position: absolute; inset: 4px; border-radius: 50%; background: #0a84ff; }
+.ios-send i::after { content: ''; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-left: 3px solid #fff; border-top: 3px solid #fff; transform: translate(-50%, -25%) rotate(45deg); }
+.ios-send:disabled i { background: #b9c7d8; }
+.ios-send.ready { animation: sendPulse 1.4s ease-in-out infinite; }
+@keyframes sendPulse { 50% { box-shadow: 0 0 0 5px rgba(10,132,255,.25); } }
+.bubble.typing { display: flex; gap: 4px; padding: 11px 14px; }
+.bubble.typing i { width: 7px; height: 7px; border-radius: 50%; background: #8e8e93; animation: typingDot 1s infinite; }
+.bubble.typing i:nth-child(2) { animation-delay: .15s; }
+.bubble.typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes typingDot { 50% { opacity: .3; } }
 .ios-homebar { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 110px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.75); z-index: 4; cursor: pointer; }
 .ios-homebar::before { content: ''; position: absolute; inset: -14px -30px; }
 

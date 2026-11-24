@@ -17,6 +17,8 @@ var Game = (function () {
     if (w === 'lead') return { name: Story.NAMES.lead, face: { variant: 'lead' } };
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
     if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
+    // 그림이 아직 없는 사람: 얼굴 칸은 회색 상자와 이름표
+    if (w === 'grandma' || w === 'mate' || w === 'boss') return { name: Story.NAMES[w === 'boss' ? 'owner' : w], face: { blank: Story.NAMES[w === 'boss' ? 'owner' : w] } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -25,6 +27,14 @@ var Game = (function () {
     var c = canvas.getContext('2d');
     c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
     c.fillStyle = '#e9dfcc'; c.fillRect(0, 0, canvas.width, canvas.height);
+    if (f.blank) {
+      var w = canvas.width, h = canvas.height, k = Math.max(1, Math.round(w / 96));
+      c.fillStyle = '#55505a'; c.fillRect(k * 4, k * 4, w - k * 8, h - k * 8);
+      c.fillStyle = '#c9c6c0'; c.fillRect(k * 6, k * 6, w - k * 12, h - k * 12);
+      c.fillStyle = '#55505a'; c.font = Math.round(11 * k) + "px 'NeoDunggeunmo', monospace"; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(f.blank, w / 2, h / 2);
+      return;
+    }
     View.portrait(c, G, f.variant, 0, 0, canvas.width, canvas.height, f.hue);
   }
 
@@ -364,8 +374,9 @@ var Game = (function () {
     }
     if (s.minute >= Life.T.bedtime) guideBed();
     while (true) {
-      var r = await Home.wait(['bed', 'shop']);
+      var r = await Home.wait(['bed', 'shop', 'town']);
       if (r === 'shop') { await goShop(); continue; }
+      if (r === 'town') { await Town.run(); continue; }
       G.guide = null;
       var slept = await night();
       if (slept) return;
@@ -392,6 +403,7 @@ var Game = (function () {
     if (storm) { UI.sfx('thunder'); G.flash = .9; }
     await Engine.walkTo(180);
     await moneyBeats();
+    await Town.homeBeats();
     var lonely = s.today.hearts.filter(function (h) { return h.key === 'alone' || h.key === 'aloneTower'; })[0];
     if (!s.hidden) await say([narr(Story.catLine(lonely && lonely.key === 'aloneTower' ? 'towerWatch' : 'waited', s.cat))]);
     if (lonely && lonely.key === 'alone' && !s.locked) await say([me(Story.catLine('alone', s.cat))]);
@@ -432,6 +444,7 @@ var Game = (function () {
     }
     var due = Life.billDue(s);
     while (due) {
+      await Town.askMoney(due);
       var M = Story.MONEY, money = '\n\n통장 잔액 ' + Life.won(s.wallet) + '\n들어올 수수료 ' + Life.won(Life.pendingTotal(s)) + ' (5/8)';
       var canCash = Life.canCash(s) && s.wallet + Life.CASH.amount >= due.amount;
       if (due.auto && s.wallet >= due.amount) {
@@ -609,24 +622,30 @@ var Game = (function () {
     // 4/20 알람이 고장 난 아침
     if (s.alarm && !s.seen.alarmSaid) { s.seen.alarmSaid = true; (s.alarm === 'cat' ? Story.BEAT.alarmCat(s) : Story.BEAT.alarmLate(s)).forEach(function (l) { lines.push(l); }); }
     if (lines.length) await say(lines);
+    // 늦은 아침: 동기에게 첫 고객님을 붙잡아 달라고 부탁할 수 있다
+    await Town.morningBeats();
     if (s.hidden) { await say([me(Story.catLine('hidden', s.cat))]); H.searching = true; }
     await Home.wait(['leave']);
     H.searching = false;
     // 화면이 다 어두워진 뒤에 집을 나선다 (그 사이 창밖이 밤으로 바뀌어 보이지 않게)
     await Engine.fade(1, .4);
     Life.leaveHome(s);
-    await Work.commute(false);
+    if (Life.day(s).first && !s.seen.train) { s.seen.train = true; await Town.train(); }
+    else await Work.commute(false);
+    if (s.covered) { Work.office(); await Engine.fade(0, .3); await say(Story.PEOPLE.helped.cover); }
     await Work.workDay();
     if (Life.day(s).group) await (Life.day(s).overtime ? Work.overtime() : Work.groupEvening());
     if (Life.day(s).final) { await evaluation(); await Arc.rainHome(); return; }
     if (Life.day(s).dinner) await Arc.dinnerOffer();
     await Work.leaveOffice();
     await Work.commute(true);
-    var choice = await Work.walkHome();
+    // 역에서 내리면 동네 지도: 집으로, 슈퍼에 들렀다가, 옆집에 먼저 들렀다가
+    var choice = await Town.map('station');
     if (choice === 'shop') { await Work.shop(); await Engine.fade(1, .3); }
     H.stormGuide = false;
     Life.arriveHome(s);
     checkpoint();
+    if (choice === 'grandma') await Town.visit(true);
     await arriveHome();
     await evening();
   }
@@ -653,9 +672,13 @@ var Game = (function () {
   }
   // 집에서 다시 나가 슈퍼에 다녀온다 (저녁이든 주말이든 몇 번이든. 한 번에 40분, 밤 11시 넘으면 심야 할증)
   async function goShop() {
-    var s = G.s, mode = H.mode, r = Life.act(s, 'shop');
-    if (!r.ok) return;
-    await Engine.fade(1, .35);
+    var s = G.s, mode = H.mode;
+    await Engine.fade(1, .3);
+    var dest = await Town.map('home');
+    if (dest === 'grandma') { await Town.visit(false); return; }
+    if (dest !== 'shop') { Home.enter('living', { mode: mode, heroX: 110 }); if (!s.hidden) G.cat.room = 'living'; await Engine.fade(0, .3); return; }
+    var r = Life.act(s, 'shop');
+    if (!r.ok) { Home.enter('living', { mode: mode, heroX: 110 }); await Engine.fade(0, .3); return; }
     var dark = s.phase === 'evening' || s.minute >= 1080;
     Work.street({ hot: null, walk: null, dusk: !dark && s.minute >= 900, night: dark });
     G.hero.x = 560; G.hero.dir = -1;
@@ -694,7 +717,7 @@ var Game = (function () {
     await UI.phoneWait({ from: '늘봄손해보험', time: '오후 5:30', preview: '[수수료 지급명세서] 4월 실적', body: '[수수료 지급명세서] 4월 실적\n\n' + body }, '5:30');
     if (!p.out.length) return;
     // 미뤄 둔 돈을 갚는다
-    var outs = p.out.map(function (o) { return (o.key === 'loan' ? '카드 현금서비스 상환 (이자 ' + Life.won(o.interest) + ' 포함)' : Story.BILL[o.bill].name + (o.late ? ' (연체료 포함)' : '')) + '  −' + Life.won(o.amount); }).join('\n');
+    var outs = p.out.map(function (o) { return (o.key === 'loan' ? '카드 현금서비스 상환 (이자 ' + Life.won(o.interest) + ' 포함)' : o.key === 'borrow' ? '사장님께 빌린 돈' : Story.BILL[o.bill].name + (o.late ? ' (연체료 포함)' : '')) + '  −' + Life.won(o.amount); }).join('\n');
     await UI.phoneWait({ from: '은행', time: '오후 5:42', preview: '미뤄 둔 돈을 보냈다', body: outs + '\n\n통장 잔액 ' + Life.won(p.wallet) }, '5:42');
   }
 

@@ -5,13 +5,14 @@
 var Life = (function () {
   'use strict';
 
-  var VERSION = 3;
+  var VERSION = 4;
   var GOAL = 12;           // 위촉 첫 달 기준 실적(계약 건수). 채우면 정착지원금이 나온다.
   var MAX = 5;             // 체력, 하트 칸 수
   var START_WALLET = 380000;
   var SETTLE = 500000;     // 신입 정착지원금 (기준 실적을 채운 달에만)
   var TAX = 0.033;         // 사업소득세 3.3% (설계사는 회사 직원이 아니라 위촉된 개인사업자)
   var CASH = { amount: 300000, rate: 0.18 }; // 현금서비스(단기카드대출): 연 18%로 계산
+  var WORK_HELP = 60;      // 동기가 야근을 나눠 하면 한 시간 일찍 나온다
 
   // 시계 (분)
   var T = {
@@ -20,7 +21,7 @@ var Life = (function () {
     accident: 10, search: 3,
     workEnd: 1080, homeArrive: 1140, shopStop: 20, groupLeave: 1260, groupHome: 1290,
     bedtime: 1380, weekendStart: 600, weekendLunch: 900,
-    play: 40, rest: 60, cook: 40, quick: 5, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
+    play: 40, rest: 60, cook: 40, quick: 5, banchan: 10, photo: 1, prep: 60, sweep: 30, mop: 30, job: 240, curtain: 10, lunch: 15, shopTrip: 40
   };
   var NIGHT_RATE = 1.5;     // 밤 11시가 넘으면 슈퍼 물건값이 심야 할증으로 오른다
 
@@ -127,7 +128,7 @@ var Life = (function () {
   }
   function day(s) { return DAYS[s.day] || DAYS[DAYS.length - 1]; }
   function clientsOn(d, s) {
-    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening && (!s || comes(s, id)); });
+    return CLIENT_IDS.filter(function (id) { return CLIENTS[id].day === d && !CLIENTS[id].evening && (!s || (comes(s, id) && s.gave !== id)); });
   }
   function nextWorkDay(d) {
     for (var i = d + 1; i < DAYS.length; i++) if (DAYS[i].kind === 'work') return i;
@@ -165,7 +166,10 @@ var Life = (function () {
       photos: [], myMeal: null, cooked: false, out: null, alarm: null, lid: null,
       // v7: 들어올 수수료, 요금, 현금서비스, 소개, 손에 익은 일
       pending: [], bills: { phone: 'none', rent: 'none', loan: 'none' }, loan: null, refs: {}, paid: null,
-      habit: { care: 0, explain: 0 }
+      habit: { care: 0, explain: 0 },
+      // v7 동네: 손을 내민 사람들. helped(오늘 고양이 밥을 챙겨 준 사람), covered(늦은 아침 첫 고객을 붙잡아 준 사람),
+      // workHelp(야근을 나눠 한 사람), borrowed(빌린 돈), gave(동기에게 넘긴 고객)
+      people: freshPeople(), dish: null, helped: null, covered: null, workHelp: null, borrowed: null, gave: null
     };
     s.today = freshToday(s);
     return s;
@@ -346,6 +350,8 @@ var Life = (function () {
     s.today.earned.push({ key: 'job', amount: JOB.pay });
     heart(s, -1, 'jobAlone');
     event(s, 'job');
+    // 일손을 도운 날: 사장님과 한 칸 가까워진다 (빌린 돈이 있으면 그 고마움도 갚는다)
+    var b = person(s, 'boss'); if (b && b.last !== s.day) { b.met = true; b.bond = clamp(b.bond + 1, 0, 3); b.owe = null; b.last = s.day; event(s, 'reach', { who: 'boss', kind: 'job' }); }
     return { ok: true, minutes: minutes, pay: JOB.pay };
   }
 
@@ -386,7 +392,7 @@ var Life = (function () {
     var busy = c.mark === 'clock', first = id === firstClient(s) && !c.evening;
     var base = { id: id, product: c.product, budget: c.budget, needs: c.needs.slice(), mark: c.mark, ask: c.ask || null, evening: !!c.evening };
     // 늦으면 첫 고객은 기다리다 가 버린다
-    if (first && s.late > 0) { base.leaves = true; base.mood = 0; base.reasons = [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }]; return base; }
+    if (first && s.late > 0 && !s.covered) { base.leaves = true; base.mood = 0; base.reasons = [{ key: busy ? 'busyLeft' : 'lateLeft', delta: 0 }]; return base; }
     // 첫 주는 선배가 옆에 앉아 청약서와 서명을 함께 봐 준다
     var tutorial = week(s.day) === 1 && !c.evening;
     if (s.smell) { mood -= s.smell; reasons.push({ key: s.smell > 1 ? 'stink' : 'smell', delta: -s.smell }); }
@@ -589,7 +595,7 @@ var Life = (function () {
     var next = nextWorkDay(s.day);
     s.cards = next < 0 ? [] : clientsOn(next, s);
     s.phase = 'commute';
-    s.minute = wentGroup ? T.groupLeave : T.workEnd;
+    s.minute = wentGroup ? T.groupLeave - (s.workHelp ? WORK_HELP : 0) : T.workEnd;
     return { earned: s.today.earned.slice(), cards: s.cards.slice() };
   }
 
@@ -634,6 +640,7 @@ var Life = (function () {
     s.wallet += net;
     var out = [];
     if (s.loan) { var back = s.loan.amount + loanInterest(s); s.wallet -= back; out.push({ key: 'loan', amount: back, interest: loanInterest(s) }); }
+    if (s.borrowed && !s.borrowed.back) { s.wallet -= s.borrowed.amount; s.borrowed.back = true; out.push({ key: 'borrow', who: s.borrowed.who, amount: s.borrowed.amount }); }
     BILLS.forEach(function (b) {
       if (s.bills[b.id] === 'deferred') { s.wallet -= b.amount; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: b.amount }); }
       else if (s.bills[b.id] === 'late') { var a = b.amount + (b.lateFee || 0); s.wallet -= a; s.bills[b.id] = 'paid'; out.push({ key: 'bill', bill: b.id, amount: a, late: true }); }
@@ -703,7 +710,7 @@ var Life = (function () {
   function arriveHome(s) {
     var wentGroup = outLate(s);
     s.phase = 'evening';
-    s.minute = wentGroup ? T.groupHome : T.homeArrive + (s.shopped ? T.shopStop : 0);
+    s.minute = wentGroup ? T.groupHome - (s.workHelp ? WORK_HELP : 0) : T.homeArrive + (s.shopped ? T.shopStop : 0);
     s.meal = 'pm';
     if (s.bowl !== 'empty' && !s.fed.pm) s.bowl = 'empty';
     s.rested = 0;
@@ -713,11 +720,13 @@ var Life = (function () {
     s.hidden = !!day(s).storm; // 천둥 치는 밤에는 숨는다
     // 아침에 못 찾고 나간 날: 서랍 속에 하루 종일 갇혀 있었다. 찾아 줄 때까지 안 나온다.
     if (s.locked) { heart(s, -1, 'locked'); s.hidden = true; }
-    // 늦게 온 밤: 현관에서 기다리다 잠들었다
-    if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
+    // 늦게 온 밤: 부탁한 사람이 밥을 챙겨 주지 않았으면 현관에서 기다리다 잠들었다
+    var visit = wentGroup ? helperVisit(s) : null;
+    if (visit) event(s, 'helperFed', { who: visit.who });
+    else if (day(s).overtime && s.group === 'go') { heart(s, -1, 'waitedAsleep'); event(s, 'waitedAsleep'); }
     else if (s.out === 'dinner') heart(s, -1, 'lateHome');
     var gone = cancels(s);
-    return { locked: !!s.locked, late: wentGroup, cancels: gone, bill: billDue(s) };
+    return { locked: !!s.locked, late: wentGroup, cancels: gone, bill: billDue(s), helper: visit };
   }
   // 주말 오후 3시 전에 침대에 누우면 낮잠이다. 오후 3시에 깨고, 고양이 저녁 끼니가 시작된다.
   function napFirst(s) { return s.phase === 'weekend' && s.meal === 'am'; }
@@ -790,6 +799,8 @@ var Life = (function () {
     s.water = false; s.played = false; s.petted = false; s.rested = 0;
     s.coffee = false; s.lateCoffee = false; s.shopped = false; s.late = 0; s.left = 0; s.smell = 0; s.locked = false; s.trips = 0;
     s.wearing = 'hoodie'; s.myMeal = null; s.cooked = false; s.out = null;
+    s.helped = null; s.covered = null; s.workHelp = null;
+    drift(s);
     s.hidden = !!d.hide;
     // 일은 하나씩 늘어난다: 첫 출근 날은 털(돌돌이)만, 사흘째(4/14)부터 화장실과 바닥 털, 4/16부터 먼지
     if (s.day >= CLEAN_FROM) s.litter.poop++;
@@ -865,9 +876,10 @@ var Life = (function () {
   function eatBlock(s) { if (!homeTime(s)) return 'notHome'; if (s.myMeal) return 'ate'; if (s.phase === 'weekend' && s.meal === 'am') return 'early'; return null; }
   function eat(s, kind) {
     var why = eatBlock(s); if (why) return { ok: false, why: why };
-    kind = kind === 'cook' ? 'cook' : 'quick';
-    s.myMeal = kind; if (kind === 'cook') s.cooked = true;
-    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : T.quick) };
+    // banchan: 옆집 할머니가 준 반찬. 차려 먹은 것만큼 든든하다.
+    kind = kind === 'cook' || kind === 'banchan' ? kind : 'quick';
+    s.myMeal = kind; if (kind !== 'quick') s.cooked = true;
+    var r = { ok: true, kind: kind, minutes: spend(s, kind === 'cook' ? T.cook : kind === 'banchan' ? T.banchan : T.quick) };
     if (kind === 'cook' && s.phase === 'weekend' && !s.hidden) { heart(s, +1, 'mealTogether'); r.together = true; }
     return r;
   }
@@ -901,6 +913,98 @@ var Life = (function () {
     if (pick === 'work') { s.cards.forEach(function (id) { s.prepared[id] = true; }); heart(s, -1, 'moved'); event(s, 'moved'); }
     else { s.played = true; heart(s, +1, 'lid'); event(s, 'lid'); }
     return s.lid;
+  }
+
+  // ---------- 사람 ----------
+  // 손을 내민 만큼 가까워진다. bond 0 모르는 사이, 1 아는 사이, 2 가까운 사이, 3 기댈 수 있는 사이.
+  // 부탁(청하는 손)을 하면 빚이 남고, 다시 손을 내밀면 갚아진다. 갚지 않고 이레가 지나면 한 칸 멀어진다.
+  var PEOPLE = {
+    grandma: { start: 0 }, // 옆집 할머니: 현관 비밀번호를 알려 드리면 늦는 날 고양이 밥을 챙겨 준다
+    mate: { start: 0 },    // 입사 동기: 늦은 아침 첫 고객을 붙잡아 주고, 야근을 나눠 한다
+    boss: { start: 1 }     // 슈퍼 사장님: 프롤로그의 비 오는 밤에 나를 봤다. 급할 때 돈을 빌려준다
+  };
+  // 내미는 손: [누구에게, 가까워지는 칸, 드는 시간(분), 드는 돈(원)]
+  var REACH = {
+    bow: ['grandma', 1, 10], parcel: ['grandma', 1, 10], dish: ['grandma', 1, 10], visit: ['grandma', 1, 20],
+    talk: ['mate', 1, 0], lunch: ['mate', 1, 0, 9000], refer: ['mate', 2, 0],
+    job: ['boss', 1, 0], greet: ['boss', 1, 0]
+  };
+  // 청하는 손: 누가 들어줄 수 있는지 (가까운 정도, 현관 비밀번호)
+  var ASK = {
+    cat: { who: ['grandma'], min: 2, key: true },   // 늦는 날 고양이 밥과 물
+    cover: { who: ['mate'], min: 1 },               // 늦은 아침, 첫 고객님께 양해를 구하고 붙잡아 준다
+    work: { who: ['mate'], min: 2 },                // 야근을 나눠 해서 일찍 들어간다
+    money: { who: ['boss'], min: 2, amount: 100000 } // 5/8까지 10만 원
+  };
+  var DRIFT_DAYS = 7, VISIT_GAP = 3;
+  var LUNCH_DAYS = [3, 9, 22]; // 동기가 점심을 같이 먹자고 하는 날 (4/15, 4/21, 5/4)
+  var DISH_FROM = 8;           // 할머니와 가까워졌으면 이날(4/20)부터 문고리에 반찬통이 걸린다
+  function freshPeople() {
+    var p = {};
+    Object.keys(PEOPLE).forEach(function (k) { p[k] = { bond: PEOPLE[k].start, owe: null, key: false, last: -9, asked: 0, met: PEOPLE[k].start > 0 }; });
+    return p;
+  }
+  function person(s, who) { return s.people && s.people[who]; }
+  // 동네 지도의 창문: 0 꺼짐(모르는 사이), 1 희미함, 2 환함
+  function windowOf(s, who) { var p = person(s, who); return !p || !p.met ? 0 : p.bond >= 2 ? 2 : 1; }
+  function litWindows(s) { return Object.keys(PEOPLE).filter(function (k) { return windowOf(s, k) > 0; }).length; }
+  function reachBlock(s, kind) {
+    var r = REACH[kind]; if (!r) return 'unknown';
+    var p = person(s, r[0]);
+    if (kind === 'visit' && (!p.met || s.day - p.last < VISIT_GAP)) return p.met ? 'soon' : 'stranger';
+    if (r[3] && s.wallet < r[3]) return 'money';
+    if (p.last === s.day && kind !== 'refer') return 'today';
+    return null;
+  }
+  function reach(s, kind) {
+    var why = reachBlock(s, kind); if (why) return { ok: false, why: why };
+    var r = REACH[kind], who = r[0], p = person(s, who), first = !p.met;
+    p.met = true; p.bond = clamp(p.bond + r[1], 0, 3); p.last = s.day;
+    var repaid = !!p.owe; p.owe = null;
+    var minutes = r[2] ? spend(s, r[2]) : 0;
+    if (r[3]) { s.wallet -= r[3]; s.today.spent.push({ item: kind === 'lunch' ? 'lunchOut' : kind, amount: r[3] }); }
+    event(s, 'reach', { who: who, kind: kind });
+    return { ok: true, who: who, bond: p.bond, first: first, repaid: repaid, minutes: minutes };
+  }
+  // 현관 비밀번호(key): 가까운 사이가 된 할머니에게만 알려 드린다
+  function giveKey(s) {
+    var p = person(s, 'grandma');
+    if (p.bond < 2 || p.key) return { ok: false };
+    p.key = true; event(s, 'key');
+    return { ok: true };
+  }
+  // 지금 이 부탁을 들어줄 수 있는 사람들 (빚을 진 사람에게는 다시 부탁하지 못한다)
+  function helpers(s, kind) {
+    var a = ASK[kind]; if (!a) return [];
+    return a.who.filter(function (who) { var p = person(s, who); return p && p.met && p.bond >= a.min && !p.owe && (!a.key || p.key); });
+  }
+  function ask(s, kind, who) {
+    if (helpers(s, kind).indexOf(who) < 0) return { ok: false };
+    var p = person(s, who), r = { ok: true, who: who };
+    p.owe = { day: s.day, kind: kind }; p.asked++;
+    if (kind === 'cat') s.helped = who;
+    if (kind === 'cover') s.covered = who;
+    if (kind === 'work') s.workHelp = who;
+    if (kind === 'money') { var n = ASK.money.amount; s.wallet += n; s.borrowed = { who: who, amount: n, day: s.day }; s.today.earned.push({ key: 'borrow', who: who, amount: n }); r.amount = n; }
+    event(s, 'ask', { who: who, kind: kind });
+    return r;
+  }
+  // 아침마다: 부탁하고 이레 넘게 갚지 않은 사이는 한 칸 멀어진다
+  function drift(s) {
+    var out = [];
+    Object.keys(s.people || {}).forEach(function (who) {
+      var p = s.people[who];
+      if (p.owe && s.day - p.owe.day >= DRIFT_DAYS) { p.bond = Math.max(1, p.bond - 1); p.owe = null; out.push(who); event(s, 'drift', { who: who }); }
+    });
+    return out;
+  }
+  // 늦게 들어온 밤, 부탁받은 사람이 저녁 시간에 밥과 물을 챙겨 두었다
+  function helperVisit(s) {
+    if (!s.helped || s.fed.pm) return null;
+    var kind = s.food.dry > 0 ? 'dry' : s.food.wet > 0 ? 'wet' : null;
+    if (kind) { s.food[kind]--; s.fed.pm = true; s.bowl = 'ate'; s.bowlKind = kind; }
+    s.water = true;
+    return { who: s.helped, fed: !!kind };
   }
 
   // ---------- 저장 ----------
@@ -953,6 +1057,8 @@ var Life = (function () {
     photo: photo, photoCap: photoCap, photosToday: photosToday, eat: eat, eatBlock: eatBlock, kneadNight: kneadNight, knead: knead, dinner: dinner, lastPrep: lastPrep,
     ALARM_HEARTS: ALARM_HEARTS, KNEAD_NIGHTS: KNEAD_NIGHTS, PHOTO_GOOD: PHOTO_GOOD, PHOTO_FAMILY: PHOTO_FAMILY,
     habitReady: habitReady, HABIT_DAYS: HABIT_DAYS,
+    PEOPLE: PEOPLE, REACH: REACH, ASK: ASK, LUNCH_DAYS: LUNCH_DAYS, DISH_FROM: DISH_FROM, DRIFT_DAYS: DRIFT_DAYS, VISIT_GAP: VISIT_GAP, WORK_HELP: WORK_HELP,
+    person: person, windowOf: windowOf, litWindows: litWindows, reach: reach, reachBlock: reachBlock, giveKey: giveKey, helpers: helpers, ask: ask, drift: drift, helperVisit: helperVisit,
     save: save, load: load,
     hasBatchim: hasBatchim, nameForm: nameForm, josa: josa, clock: clock, won: won, cleanName: cleanName
   };

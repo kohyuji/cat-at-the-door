@@ -162,7 +162,12 @@ var Engine = (function () {
       var dx = h.tx - h.x, step = h.speed * dt;
       if (Math.abs(dx) <= step) { h.x = h.tx; h.tx = null; h.walking = false; var a = arrivals; arrivals = []; a.forEach(function (f) { f.resolve(); }); }
       else { h.x += Math.sign(dx) * step; h.dir = dx > 0 ? 1 : -1; h.walking = true; }
-    } else h.walking = false;
+    } else {
+      h.walking = false;
+      // 걷던 중에 장면이 바뀌어 목적지가 지워졌으면(tx = null), 기다리던 걸음은 그 자리에서 끝난 것으로 한다.
+      // (그대로 두면 그 걸음을 기다리던 행동이 영영 끝나지 않아 아무것도 누를 수 없게 된다)
+      if (arrivals.length) { var a0 = arrivals; arrivals = []; a0.forEach(function (f) { f.resolve(); }); }
+    }
     var k = G.cat;
     if (k.tx !== null && k.tx !== undefined) {
       var cx = k.tx - k.x, cs = (k.run ? 250 : k.speed) * dt;

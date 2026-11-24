@@ -579,7 +579,7 @@ var Work = (function () {
             .then(function () { return res.goal ? goalParty() : null; });
         });
       }, Promise.resolve());
-    }).then(function () { return results; });
+    }).then(function () { return Town.lunch(); }).then(function () { return results; });
   }
   // 4/16 저녁 8시 단체보험
   function groupEvening() {
@@ -628,7 +628,8 @@ var Work = (function () {
       var stay = pick === 'stay';
       Life.decideGroup(s, stay);
       if (!stay) return Engine.fade(1, .3);
-      return Engine.fade(1, .4).then(function () { Wk.dark = true; office({ night: true }); workClock(1200); return consult(id); })
+      // 남기로 했으면: 동기에게 서류를 나눠 달라고, 옆집에 고양이 밥을 부탁할 수 있다
+      return Town.lateAsks(true).then(function () { return Engine.fade(1, .4); }).then(function () { Wk.dark = true; office({ night: true }); workClock(1200); return consult(id); })
         .then(function (res) {
           if (!res.signed) return Engine.fade(1, .3);
           return Engine.fade(1, .3).then(function () { office({ night: true }); return Engine.fade(0, .3); }).then(function () { return sticker(1); })
@@ -1006,6 +1007,6 @@ var Work = (function () {
     }).then(function () { var r = Wk.shop.pro ? Wk.shop.picked : Wk.shop.bought.slice(); return r; });
   }
 
-  return { Wk: Wk, commute: commute, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
+  return { Wk: Wk, commute: commute, drawTrain: drawTrain, office: office, assembly: assembly, consult: consult, sticker: sticker, workDay: workDay, groupEvening: groupEvening,
     leaveOffice: leaveOffice, overtime: overtime, walkHome: walkHome, street: street, shop: shop, drawOffice: drawOffice, drawShopItem: drawShopItem, SHOPDOOR: SHOPDOOR, EXIT: EXIT };
 }());
