@@ -11,7 +11,7 @@ var One = (function () {
   function H() { return Home.H; }
   function name(s) { return Story.contactName('one', s || S()); }
   function done(s, k) { return !!(s.one && s.one[k] !== undefined && s.one[k] !== null); }
-  var SH = { v: 'customerA', hue: 100 }; // 그림이 오기 전까지는 4/16 상담 고객 그림을 빌려 쓴다
+  var SH = { v: 'one' }; // v7-people 0~1번 줄
 
   // ---------- 4/16 상담이 끝나고 ----------
   // 고객님이 휴대폰 화면의 고양이를 보여 준다. 내 휴대폰(사진이 있으면)을 내밀거나, 고객님께 고개를 끄덕인다.
@@ -33,9 +33,10 @@ var One = (function () {
       place: 'office',
       draw: function (c) {
         Work.drawOffice(c);
-        View.shadow(c, one.x, 337, 18); View.person(c, G, one.x, 336, SH.v, one.dir, G.t, 'stand', 2.35, SH.hue);
-        Town.ph(c, one.x + 16, 232, 20, 28, '폰', '#b9c2c9');
-        if (can && pick !== 'nod') Town.ph(c, phone.x, phone.y, phone.w, phone.h, '폰', pick === 'show' ? '#e8d6b8' : '#c9c6c0');
+        View.shadow(c, one.x, 337, 18); View.person(c, G, one.x, 336, SH.v, one.dir, G.t, 'showPhone', 2.35);
+        // 성훈 씨가 내민 휴대폰(배를 드러낸 회색 고양이)과 내 휴대폰(우리 고양이)
+        if (!PixelArt.v7prop(c, 9, one.x + 30, 262, 20, 28)) Town.ph(c, one.x + 20, 234, 20, 28, '폰', '#b9c2c9');
+        if (can && pick !== 'nod' && !PixelArt.v7prop(c, 8, phone.x + phone.w / 2, phone.y + phone.h, phone.w, phone.h)) Town.ph(c, phone.x, phone.y, phone.w, phone.h, '폰', pick === 'show' ? '#e8d6b8' : '#c9c6c0');
       },
       hot: spots
     });
@@ -147,10 +148,10 @@ var One = (function () {
   async function park() {
     var s = S(), a = Life.appt(s, 'park'), D = Life.DATE;
     s.minute = Math.max(s.minute + 10, a.at);
-    var one = { x: 330, y: 342, v: SH.v, hue: SH.hue, dir: -1 };
+    var one = { x: 330, y: 342, v: SH.v, dir: -1 };
     Town.stage({
-      title: '동네 공원', place: 'park', heroX: 250, dir: 1, bg: '#d7e3cc', floorFill: '#b9c7a6',
-      boxes: [{ x: 0, y: 60, w: 640, h: 150, label: '나무 (연두색 잎)', fill: '#bcd2a9' }, { x: 470, y: 214, w: 110, h: 108, label: '편의점', fill: '#c9c6c0' }, { x: 120, y: 290, w: 150, h: 24, label: '벤치', fill: '#bdb7ad' }],
+      title: '동네 공원', place: 'park', img: 'bgPark', heroX: 250, dir: 1, bg: '#d7e3cc', floorFill: '#b9c7a6',
+      boxes: [{ x: 0, y: 60, w: 640, h: 150, label: '나무 (연두색 잎)', fill: '#bcd2a9', bg: true }, { x: 470, y: 214, w: 110, h: 108, label: '편의점', fill: '#c9c6c0', bg: true }, { x: 120, y: 290, w: 150, h: 24, label: '벤치', fill: '#bdb7ad', bg: true }],
       people: [one]
     });
     await Engine.fade(0, .35);
@@ -172,17 +173,19 @@ var One = (function () {
   async function date() {
     var s = S(), a = Life.appt(s, 'date'), D = Life.DATE;
     s.minute = Math.max(s.minute + 20, a.at);
-    var one = { x: 330, y: 342, v: SH.v, hue: SH.hue, dir: -1 };
-    Town.stage({ title: '역 앞 영화관', place: 'cinema', heroX: 250, dir: 1, bg: '#d4d0dc', boxes: [{ x: 60, y: 60, w: 520, h: 120, label: '상영관 입구', fill: '#bfb9c9' }], people: [one] });
+    var one = { x: 330, y: 342, v: SH.v, dir: -1 };
+    Town.stage({ title: '역 앞 영화관', place: 'cinema', img: 'bgCinema', heroX: 250, dir: 1, bg: '#d4d0dc', boxes: [{ x: 60, y: 60, w: 520, h: 120, label: '상영관 입구', fill: '#bfb9c9', bg: true }], people: [one] });
     await Engine.fade(0, .35);
     await say(O().movie(s));
     s.minute += 120;
     await Engine.fade(1, .35);
     // 카페: 커피 두 잔과 케이크는 내가 산다
     var pick = null;
-    var cafe = Town.stage({ title: '영화관 옆 카페', place: 'cinema', heroX: 230, dir: 1, pose: 'sit', heroY: 330, bg: '#e2d6c6',
-      boxes: [{ x: 250, y: 270, w: 90, h: 22, label: '테이블', fill: '#cdb79a' }, { x: 470, y: 120, w: 140, h: 120, label: '파스타 집 간판', fill: '#d9c9b0', hide: true }, { x: 20, y: 120, w: 110, h: 200, label: '역 쪽 문', fill: '#c9c6c0', hide: true }],
-      people: [{ x: 370, y: 330, v: SH.v, hue: SH.hue, dir: -1, pose: 'sit' }] });
+    var cafe = Town.stage({ title: '영화관 옆 카페', place: 'cinema', img: 'bgCafe', heroX: 230, dir: 1, pose: 'sit', heroY: 330, bg: '#e2d6c6',
+      boxes: [{ x: 250, y: 270, w: 90, h: 22, label: '테이블', fill: '#cdb79a', bg: true }, { x: 470, y: 120, w: 140, h: 120, label: '파스타 집 간판', fill: '#d9c9b0', hide: true, bg: true }, { x: 20, y: 120, w: 110, h: 200, label: '역 쪽 문', fill: '#c9c6c0', hide: true, bg: true }],
+      // 원목 의자 두 개(28×30을 두 배로): 왼쪽은 오른쪽을 보고, 오른쪽은 뒤집는다. 배경 다음, 앉은 사람 앞에 그린다.
+      draw: function (c) { var ch = PixelArt.v7img('v7Chair'); if (!ch || !PixelArt.v7img('bgCafe')) return; c.save(); c.imageSmoothingEnabled = false; c.drawImage(ch, 186, 276, 56, 60); c.translate(374 + 56, 276); c.scale(-1, 1); c.drawImage(ch, 0, 0, 56, 60); c.restore(); },
+      people: [{ x: 370, y: 330, v: SH.v, dir: -1, pose: 'sit' }] });
     await Engine.fade(0, .35);
     var r = Life.payAny(s, 'dateCoffee', D.coffee); UI.sfx(r.card ? 'tap' : 'spend');
     await say(O().cafe(s));
@@ -213,11 +216,18 @@ var One = (function () {
   // ---------- 5/5(화, 어린이날) 고양이를 보러 온다 ----------
   // 고양이는 소파 밑으로 숨는다. 성훈 씨 옆에 가만히 앉아 기다리면 나온다. 손을 뻗으면 더 깊이 들어간다.
   var VS = { on: false, x: 70, sat: false, t0: 0, peek: false, out: false, late: false, hint: false };
-  var SOFA = { x: 380, y: 168, w: 162, h: 96 }, FLOOR = { x: 300, y: 270, w: 90, h: 70 };
+  var SOFA = { x: 380, y: 168, w: 162, h: 96 }, FLOOR = { x: 300, y: 270, w: 90, h: 70 }, GAP = { x: 430, y: 246, w: 100, h: 18 };
   function drawVisitor(c) {
     if (!VS.on || H().room !== 'living') return;
     View.shadow(c, VS.x, 335, 18);
-    View.person(c, G, VS.x, 334, SH.v, VS.dir || 1, G.t, VS.sit ? 'sit' : 'stand', 2.35, SH.hue);
+    // 바닥에 책상다리로 앉고, 고양이가 나오면 손끝을 낮게 내민다
+    View.person(c, G, VS.x, 334, SH.v, VS.dir || 1, G.t, VS.sit ? (VS.out ? 'reach' : 'floorSit') : VS.moving ? 'walk' : 'stand', 2.35);
+    // 소파 밑에 납작 엎드린 고양이: 소파 아래 틈으로 보이는 만큼만 (나오기 전에는 꼬리 쪽만, 그다음에는 얼굴까지)
+    if (VS.hidden && PixelArt.v7img('v7Cats')) {
+      c.save(); c.beginPath(); c.rect(VS.peek ? GAP.x : GAP.x + 46, GAP.y, VS.peek ? GAP.w : GAP.w - 46, GAP.h); c.clip();
+      View.v7cat(c, G, 3, VS.peek ? 470 : 500, GAP.y + GAP.h, -1, 1.6);
+      c.restore(); return;
+    }
     if (VS.hidden) {
       // 소파 밑으로 보이는 꼬리 (나오기 전에는 코끝이)
       View.r(c, 470, 258, 16, 3, '#d89553'); View.r(c, 484, 255, 4, 4, '#d89553');
@@ -242,7 +252,10 @@ var One = (function () {
     Arc.stopMoment();
     VS.on = false; VS.sat = false; VS.peek = false; VS.out = false; VS.hidden = false; VS.hint = false; VS.sit = false;
     h.closeUp = null;
-    if (h.room !== 'living') { await Engine.fade(1, .25); Home.enter('living', { mode: h.mode, heroX: 200 }); await Engine.fade(0, .25); }
+    // 화면이 어두워진 사이 빗자루와 대걸레를 치워 둔다 (손님이 앉을 자리라서. 돌아가면 다시 꺼낸다)
+    await Engine.fade(1, .25); h.tidy = s.day;
+    if (h.room !== 'living') Home.enter('living', { mode: h.mode, heroX: 200 });
+    await Engine.fade(0, .25);
     UI.sfx('knock');
     await say(V2.bell);
     await Engine.walkTo(140); G.hero.dir = -1;
@@ -259,7 +272,7 @@ var One = (function () {
     k.visible = false; VS.hidden = true;
     h.entranceOpen = 0; UI.sfx('door');
     // 성훈 씨는 소파 앞 바닥에 앉는다
-    await new Promise(function (resolve) { var x0 = VS.x, t0 = G.t; (function step() { var q = Math.min(1, (G.t - t0) / .9); VS.x = x0 + (400 - x0) * q; if (q < 1) setTimeout(step, 16); else resolve(); }()); });
+    await new Promise(function (resolve) { var x0 = VS.x, t0 = G.t; VS.moving = true; (function step() { var q = Math.min(1, (G.t - t0) / .9); VS.x = x0 + (400 - x0) * q; if (q < 1) setTimeout(step, 16); else { VS.moving = false; resolve(); } }()); });
     VS.sit = true; VS.dir = 1;
     await say(V2.wait(s));
     h.arcHot = visitSpots;
@@ -274,7 +287,7 @@ var One = (function () {
     VS.out = true; VS.hidden = false; h.arcHot = function () { return []; };
     k.visible = true; k.room = 'living'; k.x = 470; k.y = 300; k.pose = 'walk'; k.dir = -1;
     await Engine.catTo(430, { y: 300 });
-    k.pose = 'sit';
+    k.pose = 'sniff'; // 목을 길게 빼고 손끝 냄새를 맡는다 (v7-cats 4번 칸)
     Life.visitOk(s);
     await say(V2.sniff(s));
     Town.heartPuff(VS.x, 200);
@@ -284,11 +297,12 @@ var One = (function () {
     s.minute += 90;
     // 돌아간다
     G.hero.pose = null; VS.sit = false; VS.dir = -1;
-    await new Promise(function (resolve) { var x0 = VS.x, t0 = G.t; (function step() { var q = Math.min(1, (G.t - t0) / 1); VS.x = x0 + (70 - x0) * q; if (q < 1) setTimeout(step, 16); else resolve(); }()); });
+    await new Promise(function (resolve) { var x0 = VS.x, t0 = G.t; VS.moving = true; (function step() { var q = Math.min(1, (G.t - t0) / 1); VS.x = x0 + (70 - x0) * q; if (q < 1) setTimeout(step, 16); else { VS.moving = false; resolve(); } }()); });
     h.entranceOpen = 1; UI.sfx('door'); await Engine.sleep(.3);
     VS.on = false; h.entranceOpen = 0; UI.sfx('door');
     k.pose = 'walk'; await Engine.catTo(150, { y: 336 }); k.pose = 'sit'; k.dir = -1;
     await say(V2.bye(s));
+    await Engine.fade(1, .25); h.tidy = null; await Engine.fade(0, .25);
     h.arcHot = null; h.catAct = null;
   }
 

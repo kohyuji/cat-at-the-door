@@ -7,12 +7,31 @@ var PixelArt = (function () {
   var images={}, peopleScale=.28, catScale=.205;
   var assetSources={r4People:'assets/r4-people-pixel.png',r4Cats:'assets/r4-cats-pixel.png',r4Props:'assets/r4-props-pixel.png',r4Actions:'assets/r4-actions-pixel.png',r4Seated:'assets/r4-seated-pixel.png',r4Portraits:'assets/r4-portraits-approved-cords.png',r4PortraitBase:'assets/r4-portraits-approved.png',r4Scenes:'assets/r4-scenes-urban.png',r4Outdoors:'assets/r4-outdoors-urban.png',
     // codex-v5(R5·R6)에서 가져온 그림: 주인공 움직임, 청소, 돌봄, 지하철 사람들과 tools/build-extras.py로 자른 조각들
-    r6People:'assets/r6-people-v2.png',r6Clean:'assets/r6-clean-v2.png',r6Care:'assets/r6-care-v2.png',r6Wet:'assets/r6-wet-v2.png',r6Transit:'assets/r6-transit-v2.png',r6Extras:'assets/r6-extras.png'};
+    // v7부터 주인공 그림은 같은 그림을 두 배 촘촘하게 다시 뽑은 96×128 칸(점 하나가 화면 2점)이다
+    r6People:'assets/v7/r6-people-v2-2px.png',r6Clean:'assets/v7/r6-clean-v2-2px.png',r6Care:'assets/v7/r6-care-v2-2px.png',r6Wet:'assets/v7/r6-wet-v2-2px.png',r6Transit:'assets/v7/r6-transit-v2-2px.png',r6Extras:'assets/r6-extras.png',
+    // v7: 새 사람, 주인공 추가 동작, 고양이 새 자세, 소품, 대화 얼굴, 장소 배경 (docs/v7-art)
+    v7People:'assets/v7/v7-people-2px.png',v7Hero:'assets/v7/v7-hero-2px.png',v7Seated:'assets/v7/v7-seated.png',v7Portraits:'assets/v7/v7-portraits.png',v7Portraits2:'assets/v7/v7-portraits-2.png',v7Cats:'assets/v7/v7-cats.png',v7Props:'assets/v7/v7-props.png',v7Receipt:'assets/v7/v7-vet-receipt.png',v7DoorOpen:'assets/v7/v7-corridor-door-open.png',v7Chair:'assets/v7/v7-cafe-chair.png',
+    bgMap:'assets/v7/v7-bg-map.png',bgCorridor:'assets/v7/v7-bg-corridor.png',bgVetWait:'assets/v7/v7-bg-vet-wait.png',bgVetExam:'assets/v7/v7-bg-vet-exam.png',bgHoesik:'assets/v7/v7-bg-hoesik.png',bgKaraoke:'assets/v7/v7-bg-karaoke.png',bgAtm:'assets/v7/v7-bg-atm.png',bgLobby:'assets/v7/v7-bg-wedding-lobby.png',bgBanquet:'assets/v7/v7-bg-wedding-banquet.png',bgPark:'assets/v7/v7-bg-park.png',bgCinema:'assets/v7/v7-bg-cinema.png',bgCafe:'assets/v7/v7-bg-cafe.png',bgDesk:'assets/v7/v7-bg-desk.png'};
   // r6-extras.png 안의 조각 자리 (tools/build-extras.py 결과)
   var EXTRA={"bedDoorClosed":[0,0,118,253],"livDoorClosed":[120,0,118,253],"bedDoorOpen":[240,0,145,290],"livDoorOpen":[387,0,145,290],"bedEmpty":[534,0,304,160],"bedAwake":[840,0,818,486],"bedAsleep":[0,488,818,486],"umbrella":[820,488,261,254],"charcoal":[1083,488,191,252],"catPortrait":[0,976,677,936],"broom":[679,976,267,347],"mop":[948,976,293,349],"robot":[1243,976,281,237],"autoToy":[0,1914,287,281],"autoToyWorn":[289,1914,438,223]};
-  // 48×64 칸 그림. 발끝(24,62)을 기준점으로 그린다.
-  var NATIVE={people:['r6People',8],clean:['r6Clean',4],care:['r6Care',4],wet:['r6Wet',4],transit:['r6Transit',2]};
-  function native(c,kind,index,x,y,unit,flip){var n=NATIVE[kind],im=n&&images[n[0]];if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(im,index%n[1]*48,Math.floor(index/n[1])*64,48,64,-24*unit,-62*unit,48*unit,64*unit);c.restore();return true;}
+  // 사람 칸 그림. unit은 예전 48×64 칸 기준의 배율(화면 4점)이고, 칸 크기는 파일 너비에서 읽는다.
+  // 96×128 칸이면 점 하나가 화면 2점이 된다. 발끝(칸 너비의 1/2, 높이의 62/64)을 기준점으로 그린다.
+  var NATIVE={people:['r6People',8],clean:['r6Clean',4],care:['r6Care',4],wet:['r6Wet',4],transit:['r6Transit',2],v7people:['v7People',8],v7hero:['v7Hero',8]};
+  function nativeCell(kind){var n=NATIVE[kind],im=n&&images[n[0]];if(!ready(im))return null;var cw=(im.naturalWidth||im.width)/n[1];return {im:im,cols:n[1],cw:cw,ch:cw*4/3};}
+  function native(c,kind,index,x,y,unit,flip){var k=nativeCell(kind);if(!k)return false;var d=unit*48/k.cw,sx=index%k.cols*k.cw,sy=Math.floor(index/k.cols)*k.ch;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(k.im,sx,sy,k.cw,k.ch,-k.cw/2*d,-k.ch*62/64*d,k.cw*d,k.ch*d);c.restore();return true;}
+  // 칸의 일부만 다시 그린다(물건을 안은 손을 물건 위에 덮을 때). part는 96×128 칸 기준 [x,y,w,h].
+  function nativePart(c,kind,index,part,x,y,unit,flip){var k=nativeCell(kind);if(!k)return false;var d=unit*48/k.cw,f=k.cw/96,sx=index%k.cols*k.cw,sy=Math.floor(index/k.cols)*k.ch;c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));if(flip)c.scale(-1,1);c.drawImage(k.im,sx+part[0]*f,sy+part[1]*f,part[2]*f,part[3]*f,(part[0]*f-k.cw/2)*d,(part[1]*f-k.ch*62/64)*d,part[2]*f*d,part[3]*f*d);c.restore();return true;}
+  // v7 소품·고양이·얼굴 칸 (assets/v7, 칸 안 그림의 자리)
+  var V7PROPS=[[8,45,176,166],[200,45,176,166],[392,45,176,166],[584,50,176,155],[776,54,176,147],[968,66,176,124],[1160,65,176,125],[1352,46,176,163],[33,264,126,240],[225,264,126,240],[392,346,176,76],[584,340,176,88],[776,336,176,96],[968,343,176,81],[1160,354,176,60],[1352,321,176,125],[8,591,176,98],[200,585,176,109],[392,579,176,121],[584,592,176,95]];
+  var V7CATS=[[8,102,176,119],[200,112,176,109],[394,83,172,138],[584,129,176,92],[776,102,176,119],[968,104,176,117],[1160,112,176,109]];
+  // 소품 i를 바닥 가운데 (x,y)에 너비 w로 (높이는 그림 비율대로). h를 주면 그 상자에 맞춘다.
+  function v7prop(c,i,x,y,w,h,flip){var a=V7PROPS[i],im=images.v7Props;if(!a||!ready(im))return false;return cut(c,im,a,x,y,w,h||w*a[3]/a[2],flip);}
+  // 상자(x,y,w,h) 안에 비율을 지켜 가운데 아래로 맞춘다
+  function v7propIn(c,i,x,y,w,h){var a=V7PROPS[i];if(!a)return false;var k=Math.min(w/a[2],h/a[3]);return v7prop(c,i,x+w/2,y+h,a[2]*k,a[3]*k);}
+  function v7cat(c,i,x,y,w,flip){var a=V7CATS[i],im=images.v7Cats;if(!a||!ready(im))return false;return cut(c,im,a,x,y,w,w*a[3]/a[2],flip);}
+  // 장소 배경(1280×720)을 화면 전체에 그린다
+  function bg(c,key){var im=images[key];if(!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(im,0,0,640,360);c.restore();return true;}
+  function v7img(key){var im=images[key];return ready(im)?im:null;}
   // 조각 하나를 바닥 가운데 기준으로 너비 w에 맞춰 그린다
   function extra(c,key,x,y,w,flip){var a=EXTRA[key],im=images.r6Extras;if(!a||!ready(im))return false;return cut(c,im,a,x,y,w,w*a[3]/a[2],flip);}
   function extraRect(c,key,x,y,w,h){var a=EXTRA[key],im=images.r6Extras;if(!a||!ready(im))return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(im,a[0],a[1],a[2],a[3],Math.round(x),Math.round(y),Math.round(w),Math.round(h));c.restore();return true;}
@@ -101,7 +120,10 @@ var PixelArt = (function () {
     if(pose==='carry')item(c,'briefcase',x+(dir<0?-14:14),y-2,.65);
     return ok;
   }
+  // v7 고양이 새 자세 (v7-cats.png 0번 줄): 지금 고양이와 같은 배율로 그린다
+  var V7CAT_POSE={onSuit:0,sunBelly:1,inBox:2,flat:3,sniff:4,sick:5,strain:6};
   function generatedCat(c,x,y,dir,t,pose){
+    if(V7CAT_POSE[pose]!==undefined&&ready(images.v7Cats)){var va=V7CATS[V7CAT_POSE[pose]];return cut(c,images.v7Cats,va,x,y,va[2]*catScale,va[3]*catScale,dir<0);}
     if(!ready(images.r4Cats))return false;var index=16;
     if(pose==='walk')index=Math.floor((t||0)*12)%8;
     else if(pose==='run')index=24+Math.floor((t||0)*14)%2;
@@ -440,6 +462,6 @@ var PixelArt = (function () {
       box(c,331,299,112,8,C.paper,C.greyDark);item(c,'document',390,296);
     }
   }
-  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,native:native,extra:extra,extraRect:extraRect,umbrella:umbrella,EXTRA:EXTRA,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
+  return {palette:C,person:person,cat:cat,item:item,portrait:portrait,train:train,rain:rain,fallback:fallback,setImages:setImages,assetSources:assetSources,native:native,nativePart:nativePart,v7prop:v7prop,v7propIn:v7propIn,v7cat:v7cat,bg:bg,v7img:v7img,V7PROPS:V7PROPS,V7CATS:V7CATS,extra:extra,extraRect:extraRect,umbrella:umbrella,EXTRA:EXTRA,atlas:{people:peopleRects,cats:catRects,props:propRects,actions:actionRects,seated:seatedRects,items:props}};
 }());
 if(typeof module!=='undefined'&&module.exports)module.exports=PixelArt;

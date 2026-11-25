@@ -169,6 +169,8 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .ios-avatar.sil { background: linear-gradient(#c4c8cf, #9fa4ad); }
 .ios-avatar.sil svg { width: 70%; height: 70%; margin-top: 15%; }
 .ios-avatar.face { background: linear-gradient(#f2c79b, #e0a774); color: #5b3a24; }
+.ios-avatar.pic { overflow: hidden; background: #e9dfcc; }
+.ios-avatar.pic img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .ios-avatar.big { width: 50px; height: 50px; }
 .bubble.photo { padding: 3px; background: none !important; border: 0; }
 .bubble.photo img, .bubble.photo .ph-none { display: block; width: 120px; height: 160px; object-fit: cover; border-radius: 14px; image-rendering: pixelated; }

@@ -80,12 +80,12 @@ var Out = (function () {
     var mateMet = !!(Life.person(s, 'mate') && Life.person(s, 'mate').met);
     s.minute = 19 * 60;
     var people = [{ x: 390, y: 342, v: 'lead', dir: -1 }, { x: 470, y: 342, v: 'peer', dir: -1 }];
-    if (mateMet) people.push({ x: 150, y: 342, box: '지안' });
+    if (mateMet) people.push({ x: 150, y: 342, v: 'mate', dir: 1 });
     var st = Town.stage({
-      title: '지점 앞 고깃집', place: 'hoesik', heroX: 240, dir: 1, bg: '#dccbb8', night: .18,
-      boxes: [{ x: 200, y: 262, w: 300, h: 30, label: '불판과 테이블', fill: '#a8988a' },
-        { x: 500, y: 60, w: 124, h: 84, label: '2차 노래방 간판', fill: '#d9b8d0', hide: true },
-        { x: 16, y: 110, w: 92, h: 212, label: '역 쪽 길', fill: '#c9c6c0', hide: true }],
+      title: '지점 앞 고깃집', place: 'hoesik', img: 'bgHoesik', heroX: 240, dir: 1, bg: '#dccbb8', night: .18,
+      boxes: [{ x: 200, y: 262, w: 300, h: 30, label: '불판과 테이블', fill: '#a8988a', bg: true },
+        { x: 500, y: 60, w: 124, h: 84, label: '2차 노래방 간판', fill: '#d9b8d0', hide: true, bg: true },
+        { x: 16, y: 110, w: 92, h: 212, label: '역 쪽 길', fill: '#c9c6c0', hide: true, bg: true }],
       people: people
     });
     await Engine.fade(0, .35);
@@ -106,8 +106,8 @@ var Out = (function () {
         UI.sfx('spend');
         await Engine.fade(1, .35);
         var kara = [{ x: 400, y: 342, v: 'lead', dir: -1 }, { x: 480, y: 342, v: 'peer', dir: -1 }];
-        if (mateMet) kara.push({ x: 320, y: 342, box: '지안' });
-        Town.stage({ title: '노래방', place: 'hoesik', heroX: 250, dir: 1, bg: '#cbbbd8', night: .3, boxes: [{ x: 40, y: 70, w: 200, h: 120, label: '노래방 화면', fill: '#9fb2c9' }], people: kara });
+        if (mateMet) kara.push({ x: 320, y: 342, v: 'mate', dir: 1 });
+        Town.stage({ title: '노래방', place: 'hoesik', img: 'bgKaraoke', heroX: 250, dir: 1, bg: '#cbbbd8', night: .3, boxes: [{ x: 40, y: 70, w: 200, h: 120, label: '노래방 화면', fill: '#9fb2c9', bg: true }], people: kara });
         await Engine.fade(0, .35);
         await say(HO().go2(s));
         if (mateMet) await say(HO().go2Mate);
@@ -137,7 +137,7 @@ var Out = (function () {
       setTimeout(function () { Phone.drop({ from: '은지', time: Town.phoneTime(30).label, body: W().missed }); }, 1500);
     }
   }
-  var NOTE = { w: 46, h: 22 }, ENV = { x: 300, y: 214, w: 60, h: 40 }, CARD = { x: 300, y: 236, w: 40, h: 24 }, PLATE = { x: 410, y: 266, w: 50, h: 18 };
+  var NOTE = { w: 46, h: 22 }, ENV = { x: 300, y: 214, w: 60, h: 40 }, CARD = { x: 300, y: 233, w: 40, h: 24 }, PLATE = { x: 405, y: 248, w: 50, h: 18 };
   async function hall() {
     var s = S();
     if (s.wearing !== 'suit') { await say(W().dress); await Town.backIn(110); return; }
@@ -146,7 +146,7 @@ var Out = (function () {
     // 역 ATM: 축의금은 현금 봉투다. 통장이 모자라면 카드 현금서비스를 받을 수 있다 (은행 앱의 광고)
     var cashed = false;
     if (s.wallet < 50000 && Life.canCash(s)) {
-      Town.stage({ title: '역 ATM', place: 'hall', heroX: 300, dir: 1, boxes: [{ x: 360, y: 150, w: 90, h: 172, label: 'ATM', fill: '#c9cdd2' }] });
+      Town.stage({ title: '역 ATM', place: 'hall', img: 'bgAtm', heroX: PixelArt.v7img('bgAtm') ? 336 : 300, dir: 1, boxes: [{ x: 360, y: 150, w: 90, h: 172, label: 'ATM', fill: '#c9cdd2', bg: true }] });
       await Engine.fade(0, .3);
       await say(W().atm);
       var before = !!s.loan;
@@ -157,11 +157,16 @@ var Out = (function () {
     }
     var n = s.wallet >= 100000 ? 2 : s.wallet >= 50000 ? 1 : 0;
     var notes = [], env = { n: 0, given: false };
-    for (var i = 0; i < n; i++) notes.push({ x: 180 + i * 56, y: 270, w: NOTE.w, h: NOTE.h, label: '5만 원', fill: '#e6cf8a', i: i });
+    // 그림이 있으면 축의대 위(상판 y 176~201)에 빈 봉투와 꺼낸 5만 원권을 올려 두고, 직원에게 내민다
+    var lob = !!PixelArt.v7img('bgLobby'), EB = lob ? { x: 380, y: 166, w: 54, h: 32 } : ENV;
+    var GIVE = lob ? { x: 482, y: 90, w: 82, h: 82 } : { x: 420, y: 150, w: 180, h: 60 };
+    for (var i = 0; i < n; i++) notes.push(lob ? { x: 442 + i * 48, y: 174, w: 44, h: 24, label: '5만 원', fill: '#e6cf8a', i: i, prop: 11, front: true } : { x: 180 + i * 56, y: 270, w: NOTE.w, h: NOTE.h, label: '5만 원', fill: '#e6cf8a', i: i, prop: 11 });
+    // 축의대 직원은 축의대 뒤에 선다: 발을 상판 아래(y 211)에 두고, 배경의 축의대를 그 위에 다시 덮는다
     var st = Town.stage({
-      title: '봄결웨딩홀 3층 로비', place: 'hall', heroX: 140, dir: 1,
-      boxes: [{ x: 420, y: 150, w: 180, h: 60, label: '축의대', fill: '#e9e2d4' }, { x: 420, y: 210, w: 180, h: 112, label: '', fill: '#d8cfc0' }, { x: ENV.x, y: ENV.y, w: ENV.w, h: ENV.h, label: '봉투', fill: '#f4f1ea', hide: !n }].concat(notes),
-      people: [{ x: 520, y: 150, box: '축의대 직원', fill: '#cfd8d6' }]
+      title: '봄결웨딩홀 3층 로비', place: 'hall', img: 'bgLobby', heroX: 140, dir: 1,
+      boxes: [{ x: 420, y: 150, w: 180, h: 60, label: '축의대', fill: '#e9e2d4', bg: true }, { x: 420, y: 210, w: 180, h: 112, label: '', fill: '#d8cfc0', bg: true }, { x: EB.x, y: EB.y, w: EB.w, h: EB.h, label: '봉투', fill: '#f4f1ea', hide: !n, prop: 10, front: lob }].concat(notes),
+      fg: [[400, 172], [586, 172], [601, 200], [602, 285], [374, 285], [375, 200]],
+      people: [PixelArt.v7img('bgLobby') ? { x: 520, y: 211, v: 'greeter', dir: -1, pose: 'front' } : { x: 520, y: 150, box: '축의대 직원', fill: '#cfd8d6' }]
     });
     await Engine.fade(0, .35);
     await say(W().lobby(n, cashed));
@@ -171,7 +176,7 @@ var Out = (function () {
       var envBox = st.o.boxes[2];
       var spots = function () {
         var list = notes.filter(function (b) { return !b.in; }).map(function (b) { return { id: 'note' + b.i, x: b.x - 4, y: b.y - 4, w: b.w + 8, h: b.h + 8, pulse: true, tap: function () { b.in = true; b.hide = true; env.n++; UI.sfx('page'); envBox.label = '봉투 ' + (env.n * 5) + '만'; return null; } }; });
-        if (env.n) list.push({ id: 'giveEnv', x: 420, y: 150, w: 180, h: 60, pulse: true, tap: function () { env.given = true; return null; } });
+        if (env.n) list.push({ id: 'giveEnv', x: GIVE.x, y: GIVE.y, w: GIVE.w, h: GIVE.h, pulse: true, tap: function () { env.given = true; return null; } });
         return list;
       };
       st.spots = spots();
@@ -187,10 +192,13 @@ var Out = (function () {
     // 식사 자리: 오랜만에 만난 친구들. 명함을 꺼내거나, 접시를 내려다본다.
     await Engine.fade(1, .35);
     var pick = null;
+    // 둥근 식탁 뒤에 둘러앉는다: 사람을 먼저 그리고 배경의 식탁을 그 위에 다시 덮은 뒤, 명함(v7-props 12번)과 접시(13번)를 올린다
+    var art = !!PixelArt.v7img('bgBanquet');
     var tb = Town.stage({
-      title: '피로연장', place: 'hall', heroX: 250, heroY: 330, pose: 'sit', dir: 1,
-      boxes: [{ x: 200, y: 280, w: 280, h: 26, label: '테이블', fill: '#e9e2d4' }, { x: CARD.x, y: CARD.y, w: CARD.w, h: CARD.h, label: '명함', fill: '#f4f1ea' }, { x: PLATE.x, y: PLATE.y, w: PLATE.w, h: PLATE.h, label: '접시', fill: '#ffffff' }],
-      people: [{ x: 390, y: 330, box: '다솜' }, { x: 470, y: 330, box: '준호' }]
+      title: '피로연장', place: 'hall', img: 'bgBanquet', heroX: 250, heroY: art ? 294 : 330, pose: 'sit', dir: 1,
+      boxes: [{ x: 200, y: 280, w: 280, h: 26, label: '테이블', fill: '#e9e2d4', bg: true }, { x: CARD.x, y: CARD.y, w: CARD.w, h: CARD.h, label: '명함', fill: '#f4f1ea', prop: 12, front: true }, { x: PLATE.x, y: PLATE.y, w: PLATE.w, h: PLATE.h, label: '접시', fill: '#ffffff', prop: 13, front: true }],
+      fg: [[288, 221], [264, 224], [246, 226], [232, 228], [224, 230], [216, 232], [210, 236], [202, 240], [198, 244], [195, 247], [195, 289], [198, 291], [204, 293], [208, 295], [216, 297], [226, 299], [246, 301], [284, 303], [384, 303], [422, 301], [440, 297], [452, 295], [458, 293], [464, 291], [473, 289], [473, 247], [470, 244], [466, 240], [460, 236], [454, 232], [448, 230], [440, 228], [430, 226], [412, 224], [388, 221]],
+      people: art ? [{ x: 366, y: 278, v: 'dasom', dir: -1, pose: 'sit' }, { x: 437, y: 277, v: 'junho', dir: -1, pose: 'sit' }] : [{ x: 390, y: 330, box: '다솜' }, { x: 470, y: 330, box: '준호' }]
     });
     await Engine.fade(0, .35);
     await say(W().table(s));
@@ -202,9 +210,9 @@ var Out = (function () {
     await Engine.until(function () { return pick; });
     tb.spots = [];
     s.wed.job = pick;
-    if (pick === 'fc') { tb.o.boxes[1].x = 350; tb.o.boxes[1].y = 270; await say(W().bizCard); await say(W().jobFc(s)); }
+    if (pick === 'fc') { tb.o.boxes[1].x = 350; tb.o.boxes[1].y = 258; await say(W().bizCard); await say(W().jobFc(s)); }
     else await say(W().jobVague(s));
-    tb.o.people.push({ x: 160, y: 342, box: '은지', fill: '#f2e6ee' });
+    tb.o.people.push(art ? { x: 160, y: 342, v: 'eunji', dir: 1, pose: 'bouquet' } : { x: 160, y: 342, box: '은지', fill: '#f2e6ee' });
     await say(W().bride(s));
     await say(W().photo);
     Life.wedGo(s);

@@ -17,12 +17,10 @@ var Game = (function () {
     if (w === 'lead') return { name: Story.NAMES.lead, face: { variant: 'lead' } };
     if (w === 'peer') return { name: Story.NAMES.peer, face: { variant: 'peer' } };
     if (w === 'owner') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } };
-    // 그림이 아직 없는 사람: 얼굴 칸은 회색 상자와 이름표
     if (w === 'boss') return { name: Story.NAMES.owner, face: { variant: 'customerC', hue: 200 } }; // 슈퍼 사장님과 같은 사람
-    if (w === 'grandma' || w === 'mate' || w === 'mom') return { name: Story.NAMES[w], face: { blank: Story.NAMES[w] } };
-    // 성훈 씨: 그림이 오기 전까지는 4/16 상담 고객 그림(c10)을 그대로 쓴다
-    if (w === 'one') { var c10 = Story.CLIENT.c10; return { name: Story.NAMES.one, face: { variant: c10.look, hue: c10.tint } }; }
-    if (w === 'vet' || w === 'desk' || w === 'bride' || w === 'dasom' || w === 'junho') return { name: Story.NAMES[w], face: { blank: Story.NAMES[w] } };
+    // v7 사람들의 얼굴 (v7-portraits). 성훈 씨는 4/16 상담 고객(c10)과 같은 사람이다.
+    var V7 = { grandma: 'grandma', mate: 'mate', mom: 'mom', one: 'one', vet: 'vetDoc', desk: 'reception', bride: 'eunji', dasom: 'dasom', junho: 'junho' };
+    if (V7[w]) return { name: Story.NAMES[w], face: { variant: V7[w] } };
     if (w === 'cat') return { name: (G.pro && G.pro.active ? G.pro.cat : s && s.cat) || '', face: { variant: 'cat' } };
     if (w === 'client') { var cl = Story.CLIENT[line.id]; return { name: cl.name + ' ' + (cl.title || '고객님'), face: { variant: cl.look, hue: cl.tint } }; }
     return { name: '', face: null };
@@ -792,8 +790,13 @@ var Game = (function () {
     if (key === 'emptyBowl') { s.bowl = 'empty'; H.entranceOpen = 0; G.hero.visible = false; }
     Home.drawLiving(c);
     G.hero.face = undefined;
-    // 숨은 엔딩: 현관에 한 달 사이 늘어난 것들 (그림이 오기 전까지는 이름표 붙은 회색 상자)
-    if (key === 'family') Story.doorItems(s).forEach(function (it, i) { View.box(c, 14 + i * 46, 300 - (i % 2) * 6, 42, 30, '#d9d2c4', '#55505a', 2); View.text(c, it.label, 35 + i * 46, 318 - (i % 2) * 6, 8, '#3b3540', 'center'); });
+    // 숨은 엔딩: 현관에 한 달 사이 늘어난 것들 (할머니의 반찬통 v7-props 5번, 엄마 택배 3번, 성훈 씨의 고양이 간식 18번, 지안의 노란 우산 19번)
+    var DOOR_PROP = { grandma: 5, mom: 3, one: 18, mate: 19 };
+    if (key === 'family') Story.doorItems(s).forEach(function (it, i) {
+      var x = 14 + i * 46, y = 300 - (i % 2) * 6;
+      if (PixelArt.v7propIn(c, DOOR_PROP[it.who], x, y, 42, 30)) return;
+      View.box(c, x, y, 42, 30, '#d9d2c4', '#55505a', 2); View.text(c, it.label, x + 21, y + 18, 8, '#3b3540', 'center');
+    });
     // 등급마다 화면 위에 한 겹: 좋음과 숨은 엔딩은 하트가 오르고, 나쁨은 어둡게 가라앉는다
     var t = G.t, grade = Life.GRADE[key];
     if (grade === 'good' || grade === 'hidden') {

@@ -59,7 +59,7 @@ var Story = (function () {
     c7: { name: '서지민', look: 'customerC', tint: 45 },
     c8: { name: '강태호', look: 'customerA', tint: 220 },
     c9: { name: '한소희', look: 'customerB', tint: 200 },
-    c10: { name: '문성훈', look: 'customerA', tint: 100 },
+    c10: { name: '문성훈', look: 'one' },
     c11: { name: '임하늘', look: 'customerC', tint: 160 },
     c12: { name: '배영숙', look: 'customerB', tint: 30 },
     c13: { name: '조민혁', look: 'customerC' },

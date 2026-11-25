@@ -1,0 +1,205 @@
+{
+ "version": 1,
+ "updated": "2026-11-25",
+ "note": "v7 그림. ChatGPT가 docs/v7-art 목록대로 만든 파일을 그대로 싣는다. r6 다섯 장은 같은 그림을 두 배 촘촘하게 다시 뽑은 판으로 바꿔 싣는다.",
+ "load": {
+  "r6People": "assets/v7/r6-people-v2-2px.png",
+  "r6Clean": "assets/v7/r6-clean-v2-2px.png",
+  "r6Care": "assets/v7/r6-care-v2-2px.png",
+  "r6Wet": "assets/v7/r6-wet-v2-2px.png",
+  "r6Transit": "assets/v7/r6-transit-v2-2px.png",
+  "v7People": "assets/v7/v7-people-2px.png",
+  "v7Hero": "assets/v7/v7-hero-2px.png",
+  "v7Seated": "assets/v7/v7-seated.png",
+  "v7Portraits": "assets/v7/v7-portraits.png",
+  "v7Portraits2": "assets/v7/v7-portraits-2.png",
+  "v7Cats": "assets/v7/v7-cats.png",
+  "v7Props": "assets/v7/v7-props.png",
+  "v7Receipt": "assets/v7/v7-vet-receipt.png",
+  "v7DoorOpen": "assets/v7/v7-corridor-door-open.png",
+  "v7Chair": "assets/v7/v7-cafe-chair.png",
+  "bgMap": "assets/v7/v7-bg-map.png",
+  "bgCorridor": "assets/v7/v7-bg-corridor.png",
+  "bgVetWait": "assets/v7/v7-bg-vet-wait.png",
+  "bgVetExam": "assets/v7/v7-bg-vet-exam.png",
+  "bgHoesik": "assets/v7/v7-bg-hoesik.png",
+  "bgKaraoke": "assets/v7/v7-bg-karaoke.png",
+  "bgAtm": "assets/v7/v7-bg-atm.png",
+  "bgLobby": "assets/v7/v7-bg-wedding-lobby.png",
+  "bgBanquet": "assets/v7/v7-bg-wedding-banquet.png",
+  "bgPark": "assets/v7/v7-bg-park.png",
+  "bgCinema": "assets/v7/v7-bg-cinema.png",
+  "bgCafe": "assets/v7/v7-bg-cafe.png",
+  "bgDesk": "assets/v7/v7-bg-desk.png"
+ },
+ "images": {
+  "r6People": {
+   "file": "assets/v7/r6-people-v2-2px.png",
+   "bytes": 251998,
+   "sha256": "637c9e49a1b4c62c9929cca5e8579289cb6bd26ec9acdf542d347ecd6b6f86a1",
+   "contents": "r6-people-v2.png 를 96×128 칸(점 하나가 화면 2점)으로 다시 뽑은 판. 칸 번호와 동작 순서는 그대로"
+  },
+  "r6Clean": {
+   "file": "assets/v7/r6-clean-v2-2px.png",
+   "bytes": 68948,
+   "sha256": "a22810af316dcdece52760c2a32aaeeb7f4b8db275fc81c4eb892fd1851cc183",
+   "contents": "r6-clean-v2.png 의 96×128 칸 판"
+  },
+  "r6Care": {
+   "file": "assets/v7/r6-care-v2-2px.png",
+   "bytes": 235122,
+   "sha256": "dbd8b74ce249748603804b58cd74e8759d2e3f757010855dfd4fe7f4fe63fcd5",
+   "contents": "r6-care-v2.png 의 96×128 칸 판"
+  },
+  "r6Wet": {
+   "file": "assets/v7/r6-wet-v2-2px.png",
+   "bytes": 70153,
+   "sha256": "d5add72f69f2576943d1fa670c26b208245d1941f37814e87396026938f035ab",
+   "contents": "r6-wet-v2.png 의 96×128 칸 판"
+  },
+  "r6Transit": {
+   "file": "assets/v7/r6-transit-v2-2px.png",
+   "bytes": 13376,
+   "sha256": "958a1923c8aaed2acd26de52cf0bd65d264c1e452ddbcc16cf051b02427fabf5",
+   "contents": "r6-transit-v2.png 의 96×128 칸 판"
+  },
+  "v7People": {
+   "file": "assets/v7/v7-people-2px.png",
+   "bytes": 345761,
+   "sha256": "5aa68bfea55528d144dc9192b7abc47ac61f5e38740680e8c4a8de38b98ebb29",
+   "contents": "96×128 칸 8열 10줄. 줄: 성훈, 성훈 추가 동작, 지안, 옆집 할머니, 슈퍼 사장님, 수의사, 축의대 직원, 은지, 다솜, 준호. 칸: 0~3 걷기, 4 서기, 5 정면, 6 앉기, 7 그 사람만의 동작"
+  },
+  "v7Hero": {
+   "file": "assets/v7/v7-hero-2px.png",
+   "bytes": 68004,
+   "sha256": "7c776661f70b322924621ac163833fec10135c8ed5a0a1d4e2de8298ce1ccfd6",
+   "contents": "96×128 칸 8열 2줄(후드티, 정장). 0~3 물건 안고 걷기, 4 안고 서기, 5 인사, 6 휴대폰 꺼내기, 7 휴대폰 들기"
+  },
+  "v7Seated": {
+   "file": "assets/v7/v7-seated.png",
+   "bytes": 51551,
+   "sha256": "da9e0dec894802698e8a1d9a874ddf142bd4df16255ff6e0445289a73519e412",
+   "contents": "1254×1254, 4×4칸. 0번 칸 상담 의자에 앉은 성훈"
+  },
+  "v7Portraits": {
+   "file": "assets/v7/v7-portraits.png",
+   "bytes": 978810,
+   "sha256": "f2fbd62394fe95fe588cdd558e624e6b54207a9a0047946a6d709a13c7279810",
+   "contents": "1536×1024, 4×2칸 대화 얼굴: 성훈, 지안, 옆집 할머니, 엄마, 수의사, 접수 직원, 은지, 다솜"
+  },
+  "v7Portraits2": {
+   "file": "assets/v7/v7-portraits-2.png",
+   "bytes": 129192,
+   "sha256": "9a0ee604cf083ae2303ae08bd52a7b54f5bc44fc1efaa40b10e4e0dfbd3aef23",
+   "contents": "0번 칸 준호"
+  },
+  "v7Cats": {
+   "file": "assets/v7/v7-cats.png",
+   "bytes": 163242,
+   "sha256": "f98e333fc4738d3e15b0bf6fa4e23f27191b5951ba0a186b18f1a031becef452",
+   "contents": "1536×1024, 8×4칸. 0번 줄 0~6: 정장 위, 볕 쬐며 배 드러내기, 상자 속, 납작 엎드리기, 냄새 맡기, 아파서 웅크리기, 모래에서 힘주기"
+  },
+  "v7Props": {
+   "file": "assets/v7/v7-props.png",
+   "bytes": 464491,
+   "sha256": "a673eb627ff56057fc06dc7b66bdfed4a6be264f1b23635c3722790d990bd3ba",
+   "contents": "1536×1024, 8×4칸 소품 P00~P19 (docs/v7-art 7번 항목)"
+  },
+  "v7Receipt": {
+   "file": "assets/v7/v7-vet-receipt.png",
+   "bytes": 25626,
+   "sha256": "486a938edd4e592ca3b8309de291c0f6bfee6faec18192b91fbb72f5ad3d9e50",
+   "contents": "진료비 영수증 종이"
+  },
+  "v7DoorOpen": {
+   "file": "assets/v7/v7-corridor-door-open.png",
+   "bytes": 53561,
+   "sha256": "139c9d2fa847400835c105a787de6cd275c75877cb90b690bc5caf124ca51a28",
+   "contents": "복도의 열린 현관문 조각"
+  },
+  "v7Chair": {
+   "file": "assets/v7/v7-cafe-chair.png",
+   "bytes": 1027,
+   "sha256": "b0d1460d1ebb8282739edbde6dca74e6daf02e89aa925538209b2fb4c2de8ebf",
+   "contents": "카페 원목 의자 28×30"
+  },
+  "bgMap": {
+   "file": "assets/v7/v7-bg-map.png",
+   "bytes": 145748,
+   "sha256": "5f43e91ae5a0394d6704f1c272df69637e3c20db8f4a0ace9eaf2f74f20f0a61",
+   "contents": "장소 배경 1280×720 (v7-bg-map.png)"
+  },
+  "bgCorridor": {
+   "file": "assets/v7/v7-bg-corridor.png",
+   "bytes": 78987,
+   "sha256": "3a4b381fb5dc70e80f4ba208d5576811ac0ef2be2cd328921e4bdc4b779d90bb",
+   "contents": "장소 배경 1280×720 (v7-bg-corridor.png)"
+  },
+  "bgVetWait": {
+   "file": "assets/v7/v7-bg-vet-wait.png",
+   "bytes": 89839,
+   "sha256": "accef1f8d28d40b5dc9db780d88895463e8555a18987aa6ab18ec80f26c49bfb",
+   "contents": "장소 배경 1280×720 (v7-bg-vet-wait.png)"
+  },
+  "bgVetExam": {
+   "file": "assets/v7/v7-bg-vet-exam.png",
+   "bytes": 88852,
+   "sha256": "e4865a97eaa840bbaf63e0becdb766f4ab8ad851465f5b660fcebbfd5e41a9d3",
+   "contents": "장소 배경 1280×720 (v7-bg-vet-exam.png)"
+  },
+  "bgHoesik": {
+   "file": "assets/v7/v7-bg-hoesik.png",
+   "bytes": 102342,
+   "sha256": "09ce81188149a3fc91e96499e54537310253b196c1a978e85bb54e5bb9a43566",
+   "contents": "장소 배경 1280×720 (v7-bg-hoesik.png)"
+  },
+  "bgKaraoke": {
+   "file": "assets/v7/v7-bg-karaoke.png",
+   "bytes": 81361,
+   "sha256": "109663a22ab508f3b8eeff5be715f15f064a7682dc7613ab97054e2ddc031572",
+   "contents": "장소 배경 1280×720 (v7-bg-karaoke.png)"
+  },
+  "bgAtm": {
+   "file": "assets/v7/v7-bg-atm.png",
+   "bytes": 85745,
+   "sha256": "974cb953a91cf28d1f0cadc121ed41cc477ce4feeec24d30bf2d8b41153aade1",
+   "contents": "장소 배경 1280×720 (v7-bg-atm.png)"
+  },
+  "bgLobby": {
+   "file": "assets/v7/v7-bg-wedding-lobby.png",
+   "bytes": 91308,
+   "sha256": "772e5aa3ed3c6802a4e8dc611f62d9be9945a2fbc22e02e0e532c8c8f05bcecc",
+   "contents": "장소 배경 1280×720 (v7-bg-wedding-lobby.png)"
+  },
+  "bgBanquet": {
+   "file": "assets/v7/v7-bg-wedding-banquet.png",
+   "bytes": 101255,
+   "sha256": "cb4c6bfc4b92c894c64ba4053e6aabd4e6f4fd2196595f757b3635ec63e79279",
+   "contents": "장소 배경 1280×720 (v7-bg-wedding-banquet.png)"
+  },
+  "bgPark": {
+   "file": "assets/v7/v7-bg-park.png",
+   "bytes": 123545,
+   "sha256": "8f6038d5982d2cf27f8834cbc2a41e096dadfc63ff36a1c61127576627f2a06c",
+   "contents": "B10 동네 공원: 왼쪽 벤치, 사선으로 좁아지는 보도, 중경의 편의점. 1280×720, 320×180 점을 두 배로"
+  },
+  "bgCinema": {
+   "file": "assets/v7/v7-bg-cinema.png",
+   "bytes": 88294,
+   "sha256": "878e351cd0ee9460310867662fc8e983267bef4f63a75609b49a63c29942df94",
+   "contents": "장소 배경 1280×720 (v7-bg-cinema.png)"
+  },
+  "bgCafe": {
+   "file": "assets/v7/v7-bg-cafe.png",
+   "bytes": 111008,
+   "sha256": "5e8fce2fd148d37ac04c3ff8c4cfb75bebc9adea2ac0b3b6613064a925fd43be",
+   "contents": "장소 배경 1280×720 (v7-bg-cafe.png)"
+  },
+  "bgDesk": {
+   "file": "assets/v7/v7-bg-desk.png",
+   "bytes": 80967,
+   "sha256": "849c4ef0db9d58a43b79b039f6a6d26844209c8b73c03768a5dff8e52a45aec3",
+   "contents": "장소 배경 1280×720 (v7-bg-desk.png)"
+  }
+ }
+}

@@ -242,8 +242,9 @@ var Work = (function () {
     if (!k.gone) View.seated(c, G, 446 + (k.shake ? Math.sin(t * 40) * 3 : 0), 262, cl.look, 0, 2.5, cl.tint, false);
     View.box(c, 250, 206, 140, 10, '#b98a5f', '#5b4636', 2);
     View.box(c, 40, 270, 560, 96, '#c99b6c', '#5b4636', 3);
-    // 상담 노트 (왼쪽 위)
-    ph(c, 14, 14, 210, 120, '상담 노트', '#e9e4d8');
+    // 상담 노트 (왼쪽 위, 가로로 펼친 수첩 v7-props 16번)
+    if (PixelArt.v7propIn(c, 16, 14, 14, 210, 120)) View.text(c, '상담 노트', 26, 28, 10, '#55505a', 'left');
+    else ph(c, 14, 14, 210, 120, '상담 노트', '#e9e4d8');
     k.st.notes.forEach(function (f, i) { wrap(c, '· ' + factText(k.id, f), 22, 36 + i * 32, 196, 10, '#2f2a33', 13); });
     listenRows(c, k).forEach(function (r) {
       var on = k.st.notes.indexOf(r.f) >= 0;
@@ -265,13 +266,16 @@ var Work = (function () {
 
   // 위에서 본 책상
   function drawDesk(c, k, t) {
-    var s = S(), p = k.p, st = k.st;
-    c.fillStyle = '#a77d57'; c.fillRect(0, 0, 640, 360);
-    View.text(c, '상담 책상 (위에서 본 모습)', 320, 352, 9, 'rgba(47,42,51,.5)');
-    // 고객님 얼굴과 말풍선
-    ph(c, FACE.x, FACE.y, FACE.w, FACE.h, '', '#d7d3cc');
-    var cl = Story.CLIENT[k.id];
-    View.portrait(c, G, cl.look, FACE.x + 22 + (k.shake ? Math.sin(t * 40) * 3 : 0), FACE.y + 2, FACE.w - 44, FACE.h - 4, cl.tint);
+    var s = S(), p = k.p, st = k.st, art = PixelArt.bg(c, 'bgDesk');
+    if (!art) {
+      c.fillStyle = '#a77d57'; c.fillRect(0, 0, 640, 360);
+      View.text(c, '상담 책상 (위에서 본 모습)', 320, 352, 9, 'rgba(47,42,51,.5)');
+    }
+    // 고객님 얼굴과 말풍선 (그림에서는 오른쪽 위 액자 안 498~622, 18~104)
+    if (!art) ph(c, FACE.x, FACE.y, FACE.w, FACE.h, '', '#d7d3cc');
+    var cl = Story.CLIENT[k.id], fx = (k.shake ? Math.sin(t * 40) * 3 : 0);
+    if (art) View.portrait(c, G, cl.look, 518 + fx, 19, 84, 84, cl.tint);
+    else View.portrait(c, G, cl.look, FACE.x + 22 + fx, FACE.y + 2, FACE.w - 44, FACE.h - 4, cl.tint);
     PixelIcons.mood(c, FACE.x + FACE.w - 14, FACE.y + 14, st.mood, 8);
     if (k.bubble) {
       var ls = wrapLines(c, k.bubble, 136, 10), bh = 12 + ls.length * 13;
@@ -283,18 +287,36 @@ var Work = (function () {
       View.disc(c, tx, ty, 10, '#2f2a33'); View.disc(c, tx, ty, 8, '#fffaf0');
       c.fillStyle = left < .35 ? '#e0574f' : '#ffb05a'; c.beginPath(); c.moveTo(tx, ty); c.arc(tx, ty, 7, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.closePath(); c.fill();
     }
-    // 상담 노트
-    ph(c, NOTE_BOX.x, NOTE_BOX.y, NOTE_BOX.w, NOTE_BOX.h, '상담 노트', '#e9e4d8');
-    var ny = NOTE_BOX.y + 28;
-    st.notes.forEach(function (f) { ny += wrap(c, '· ' + factText(k.id, f), NOTE_BOX.x + 8, ny, NOTE_BOX.w - 16, 10, '#2f2a33', 13) + 6; });
-    if (!st.notes.length) View.text(c, '(적은 게 없다)', NOTE_BOX.x + NOTE_BOX.w / 2, NOTE_BOX.y + 60, 10, '#8a8490');
+    // 상담 노트 (그림에는 펼친 수첩이 있다)
+    if (art) View.text(c, '상담 노트', 22, 78, 10, '#55505a', 'left');
+    else ph(c, NOTE_BOX.x, NOTE_BOX.y, NOTE_BOX.w, NOTE_BOX.h, '상담 노트', '#e9e4d8');
+    if (art) {
+      // 그림의 수첩은 두 쪽으로 펼쳐져 있다 (왼쪽 x 18~90, 가운데 접힌 선 x 92, 오른쪽 x 94~168, 아래 y 272).
+      // 글이 접힌 선을 넘지 않게 왼쪽 쪽부터 쓰고, 차면 오른쪽 쪽 위에서 이어 쓴다.
+      var PG = [{ x: 22, top: 92 }, { x: 98, top: 80 }], pg = 0, py = PG[0].top, BOT = 270;
+      st.notes.forEach(function (f) {
+        var ls = wrapLines(c, '· ' + factText(k.id, f), 66, 9), hgt = ls.length * 11;
+        if (py + hgt > BOT && pg === 0) { pg = 1; py = PG[1].top; }
+        ls.forEach(function (l, i) { View.text(c, l, PG[pg].x, py + i * 11, 9, '#2f2a33', 'left'); });
+        py += hgt + 5;
+      });
+      if (!st.notes.length) View.text(c, '(적은 게 없다)', 54, 120, 9, '#8a8490');
+    } else {
+      var ny = NOTE_BOX.y + 28;
+      st.notes.forEach(function (f) { ny += wrap(c, '· ' + factText(k.id, f), NOTE_BOX.x + 8, ny, NOTE_BOX.w - 16, 10, '#2f2a33', 13) + 6; });
+      if (!st.notes.length) View.text(c, '(적은 게 없다)', NOTE_BOX.x + NOTE_BOX.w / 2, NOTE_BOX.y + 60, 10, '#8a8490');
+    }
     // 고객이 들고 온 증권
     if (p.existing) {
-      ph(c, POLICY.x, POLICY.y, POLICY.w, POLICY.h, '기존 보험증권', '#e6e0f0');
-      View.text(c, p.existing.map(function (x) { return Story.coverName(p.product, x); }).join(', ') + '만 보장', POLICY.x + 8, POLICY.y + 36, 10, '#2f2a33', 'left');
+      var cover = p.existing.map(function (x) { return Story.coverName(p.product, x); }).join(', ') + '만 보장';
+      // 기존 보험증권(v7-props 14번): 아래쪽 흰 종이 안(x 32~156)에 보장 내용을 두 줄까지 쓴다
+      if (PixelArt.v7propIn(c, 14, POLICY.x, POLICY.y, POLICY.w, POLICY.h)) wrapLines(c, cover, 122, 9).slice(0, 2).forEach(function (l, i) { View.text(c, l, 33, 325 + i * 12, 9, '#2f2a33', 'left'); });
+      else { ph(c, POLICY.x, POLICY.y, POLICY.w, POLICY.h, '기존 보험증권', '#e6e0f0'); View.text(c, cover, POLICY.x + 8, POLICY.y + 36, 10, '#2f2a33', 'left'); }
     }
-    // 태블릿
-    ph(c, TAB.x, TAB.y, TAB.w, TAB.h, st.stage === 'design' ? '가입설계서' : st.stage === 'apply' ? '청약서' : '상품설명서', '#e8edf0');
+    // 태블릿 (그림에는 빈 화면이 있다. 문서 제목만 쓴다)
+    var docName = st.stage === 'design' ? '가입설계서' : st.stage === 'apply' ? '청약서' : '상품설명서';
+    if (art) View.text(c, docName, TAB.x + 14, TAB.y + 16, 10, '#55505a', 'left');
+    else ph(c, TAB.x, TAB.y, TAB.w, TAB.h, docName, '#e8edf0');
     if (st.stage === 'design') drawDesign(c, k, t);
     else if (st.stage === 'apply') drawApply(c, k, t);
     else if (st.stage === 'explain') drawExplain(c, k, t);
@@ -356,7 +378,12 @@ var Work = (function () {
       View.box(c, r.x, r.y, r.w, r.h, done ? '#d8efd9' : '#fffaf0', '#2f2a33', done ? 1 : 3);
       wrap(c, pts[r.i], r.x + 8, r.y + 12, r.w - 20, 10, '#2f2a33', 13);
     });
-    ph(c, COPIES.x, COPIES.y, COPIES.w, COPIES.h, '약관과 부본', st.copies ? '#d8efd9' : '#e6e0f0');
+    // 약관과 청약서 부본(v7-props 15번): 건네면 고객님 쪽으로 밀려 올라가고 반짝인다
+    if (PixelArt.v7img('v7Props')) {
+      var cy = COPIES.y - (st.copies ? 10 : 0);
+      PixelArt.v7propIn(c, 15, COPIES.x, cy, COPIES.w, COPIES.h);
+      if (st.copies) View.icon(c, 'sparkle', COPIES.x + COPIES.w - 8, cy + 6, 1);
+    } else ph(c, COPIES.x, COPIES.y, COPIES.w, COPIES.h, '약관과 부본', st.copies ? '#d8efd9' : '#e6e0f0');
     View.box(c, SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h, '#f3f0e6', '#2f2a33', 2);
     View.text(c, st.signed ? '서명됨' : '여기에 서명', SIGN_BOX.x + SIGN_BOX.w / 2, SIGN_BOX.y + 13, 11, st.signed ? '#2e7d4f' : '#2f2a33');
   }
@@ -813,7 +840,7 @@ var Work = (function () {
   function drawClerk(c) {
     var t = G.t, sh = Wk.shop;
     c.save(); c.beginPath(); c.rect(COUNTER.x, 0, 640 - COUNTER.x, COUNTER.top + 2); c.clip();
-    View.person(c, G, COUNTER.clerk, 292 + (sh.asking ? Math.sin(t * 6) : 0), 'customerC', -1, t, 'stand', 2.2, 200);
+    View.person(c, G, COUNTER.clerk, 292 + (sh.asking ? Math.sin(t * 6) : 0), PixelArt.v7img('v7People') ? 'owner' : 'customerC', -1, t, 'stand', PixelArt.v7img('v7People') ? 2.35 : 2.2, 200);
     c.restore();
     if (sh.night && !sh.pro) { // 심야 할증 안내판 (천장에 매달린 판)
       View.r(c, 566, 92, 2, 16, '#5b4636'); View.r(c, 610, 92, 2, 16, '#5b4636');

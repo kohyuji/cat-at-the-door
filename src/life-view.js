@@ -114,10 +114,42 @@ var View = (function () {
     if (pose === 'study') return N(c, 'people', (suit ? 28 : 22) + rf, x, y, u, flip);
     if (pose === 'umbrella') return N(c, 'people', suit ? 26 : 30 + rf, x, y, u, flip);
     if (pose === 'back') return N(c, 'people', suit ? 27 : 19, x, y, u, false);
+    // v7 주인공 추가 동작: 물건을 안고 걷기·서기(물건은 장면이 그린다), 인사, 휴대폰 꺼내기와 들기
+    if (pose === 'carryWalk' || pose === 'carryStand' || pose === 'bow' || pose === 'phoneOut' || pose === 'phoneUp') {
+      var hi = (suit ? 8 : 0) + (pose === 'carryWalk' ? Math.floor((t || 0) * 6) % 4 : pose === 'carryStand' ? 4 : pose === 'bow' ? 5 : pose === 'phoneOut' ? 6 : 7);
+      if (N(c, 'v7hero', hi, x, y, u, flip)) return true;
+      if (pose === 'carryWalk') return N(c, 'people', (suit ? 8 : 0) + Math.floor((t || 0) * 10) % 8, x, y, u, flip);
+      return N(c, 'people', suit ? 26 : 18, x, y, u, flip);
+    }
     if (pose === 'front' || pose === 'tired' || dir === 0) return N(c, 'people', suit ? 24 : 16, x, y, u, false);
     if (pose === 'stand' || pose === 'carry' || !pose) return N(c, 'people', suit ? 26 : 18, x, y, u, flip);
     return false;
   }
+  // 안은 물건 위에 손을 다시 덮는다 (carryWalk, carryStand 다음에 부른다). 물건의 바닥 가운데 자리를 돌려준다.
+  function carryHand(c, G, x, y, variant, dir, t, pose, scale) {
+    var suit = variant === 'suit', u = HERO_PX * (scale || 2.35) / 2.35, k = u / 4, flip = dir < 0;
+    var hi = (suit ? 8 : 0) + (pose === 'carryWalk' ? Math.floor((t || 0) * 6) % 4 : 4);
+    return { x: x + (suit ? 20 : 24) * k * (flip ? -1 : 1), y: y - 52 * k, draw: function () { PixelArt.nativePart(c, 'v7hero', hi, suit ? [48, 90, 18, 12] : [50, 92, 16, 10], x, y, u, flip); } };
+  }
+  // v7 새 사람 (v7-people, 줄마다 한 사람): 0~3 걷기, 4 서기, 5 정면, 6 앉기, 7 그 사람만의 동작
+  var V7ROW = { one: 0, mate: 2, grandma: 3, owner: 4, vetDoc: 5, greeter: 6, eunji: 7, dasom: 8, junho: 9 };
+  // 성훈 씨 추가 동작 (1번 줄)
+  var ONE_X = { floorSit: 8, reach: 9, carrierStand: 14, showPhone: 15 };
+  function v7Person(c, G, x, y, variant, dir, t, pose, scale) {
+    var row = V7ROW[variant]; if (row === undefined || !img(G, 'v7People')) return false;
+    var u = HERO_PX * (scale || 2.35) / 2.35, flip = dir < 0, i;
+    if (pose === 'walk' || pose === 'umbrellaWalk') i = row * 8 + Math.floor((t || 0) * 6) % 4;
+    else if (variant === 'one' && pose === 'carrierWalk') i = 10 + Math.floor((t || 0) * 6) % 4;
+    else if (variant === 'one' && ONE_X[pose] !== undefined) i = ONE_X[pose];
+    else if (pose === 'sit') i = row * 8 + 6;
+    else if (pose === 'special' || pose === 'umbrella' || pose === 'grip' || pose === 'bow' || pose === 'wave' || pose === 'bouquet' || pose === 'stetho') i = row * 8 + 7;
+    else if (pose === 'front' || dir === 0) { i = row * 8 + 5; flip = false; }
+    else i = row * 8 + 4;
+    return PixelArt.native(c, 'v7people', i, x, y, u, flip);
+  }
+  // 우산대·손잡이를 쥔 손의 자리 (7번 칸, 발 기준, 오른쪽을 볼 때)
+  var GRIP = { one: [32, -136], mate: [24, -136], grandma: [32, -136], owner: [28, -136] };
+  function gripAt(variant, x, y, dir, scale) { var g = GRIP[variant] || [28, -136], k = (scale || 2.35) / 2.35; return { x: x + g[0] * k * (dir < 0 ? -1 : 1), y: y + g[1] * k }; }
   // 지하철 승객 (R6 앉은 그림 네 명)
   function commuter(c, G, x, y, i, flip) { PixelArt.native(c, 'transit', i % 4, x, y, HERO_PX, !!flip); }
   var SEATED_INDEX = { customerA: 4, customerB: 5, customerC: 6, peer: 7, lead: 15 };
@@ -125,6 +157,7 @@ var View = (function () {
   function person(c, G, x, y, variant, dir, t, pose, scale, hue) {
     scale = scale || 2.15;
     if ((variant === 'me' || variant === 'hoodie' || variant === 'suit') && heroPose(c, G, x, y, variant, dir, t, pose, scale)) return;
+    if (V7ROW[variant] !== undefined) { if (v7Person(c, G, x, y, variant, dir, t, pose, scale)) return; variant = variant === 'one' ? 'customerA' : 'customerC'; }
     var A = PixelArt.atlas, im;
     if ((variant === 'customerA' || variant === 'customerB' || variant === 'customerC') && hue !== undefined && hue !== null && (im = img(G, 'r4People'))) {
       var a = A.people[pose === 'sit' ? (variant === 'customerB' ? 30 : variant === 'customerC' ? 31 : 29) : PEOPLE_INDEX[variant]];
@@ -137,6 +170,9 @@ var View = (function () {
   }
   // 의자에 앉은 사람 (상담). me: 0~3 정장, 8~11 후드티
   function seated(c, G, x, y, variant, frame, scale, hue, dir) {
+    // 성훈 씨는 v7-seated.png 0번 칸 (r4 앉은 그림 4번 칸과 같은 방향·크기)
+    var v7s = variant === 'one' && img(G, 'v7Seated');
+    if (v7s) { cut(c, v7s, [75, 39, 162, 264], x, y, 162 * .178 * scale, 264 * .178 * scale, !!dir); return; }
     var im = img(G, 'r4Seated'); if (!im) return;
     var A = PixelArt.atlas.seated, idx = variant === 'suit' ? frame : variant === 'hoodie' ? 8 + frame : SEATED_INDEX[variant];
     var a = A[idx], w = a[2] * .178 * scale, h = a[3] * .178 * scale;
@@ -146,7 +182,17 @@ var View = (function () {
     }
     cut(c, im, a, x, y, w, h, !!dir);
   }
+  // v7 대화 얼굴: v7-portraits.png 8칸과 v7-portraits-2.png 0번 칸
+  var V7FACE = { one: ['v7Portraits', 0], mate: ['v7Portraits', 1], grandma: ['v7Portraits', 2], mom: ['v7Portraits', 3], vetDoc: ['v7Portraits', 4], reception: ['v7Portraits', 5], eunji: ['v7Portraits', 6], dasom: ['v7Portraits', 7], junho: ['v7Portraits2', 0] };
   function portrait(c, G, variant, x, y, w, h, hue) {
+    var vf = V7FACE[variant], vim = vf && img(G, vf[0]);
+    if (vim) {
+      var vw = (vim.naturalWidth || vim.width) / 4, vh = (vim.naturalHeight || vim.height) / 2, vs = Math.min(vw, vh);
+      c.save(); c.imageSmoothingEnabled = false;
+      c.drawImage(vim, (vf[1] % 4) * vw, Math.floor(vf[1] / 4) * vh + (vh - vs) * .35, vw, vs, x, y, w, h);
+      c.restore(); return true;
+    }
+    if (vf) variant = variant === 'one' ? 'customerA' : 'customerC';
     var map = { me: 0, hoodie: 0, suit: 1, lead: 2, peer: 3, customerA: 4, customerB: 5, customerC: 6, cat: 7 };
     // 고양이는 codex-v5의 단순한 초상화
     if (variant === 'cat' && PixelArt.portrait(c, 'cat', x, y, w, h)) return true;
@@ -174,6 +220,8 @@ var View = (function () {
     PixelArt.cat(c, 0, 0, dir, t, pose);
     c.restore();
   }
+  // v7 고양이 새 자세: 지금 고양이와 같은 점 크기(r4 고양이 배율 .205 × scale)로 바닥 가운데에 그린다
+  function v7cat(c, G, i, x, y, dir, scale) { var a = PixelArt.V7CATS[i]; return !!a && PixelArt.v7cat(c, i, x, y, a[2] * .205 * (scale || 1.6), dir < 0); }
   function item(c, type, x, y, scale) { PixelArt.item(c, type, x, y, scale || 1); }
   function icon(c, name, x, y, px, opts) { PixelIcons.draw(c, name, x, y, px || 2, opts); }
   function shadow(c, x, y, w) { c.fillStyle = 'rgba(30,24,30,.18)'; c.beginPath(); c.ellipse(x, y, w, Math.max(2, w * .18), 0, 0, Math.PI * 2); c.fill(); }
@@ -472,7 +520,7 @@ var View = (function () {
     wallClock: wallClock, slotClock: slotClock, bowl: bowl, waterBowl: waterBowl, litterBox: litterBox, foodBag: foodBag, bag: bag, hangerSuit: hangerSuit, hair: hair,
     bed: bed, roomDoor: roomDoor, entranceDoor: entranceDoor, windowView: windowView, toy: toy, card: card, brochure: brochure, bubble: bubble,
     priceTag: priceTag, catTower: catTower, feeder: feeder, robot: robot, autoToy: autoToy, chart: chart, charcoal: charcoal, cup: cup, lunchbox: lunchbox, sandBag: sandBag,
-    broom: broom, mop: mop, floorDirt: floorDirt, dirtSpots: dirtSpots, commuter: commuter, BED: BED, HERO_PX: HERO_PX,
+    broom: broom, mop: mop, floorDirt: floorDirt, dirtSpots: dirtSpots, commuter: commuter, BED: BED, HERO_PX: HERO_PX, carryHand: carryHand, gripAt: gripAt, V7ROW: V7ROW, v7cat: v7cat,
     arrow: arrow, ghostHand: ghostHand, outline: outline, fx: fx, tint: tint, nightTint: nightTint, lampGlow: lampGlow
   };
 }());
