@@ -10,7 +10,7 @@
 
 인터랙티브 미디어 스토리텔링 수업에서 만든 픽셀아트 웹 게임입니다. 설치 없이 브라우저에서 바로 하고, PC의 크롬이나 엣지에서 마우스로 하는 것을 기준으로 만들었습니다.
 
-v7은 지금 만들고 있는 판입니다. 기획은 [v7 기획서](docs/기획서-v7.md)에 있습니다. 새로 생긴 장소(동물병원, 고깃집, 노래방, 결혼식장, 공원, 영화관, 카페 등)와 옆집 할머니는 그림이 들어오기 전까지 회색 상자에 이름만 적어 두었습니다.
+v7은 지금 만들고 있는 판입니다. 기획은 [v7 기획서](docs/기획서-v7.md)에 있습니다. 새로 생긴 장소(동네 지도, 빌라 복도, 동물병원, 고깃집, 노래방, 역 ATM, 결혼식장, 공원, 영화관, 카페, 상담 책상)와 새 사람들, 고양이의 새 자세, 소품은 ChatGPT가 [그림 목록](docs/v7-art/README.md)대로 그린 그림으로 들어가 있습니다. 음악은 아직 예전 곡을 씁니다.
 
 ## 이야기
 
@@ -85,7 +85,7 @@ v7은 지금 만들고 있는 판입니다. 기획은 [v7 기획서](docs/기획
 ## 만든 사람들
 
 - 기획, 플레이 테스트, 피드백: 코휴지 ([@kohyuji](https://github.com/kohyuji))
-- 픽셀아트: ChatGPT(Codex)가 그린 R4·R6 그림을 바탕으로 썼습니다. 어느 그림을 어디서 가져왔는지는 [`assets/README.md`](assets/README.md)와 `assets/*-asset-manifest.json`에 있습니다.
+- 픽셀아트: ChatGPT(Codex)가 그린 R4·R6 그림과 v7 그림을 썼습니다. 어느 그림을 어디서 가져왔는지는 [`assets/README.md`](assets/README.md)와 `assets/*-asset-manifest.json`, `assets/v7/v7-asset-manifest.json`에 있습니다.
 - 코드와 밸런스: Claude (Claude Code)
 - 글꼴: Neo둥근모 Pro, 둥근모꼴 ([`assets/fonts/`](assets/fonts/))
 

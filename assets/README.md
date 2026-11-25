@@ -35,3 +35,18 @@ R4 생성 스프라이트·배경은 r4-asset-manifest.json과 r4-prompts.md를 
 | `r6-extras.png` | `tools/build-extras.py`로 잘라 묶은 조각: 방문, 침대, 우산, 번개탄, 고양이 얼굴, 빗자루, 물걸레, 로봇청소기, 깃털 자동 장난감 |
 
 `r6-extras.png`는 `python3 tools/build-extras.py`로 다시 만들 수 있다(원본은 git의 `origin/codex-v5`에서 읽는다). 결과 좌표는 `src/pixel-render.js`의 `EXTRA`에 넣는다. 주인공은 R4 사람들과 키가 맞도록 한 칸을 4배로 그린다.
+
+## v7 그림 (`assets/v7/`)
+
+ChatGPT가 [v7 그림 목록](../docs/v7-art/README.md)대로 그린 그림이다. 파일마다 크기와 해시, 내용은 [v7-asset-manifest.json](v7/v7-asset-manifest.json)에 적었다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `v7-bg-*.png` 13장 | 1280×720 배경(320×180 점을 두 배로): 동네 지도, 빌라 복도, 동물병원 대기실·진료실, 고깃집, 노래방, 역 ATM, 결혼식 로비·피로연, 동네 공원, 영화관, 카페, 상담 책상 |
+| `v7-people-2px.png`, `v7-hero-2px.png` | 96×128 칸 배우 시트(점 하나가 화면 2점): 성훈 씨, 지안, 할머니, 가게 사장님, 수의사, 축의대 직원, 은지, 다솜, 준호 / 정장 차림 주인공의 운반·인사·휴대폰 |
+| `r6-*-v2-2px.png` 다섯 장 | 위 R6 그림을 같은 칸 순서로 두 배 촘촘하게 다시 뽑은 판. 게임은 이쪽을 쓴다 |
+| `v7-seated.png`, `v7-portraits.png`, `v7-portraits-2.png` | 상담 의자에 앉은 성훈 씨, 대화창·휴대폰 초상 |
+| `v7-cats.png`, `v7-props.png` | 고양이 새 자세 일곱, 소품 스무 개 |
+| `v7-vet-receipt.png`, `v7-corridor-door-open.png`, `v7-cafe-chair.png` | 진료비 영수증 종이, 열린 현관문, 카페 의자 |
+
+주인공과 사람은 모두 화면에서 128점 키로 그린다. 칸 크기는 그림 폭을 칸 수로 나눠 읽으므로 48×64 칸 그림과 96×128 칸 그림을 같은 코드로 그린다.
