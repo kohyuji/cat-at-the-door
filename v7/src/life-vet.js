@@ -27,6 +27,8 @@ var Vet = (function () {
   function drawHome(c) {
     var s = S(), h = H(); if (!s || h.pro || h.room !== 'living') return;
     if (!carrierOut(s) && !ST.inside) return;
+    // 빈 이동장(v7-props 0번), 고양이가 들어간 이동장(1번)
+    if (PixelArt.v7propIn(c, ST.inside ? 1 : 0, CARRIER.x, CARRIER.y, CARRIER.w, CARRIER.h)) return;
     View.box(c, CARRIER.x, CARRIER.y, CARRIER.w, CARRIER.h, '#cdb79a', '#55505a', 2);
     View.text(c, '이동장', CARRIER.x + CARRIER.w / 2, CARRIER.y + CARRIER.h / 2 + 4, 10, '#55505a', 'center');
     if (ST.inside) View.text(c, '(' + s.cat + ')', CARRIER.x + CARRIER.w / 2, CARRIER.y - 6, 9, '#55505a', 'center');
@@ -61,7 +63,7 @@ var Vet = (function () {
       s.seen.vetSign = true;
       h.catAct = 'still'; k.visible = true; k.room = 'living'; k.pose = 'walk';
       await Engine.catTo(Home.P.litter.x - 20, { y: 336 });
-      k.pose = 'sit'; k.dir = 1;
+      k.pose = 'strain'; k.dir = 1; // 모래 위에 쪼그려 앉아 힘준다 (v7-cats 6번 칸)
       await Engine.sleep(1.6);
       await say(V().sign(s));
       k.pose = 'walk'; await Engine.catTo(420, { y: 336 }); k.pose = 'sit';
@@ -73,7 +75,7 @@ var Vet = (function () {
     var s = S(), h = H(), k = G.cat;
     if (!(Life.vetDue(s) && s.day === Life.VET.day && s.seen.vetKnown && !s.seen.vetEve)) return false;
     s.seen.vetEve = true;
-    if (!s.hidden) { h.catAct = 'still'; k.visible = true; k.room = 'living'; k.x = Home.P.litter.x - 30; k.y = 336; k.pose = 'sleep'; }
+    if (!s.hidden) { h.catAct = 'still'; k.visible = true; k.room = 'living'; k.x = Home.P.litter.x - 30; k.y = 336; k.pose = 'sick'; } // 화장실 앞에 웅크린 아픈 고양이 (v7-cats 5번 칸)
     await say(V().eveHome(s, s.vetPm === s.day));
     h.catAct = null;
     Town.outline(2.4);
@@ -187,15 +189,17 @@ var Vet = (function () {
     var s = S(), VT = Life.VET, worse = when === 'next';
     var one = Life.person(s, 'one'), knew = !!(one && one.met), shown = !!(s.one && s.one.show !== undefined && s.one.show !== null);
     s.minute = Math.max(s.minute + 15, VT.open);
-    var mine = { x: 262, y: 268, w: 40, h: 30, label: '이동장', fill: '#cdb79a' };
-    var his = { x: 504, y: 268, w: 40, h: 30, label: '이동장', fill: '#b9c2c9' };
-    var sh = { x: 470, y: 300, v: 'customerA', hue: 100, dir: -1, pose: 'sit' };
+    // 이동장은 긴 의자의 앉는 면 위에 놓인다 (내 것: 우리 고양이가 보이는 v7-props 1번, 성훈 씨 것: 모카가 보이는 2번)
+    var SEAT = 242, HIS = 484;
+    var mine = { x: 272, y: SEAT, w: 40, h: 30, label: '이동장', fill: '#cdb79a', prop: 1 };
+    var his = { x: HIS, y: SEAT, w: 40, h: 30, label: '이동장', fill: '#b9c2c9', prop: 2 };
+    var sh = { x: 438, y: 300, v: 'one', dir: -1, pose: 'sit' };
     var st = Town.stage({
-      title: '동물병원 대기실', place: 'vet', heroX: 232, heroY: 300, pose: 'sit', dir: 1,
+      title: '동물병원 대기실', place: 'vet', img: 'bgVetWait', heroX: 232, heroY: 300, pose: 'sit', dir: 1,
       boxes: [
-        { x: 20, y: 120, w: 112, h: 200, label: '접수대', fill: '#c9c6c0' },
-        { x: 562, y: 100, w: 70, h: 222, label: '진료실 문', fill: '#c9c6c0' },
-        { x: 170, y: 262, w: 380, h: 18, label: '대기 의자', fill: '#bdb7ad' },
+        { x: 20, y: 120, w: 112, h: 200, label: '접수대', fill: '#c9c6c0', bg: true },
+        { x: 562, y: 100, w: 70, h: 222, label: '진료실 문', fill: '#c9c6c0', bg: true },
+        { x: 170, y: 262, w: 380, h: 18, label: '대기 의자', fill: '#bdb7ad', bg: true },
         mine, his
       ],
       people: [sh]
@@ -206,7 +210,8 @@ var Vet = (function () {
     await say(knew ? V().meet(s, shown) : V().stranger);
     // 접수대에서 성훈 씨를 부른다: 이동장을 들고 일어서다 머뭇거린다
     await say(V().desk(s));
-    sh.pose = 'stand'; sh.x = 486; his.y = 236; his.x = 500;
+    // 일어서서 이동장을 끌어안는다 (그림에 이동장이 들어 있어서 따로 그리지 않는다. 누를 자리만 남긴다)
+    sh.pose = 'carrierStand'; sh.x = 486; his.y = 236; his.x = 500; his.hide = PixelArt.v7img('v7People') ? true : false;
     var held = false, wait = true, t0 = G.t;
     st.spots = [{ id: 'holdCarrier', x: his.x - 6, y: his.y - 6, w: his.w + 12, h: his.h + 12, pulse: true, tap: function () { held = true; return null; } }];
     var look = setInterval(function () { sh.dir = -sh.dir; }, 700);
@@ -214,7 +219,8 @@ var Vet = (function () {
     clearInterval(look); st.spots = []; sh.dir = -1; wait = false;
     if (held) {
       // 내 옆 의자로 옮겨 놓는다
-      await slide(his, 312, 268, .45);
+      sh.pose = 'stand'; his.hide = false;
+      await slide(his, 312, SEAT, .45);
       UI.sfx('tap');
       await say(V().hold);
       if (knew) { Life.oneMeet(s, 'carrier'); Town.heartPuff(sh.x, 200); }
@@ -222,9 +228,9 @@ var Vet = (function () {
     // 접수대에 다녀온다
     await walkBox(sh, his, held, 150);
     await Engine.sleep(.8);
-    await walkBox(sh, his, held, 470);
-    sh.pose = 'sit'; sh.dir = -1;
-    if (held) await slide(his, 504, 268, .35); else { his.x = 504; his.y = 268; }
+    await walkBox(sh, his, held, 438);
+    sh.pose = 'sit'; sh.dir = -1; sh.x = 438; his.hide = false;
+    if (held) await slide(his, HIS, SEAT, .35); else { his.x = HIS; his.y = SEAT; }
     if (knew) {
       await say(V().back(s, held));
       await say(V().worry(s));
@@ -235,9 +241,11 @@ var Vet = (function () {
     await Engine.fade(1, .3);
     var R = { on: false, paid: false };
     var ex = Town.stage({
-      title: '진료실', place: 'vet', heroX: 200, dir: 1,
-      boxes: [{ x: 270, y: 210, w: 200, h: 26, label: '진료대', fill: '#d3d8dc' }, { x: 340, y: 180, w: 56, h: 30, label: s.cat, fill: '#e8d6b8' }],
-      people: [{ x: 520, y: 342, box: '수의사', fill: '#cfd8d6' }],
+      title: '진료실', place: 'vet', img: 'bgVetExam', heroX: 200, dir: 1,
+      boxes: [{ x: 270, y: 210, w: 200, h: 26, label: '진료대', fill: '#d3d8dc', bg: true }, { x: 340, y: 180, w: 56, h: 30, label: s.cat, fill: '#e8d6b8', hide: !!PixelArt.v7img('v7Cats') }],
+      // 진료대 위에 웅크린 우리 고양이
+      draw: function (c) { if (PixelArt.v7img('v7Cats')) View.cat(c, G, 368, 212, -1, G.t, 'sick', 1.6); },
+      people: [{ x: 520, y: 342, v: 'vetDoc', dir: -1, pose: 'stetho' }],
       top: function (c) { if (R.on) receipt(c, worse, R.paid); }
     });
     await Engine.fade(0, .3);
@@ -261,7 +269,11 @@ var Vet = (function () {
   function receipt(c, worse, paid) {
     var P = PAPER, items = V().BILL.slice(); if (worse) items.push(V().EXTRA);
     var total = items.reduce(function (a, it) { return a + it[1]; }, 0), lh = items.length > 6 ? 21 : 23;
-    View.box(c, P.x, P.y, P.w, P.h, '#f6f3ec', '#55505a', 2);
+    // 영수증 종이(v7-vet-receipt.png, 560×552를 반으로)
+    var paper = PixelArt.v7img('v7Receipt');
+    // 영수증을 가까이 들여다보는 순간: 방을 살짝 어둡게 (종이 아래로 다리나 진료대가 비치지 않게)
+    if (paper) { c.save(); c.fillStyle = 'rgba(34,30,40,.42)'; c.fillRect(0, 0, 640, 360); c.imageSmoothingEnabled = false; c.drawImage(paper, P.x, P.y, P.w, P.h); c.restore(); }
+    else View.box(c, P.x, P.y, P.w, P.h, '#f6f3ec', '#55505a', 2);
     View.text(c, '진료비 영수증', P.x + P.w / 2, P.y + 24, 13, '#2f2a33', 'center');
     items.forEach(function (it, i) {
       View.text(c, it[0], P.x + 18, P.y + 52 + i * lh, 11, '#3b3540', 'left');
@@ -271,7 +283,8 @@ var Vet = (function () {
     View.r(c, P.x + 14, ty - 12, P.w - 28, 2, '#8a8490');
     View.text(c, '합계', P.x + 18, ty + 6, 12, '#2f2a33', 'left');
     View.text(c, Life.won(total), P.x + P.w - 18, ty + 6, 12, '#c0392b', 'right');
-    if (!paid) { View.box(c, CARD.x, CARD.y, CARD.w, CARD.h, '#8fb3d9', '#3a3640', 2); View.text(c, '카드', CARD.x + CARD.w / 2, CARD.y + 21, 10, '#2f2a33', 'center'); }
+    // 체크카드 (v7-props 17번)
+    if (!paid && !PixelArt.v7propIn(c, 17, CARD.x, CARD.y, CARD.w, CARD.h)) { View.box(c, CARD.x, CARD.y, CARD.w, CARD.h, '#8fb3d9', '#3a3640', 2); View.text(c, '카드', CARD.x + CARD.w / 2, CARD.y + 21, 10, '#2f2a33', 'center'); }
   }
   function slide(b, x, y, sec) {
     var x0 = b.x, y0 = b.y, t0 = G.t;
@@ -280,12 +293,14 @@ var Vet = (function () {
   // 성훈 씨가 걸어간다 (맡겨 둔 이동장은 내 옆에 남는다)
   function walkBox(p, box, held, x) {
     var x0 = p.x, t0 = G.t, dur = Math.abs(x - x0) / 260;
-    p.dir = x < x0 ? -1 : 1; p.pose = 'walk';
+    // 맡기지 않았으면 이동장을 끌어안고 걷는다 (성훈 씨 그림 1번 줄 2~5번 칸)
+    var art = !held && !!PixelArt.v7img('v7People');
+    p.dir = x < x0 ? -1 : 1; p.pose = art ? 'carrierWalk' : 'walk'; if (art) box.hide = true;
     return new Promise(function (resolve) {
       (function step() {
         var q = Math.min(1, (G.t - t0) / Math.max(.2, dur)); p.x = x0 + (x - x0) * q;
         if (!held) { box.x = p.x + 10 * p.dir - 20; box.y = 236; }
-        if (q < 1) setTimeout(step, 16); else { p.pose = 'stand'; resolve(); }
+        if (q < 1) setTimeout(step, 16); else { p.pose = art ? 'carrierStand' : 'stand'; resolve(); }
       }());
     });
   }

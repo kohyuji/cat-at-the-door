@@ -33,19 +33,20 @@ var Town = (function () {
   // 내 인형을 끌어서 가고 싶은 곳에 놓는다 (눌러도 된다). 멀수록 시계가 더 흐른다.
   // 창문: 모르는 사람의 창은 꺼져 있고, 아는 사람의 창은 희미하게, 가까운 사람의 창은 환하게 켜진다.
   // 우리 집 창은 집을 오래 비울수록 어둡다.
+  // 자리는 동네 지도 그림(v7-bg-map)의 건물에 맞춘다: 누르는 칸(x, y, w, h), 이름 자리(lx, ly), 인형이 서는 곳(ax, ay)
   var SPOT = {
-    home: { x: 66, y: 232, w: 62, h: 76, label: '301호' },
-    grandma: { x: 130, y: 232, w: 62, h: 76, label: '302호' },
-    station: { x: 286, y: 272, w: 96, h: 50, label: '역' },
-    shop: { x: 272, y: 150, w: 100, h: 64, label: '슈퍼' },
-    branch: { x: 500, y: 34, w: 112, h: 110, label: '새솔지점' },
+    home: { x: 38, y: 199, w: 87, h: 112, lx: 80, ly: 193, ax: 70, ay: 321, label: '301호' },
+    grandma: { x: 125, y: 199, w: 82, h: 112, lx: 167, ly: 193, ax: 147, ay: 321, label: '302호' },
+    station: { x: 275, y: 276, w: 121, h: 60, lx: 335, ly: 271, ax: 331, ay: 338, label: '역' },
+    shop: { x: 262, y: 152, w: 117, h: 69, lx: 323, ly: 146, ax: 349, ay: 223, label: '슈퍼' },
+    branch: { x: 490, y: 24, w: 116, h: 119, lx: 552, ly: 18, ax: 559, ay: 150, label: '새솔지점' },
     // 알게 되면 밝아지는 곳: 동물병원(4/22부터), 공원과 영화관(그 사람과 약속을 잡으면), 성훈 씨네(같은 동네인 줄 알면, 갈 수는 없다)
-    vet: { x: 414, y: 178, w: 86, h: 58, label: '동물병원' },
-    park: { x: 212, y: 52, w: 84, h: 58, label: '공원' },
-    cinema: { x: 352, y: 58, w: 92, h: 58, label: '영화관' },
-    oneHome: { x: 52, y: 44, w: 132, h: 84, label: '성훈 씨네', view: true },
-    // 지하철로 40분 떨어진 곳: 결혼식에 가기로 한 날에만 밝아진다 (어두운 먼 곳 자리)
-    hall: { x: 498, y: 228, w: 116, h: 90, label: '결혼식장' }
+    vet: { x: 412, y: 170, w: 105, h: 53, lx: 463, ly: 164, ax: 465, ay: 225, label: '동물병원' },
+    park: { x: 207, y: 53, w: 105, h: 71, lx: 259, ly: 49, ax: 259, ay: 129, label: '공원' },
+    cinema: { x: 346, y: 53, w: 111, h: 68, lx: 403, ly: 49, ax: 415, ay: 129, label: '영화관' },
+    oneHome: { x: 40, y: 40, w: 136, h: 101, lx: 108, ly: 37, ax: 176, ay: 141, label: '성훈 씨네', view: true },
+    // 지하철로 40분 떨어진 곳: 결혼식에 가기로 한 날에만 밝아진다
+    hall: { x: 467, y: 247, w: 150, h: 85, lx: 540, ly: 242, ax: 543, ay: 339, label: '결혼식장' }
   };
   function known(s, id) {
     if (id === 'vet') return s.day >= Life.VET.day || Life.vetDone(s);
@@ -55,11 +56,13 @@ var Town = (function () {
     if (id === 'hall') return !!Life.day(s).wedding && !!s.wed && s.wed.answer === 'yes' && !s.wed.went;
     return true;
   }
-  var VILLA = { x: 58, y: 196, w: 142, h: 120 };
+  var VILLA = { x: 38, y: 197, w: 169, h: 115 };
   // 아직 모르는 곳은 어둡다. 사람을 알게 될 때마다 하나씩 밝아진다.
-  var FAR = { x: 498, y: 228, w: 116, h: 90 };
+  var FAR = { x: 467, y: 247, w: 150, h: 85 };
   var ROADS = [['station', 'home'], ['station', 'shop'], ['shop', 'grandma'], ['station', 'branch'], ['station', 'vet'], ['shop', 'park'], ['station', 'cinema'], ['park', 'oneHome'], ['station', 'hall']];
   var WIN = { mine: { x: 89, y: 244 }, grandma: { x: 153, y: 244 }, boss: { x: 336, y: 158 }, mate: { x: 560, y: 52 }, one: { x: 110, y: 70 } };
+  // 지도 그림의 창유리 (창마다 두 장, 가운데 창살은 그림 그대로 남긴다)
+  var PANES = { mine: [[84, 270, 10, 12], [98, 270, 10, 12]], grandma: [[162, 270, 10, 12], [174, 270, 12, 12]], boss: [[310, 194, 8, 9], [322, 194, 8, 9]], mate: [[530, 57, 10, 9], [544, 57, 12, 9]], one: [[100, 78, 11, 12], [114, 78, 10, 12]] };
   // 4단계에서 더하는 갈 곳: 지도에 뜨는 조건(routes)과 고르면 하는 일(PLACES)
   var EXTRA = [], PLACES = {}, RUN = {};
   function addRoutes(fn) { EXTRA.push(fn); }
@@ -67,7 +70,7 @@ var Town = (function () {
   function onRun(kind, fn) { RUN[kind] = fn; }
   var MP = null;
   function center(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }
-  function foot(id) { var r = SPOT[id]; return { x: r.x + r.w / 2, y: r.y + r.h - 8 }; }
+  function foot(id) { var r = SPOT[id]; return r.ax !== undefined ? { x: r.ax, y: r.ay } : { x: r.x + r.w / 2, y: r.y + r.h - 8 }; }
   // 갈 수 있는 곳과 드는 시간(분). 저녁에 역에서 내리면 집, 슈퍼, 옆집. 집에서 나서면 슈퍼, 옆집, 그대로 집.
   function routes(s, from) {
     var out = { home: 0 };
@@ -84,8 +87,43 @@ var Town = (function () {
     if (glow && level >= 2) View.lampGlow(c, w.x + 8, w.y + 6, 26, .35);
     View.box(c, w.x, w.y, 16, 12, windowColor(level), '#3a3640', 2);
   }
+  // 창에 불: 켜진 정도만큼 유리 두 장을 채운다 (꺼진 창은 그림 그대로)
+  function drawPanes(c, who, level) {
+    if (level <= 0) return;
+    var ps = PANES[who], a = ps[0], b = ps[ps.length - 1];
+    if (level >= 2) View.lampGlow(c, (a[0] + b[0] + b[2]) / 2, a[1] + a[3] / 2, 22, .35);
+    ps.forEach(function (p) { c.fillStyle = level >= 2 ? '#ffd970' : '#c9a85c'; c.fillRect(p[0], p[1], p[2], p[3]); });
+  }
+  function mapLabel(c, r, can) {
+    c.font = "10px 'NeoDunggeunmo', monospace";
+    var w = Math.ceil(c.measureText(r.label).width) + 10;
+    View.box(c, Math.round(r.lx - w / 2), r.ly - 9, w, 15, can ? '#fffaf0' : 'rgba(233,229,220,.85)', can ? '#3b3540' : '#8a8490', 1);
+    View.text(c, r.label, r.lx, r.ly - 1, 10, can ? '#3b3540' : '#77717c', 'center');
+  }
+  function drawMapArt(c) {
+    var s = S(), t = G.t;
+    // 아직 모르는 곳은 어둡게 덮는다
+    Object.keys(SPOT).forEach(function (id) {
+      var r = SPOT[id];
+      if (!known(s, id)) { c.fillStyle = 'rgba(38,36,48,.62)'; c.fillRect(r.x, r.y, r.w, r.h); return; }
+    });
+    drawPanes(c, 'mine', MP.away > .6 ? 2 : MP.away > .25 ? 1 : 0);
+    drawPanes(c, 'grandma', Life.windowOf(s, 'grandma'));
+    drawPanes(c, 'boss', Life.windowOf(s, 'boss'));
+    drawPanes(c, 'mate', Life.windowOf(s, 'mate'));
+    if (known(s, 'oneHome')) drawPanes(c, 'one', Life.windowOf(s, 'one'));
+    if (MP.view === 'evening') View.nightTint(c, .22);
+    Object.keys(SPOT).forEach(function (id) {
+      var r = SPOT[id]; if (!known(s, id)) return;
+      mapLabel(c, r, MP.to[id] !== undefined && id !== MP.at);
+    });
+    var p = MP.drag || MP.tok;
+    View.shadow(c, p.x, p.y + 2, 10);
+    View.person(c, G, p.x, p.y, s.wearing === 'suit' ? 'suit' : 'hoodie', 1, t, MP.drag || MP.moving ? 'walk' : 'stand', 1);
+  }
   function drawMap(c) {
     var s = S(), t = G.t;
+    if (PixelArt.bg(c, 'bgMap')) { drawMapArt(c); return; }
     c.fillStyle = '#d9d6cf'; c.fillRect(0, 0, 640, 360);
     View.text(c, '동네 지도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
     c.lineCap = 'round';
@@ -169,23 +207,48 @@ var Town = (function () {
   }
 
   // ---------- 빌라 복도 ----------
-  var DOOR = { mine: { x: 150, y: 116, w: 74, h: 206 }, next: { x: 404, y: 116, w: 74, h: 206 } };
+  // 현관문 자리는 복도 그림(v7-bg-corridor)의 문짝에 맞춘다. 열린 문은 v7-corridor-door-open 조각을 문틀 안에 덮는다.
+  var DOOR = { mine: { x: 136, y: 108, w: 102, h: 200 }, next: { x: 390, y: 108, w: 102, h: 200 } };
+  var DOOR_OPEN = { mine: [144, 118, 84, 190], next: [400, 118, 84, 190] };
+  // 안고 가는 물건: 택배 상자(v7-props 3번), 비운 반찬통(6번)
+  var CARRY_PROP = { '택배': 3, '반찬통': 6 };
   var CR = { spots: [] };
+  function doorOpen(c, r) { var im = PixelArt.v7img('v7DoorOpen'); if (!im) return false; c.save(); c.imageSmoothingEnabled = false; c.drawImage(im, 2, 2, 144, 408, r[0], r[1], r[2], r[3]); c.restore(); return true; }
   function drawCorridor(c) {
-    var s = S(), t = G.t, h = G.hero;
-    c.fillStyle = '#d8d4cc'; c.fillRect(0, 0, 640, 360);
-    View.text(c, '빌라 복도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
-    c.fillStyle = '#b7b1a6'; c.fillRect(0, 322, 640, 38);
-    ph(c, DOOR.mine.x, DOOR.mine.y, DOOR.mine.w, DOOR.mine.h, '301호', CR.mineOpen ? '#6f6a64' : '#c9c6c0');
-    ph(c, DOOR.next.x, DOOR.next.y, DOOR.next.w, DOOR.next.h, '302호', CR.nextOpen ? '#6f6a64' : '#c9c6c0');
-    ph(c, 584, 120, 56, 202, '계단', '#bdb7ad');
-    if (CR.gm) ph(c, CR.gm.x - 22, 214, 44, 108, '할머니', '#bfb6c9');
-    if (h.visible) {
-      View.shadow(c, h.x, 343, 20);
-      View.person(c, G, h.x, 342 + (CR.bow ? 5 : 0), s.wearing === 'suit' ? 'suit' : 'hoodie', h.dir, t, h.walking ? 'walk' : 'stand', 2.35);
+    var s = S(), t = G.t, h = G.hero, look = s.wearing === 'suit' ? 'suit' : 'hoodie';
+    var art = PixelArt.bg(c, 'bgCorridor');
+    if (art) {
+      if (CR.mineOpen) doorOpen(c, DOOR_OPEN.mine);
+      if (CR.nextOpen) doorOpen(c, DOOR_OPEN.next);
+    } else {
+      c.fillStyle = '#d8d4cc'; c.fillRect(0, 0, 640, 360);
+      View.text(c, '빌라 복도 (그림 자리)', 10, 16, 10, '#7a7480', 'left');
+      c.fillStyle = '#b7b1a6'; c.fillRect(0, 322, 640, 38);
+      ph(c, DOOR.mine.x, DOOR.mine.y, DOOR.mine.w, DOOR.mine.h, '301호', CR.mineOpen ? '#6f6a64' : '#c9c6c0');
+      ph(c, DOOR.next.x, DOOR.next.y, DOOR.next.w, DOOR.next.h, '302호', CR.nextOpen ? '#6f6a64' : '#c9c6c0');
+      ph(c, 584, 120, 56, 202, '계단', '#bdb7ad');
     }
-    if (CR.carry) ph(c, h.x + 6 * h.dir - 16, 250, 32, 24, CR.carry, '#d9c39a');
-    if (CR.key) { var k = CR.key; ph(c, k.x - 14, k.y - 10, 28, 20, '쪽지', '#f3e48a'); }
+    // 옆집 할머니: 주인공 쪽을 본다
+    if (CR.gm) {
+      View.shadow(c, CR.gm.x, 343, 18);
+      if (PixelArt.v7img('v7People')) View.person(c, G, CR.gm.x, 342, 'grandma', h.x < CR.gm.x ? -1 : 1, t, CR.gm.walking ? 'walk' : 'stand', 2.35);
+      else ph(c, CR.gm.x - 22, 214, 44, 108, '할머니', '#bfb6c9');
+    }
+    if (h.visible) {
+      var carry = CR.carry && CARRY_PROP[CR.carry] !== undefined && PixelArt.v7img('v7Hero') && PixelArt.v7img('v7Props');
+      var pose = CR.bow ? 'bow' : carry ? (h.walking ? 'carryWalk' : 'carryStand') : h.walking ? 'walk' : 'stand';
+      View.shadow(c, h.x, 343, 20);
+      View.person(c, G, h.x, 342 + (CR.bow && !PixelArt.v7img('v7Hero') ? 5 : 0), look, h.dir, t, pose, 2.35);
+      if (carry) {
+        // 주인공, 안은 물건(32×24), 그 위에 손 순서로 겹친다
+        var hand = View.carryHand(c, G, h.x, 342, look, h.dir, t, pose, 2.35);
+        PixelArt.v7propIn(c, CARRY_PROP[CR.carry], hand.x - 16, hand.y - 24, 32, 24);
+        hand.draw();
+      }
+    }
+    if (CR.carry && !(h.visible && CARRY_PROP[CR.carry] !== undefined && PixelArt.v7img('v7Hero') && PixelArt.v7img('v7Props'))) ph(c, h.x + 6 * h.dir - 16, 250, 32, 24, CR.carry, '#d9c39a');
+    // 현관 비밀번호를 적은 노란 쪽지 (v7-props 7번)
+    if (CR.key) { var k = CR.key; if (!PixelArt.v7propIn(c, 7, k.x - 14, k.y - 10, 28, 20)) ph(c, k.x - 14, k.y - 10, 28, 20, '쪽지', '#f3e48a'); }
     if (Home.H.mode === 'evening' || Home.H.mode === 'night') View.nightTint(c, .12);
   }
   function enterCorridor(o) {
@@ -212,7 +275,7 @@ var Town = (function () {
     var x0 = gm.x, x1 = DOOR.next.x + DOOR.next.w / 2, t0 = G.t;
     return new Promise(function (resolve) {
       (function step() {
-        var q = Math.min(1, (G.t - t0) / .7); gm.x = x0 + (x1 - x0) * q;
+        var q = Math.min(1, (G.t - t0) / .7); gm.x = x0 + (x1 - x0) * q; gm.walking = q < 1 && Math.abs(x1 - x0) > 4;
         if (q < 1) setTimeout(step, 16); else { CR.gm = null; CR.nextOpen = false; UI.sfx('door'); resolve(); }
       }());
     });
@@ -247,14 +310,15 @@ var Town = (function () {
     UI.sfx('knock');
     await say([narr(PP().knock.sound)]);
     await Engine.fade(1, .3);
-    enterCorridor({ heroX: DOOR.mine.x + DOOR.mine.w / 2 + 34, mineOpen: true });
-    CR.gm = { x: DOOR.mine.x + DOOR.mine.w + 96 };
+    // 열린 문 바로 옆에 선다 (고개 숙이는 자리가 문과 겹치지 않게)
+    enterCorridor({ heroX: DOOR.mine.x + DOOR.mine.w + 28, mineOpen: true });
+    CR.gm = { x: DOOR.mine.x + DOOR.mine.w + 98 };
     await Engine.fade(0, .3);
     await say(PP().knock.open(s));
     outline(2.6);
     var pick = await pickFrom(CR, [
-      { id: 'bow', x: G.hero.x - 24, y: 206, w: 48, h: 132, pulse: true },
-      { id: 'shut', x: DOOR.mine.x, y: DOOR.mine.y, w: DOOR.mine.w, h: DOOR.mine.h, pulse: true }
+      { id: 'shut', x: DOOR.mine.x, y: DOOR.mine.y, w: DOOR.mine.w, h: DOOR.mine.h, pulse: true },
+      { id: 'bow', x: G.hero.x - 24, y: 206, w: 48, h: 132, pulse: true }
     ]);
     if (pick === 'bow') {
       CR.bow = true; UI.sfx('tap'); await Engine.sleep(.7); CR.bow = false;
@@ -329,8 +393,9 @@ var Town = (function () {
   function homeOK() { var s = S(), H = Home.H; return !!s && !H.pro && Life.homeTime(s) && H.mode !== 'night' && !H.closeUp; }
   function drawHome(c) {
     var s = S(), H = Home.H; if (!s || H.pro || H.room !== 'living') return;
-    if (s.seen.parcelAt) ph(c, HOME_SPOT.parcel.x - 18, HOME_SPOT.parcel.y - 22, 36, 26, '택배', '#d9c39a');
-    if (s.dish) ph(c, HOME_SPOT.dish.x - 16, HOME_SPOT.dish.y - 16, 32, 18, s.dish === 'full' ? '반찬' : '빈 통', s.dish === 'full' ? '#e7d0a6' : '#e4e0d8');
+    // 옆집 택배(v7-props 3번), 할머니 반찬통(가득 5번 / 빈 통 6번)
+    if (s.seen.parcelAt && !PixelArt.v7propIn(c, 3, HOME_SPOT.parcel.x - 18, HOME_SPOT.parcel.y - 22, 36, 26)) ph(c, HOME_SPOT.parcel.x - 18, HOME_SPOT.parcel.y - 22, 36, 26, '택배', '#d9c39a');
+    if (s.dish && !PixelArt.v7propIn(c, s.dish === 'full' ? 5 : 6, HOME_SPOT.dish.x - 16, HOME_SPOT.dish.y - 16, 32, 18)) ph(c, HOME_SPOT.dish.x - 16, HOME_SPOT.dish.y - 16, 32, 18, s.dish === 'full' ? '반찬' : '빈 통', s.dish === 'full' ? '#e7d0a6' : '#e4e0d8');
   }
   // 복도로 나가는 일(택배, 빈 통)은 저녁 기다림을 'town'으로 끝내고, 저녁 흐름이 run()으로 이어 간다.
   // (누른 행동 안에서 복도 장면을 열면, 복도에서 또 눌러야 하는 곳이 막힌다)
@@ -407,12 +472,14 @@ var Town = (function () {
   // 옆에 선 사람(우리 회사 서류 봉투)이 내 소매의 털을 본다. 먼저 말을 걸거나, 소매를 털고 창밖을 본다.
   var TR = { spots: [] };
   async function train() {
-    var s = S(), mateX = 354;
-    G.hero.x = 300; G.hero.tx = null; G.hero.dir = 1; Work.Wk.dark = false;
+    // 그림이 있으면 지안은 왼쪽 기둥(x 262)을 잡고 선다: 'grip' 칸의 손은 발에서 왼쪽으로 24, 위로 136
+    var s = S(), pole = !!PixelArt.v7img('v7People'), mateX = pole ? 262 + 24 : 354;
+    G.hero.x = pole ? mateX - 54 : 300; G.hero.tx = null; G.hero.dir = 1; Work.Wk.dark = false;
     TR = { spots: [] };
     Engine.setScene({
       place: 'train',
-      draw: function (c) { Work.drawTrain(c); ph(c, mateX - 20, 216, 40, 128, '동기', '#bfb6c9'); },
+      // 지안: 기둥을 잡고 서서 내 쪽을 본다 (v7-people 2번 줄 7번 칸)
+      draw: function (c) { Work.drawTrain(c); if (!PixelArt.v7img('v7People')) { ph(c, mateX - 20, 216, 40, 128, '동기', '#bfb6c9'); return; } View.person(c, G, mateX, 344, 'mate', -1, G.t, 'grip', 2.35); },
       hot: function () { return TR.spots; }
     });
     await Engine.fade(0, .35);
@@ -501,9 +568,10 @@ var Town = (function () {
     return who;
   }
 
-  // ---------- 그림이 아직 없는 장소 (동물병원, 고깃집, 결혼식장, 공원, 영화관) ----------
-  // o: { title, place, bg, boxes: [{ x, y, w, h, label, fill, hide }], people: [{ x, y, v, dir, pose, hue, hide }], draw(c, t), top(c, t), night, walk }
-  // 사람 그림이 있는 사람(지점장님, 선배, 손님 그림을 빌린 성훈 씨)은 그림으로, 없는 사람은 회색 상자로 둔다
+  // ---------- 동네 밖 장소 (동물병원, 고깃집, 노래방, 결혼식장, 공원, 영화관, 카페) ----------
+  // o: { title, place, img(배경 그림 키), bg, boxes: [{ x, y, w, h, label, fill, hide, bg(배경 그림에 이미 있는 것), prop(v7 소품 칸) }],
+  //      people: [{ x, y, v, dir, pose, hue, hide }], draw(c, t), top(c, t), night, walk }
+  // 배경 그림이 아직 안 불렸으면 회색 상자와 이름표로 둔다
   var STG = { spots: [], o: {} };
   function stage(o) {
     o = o || {};
@@ -515,11 +583,20 @@ var Town = (function () {
     return STG;
   }
   function drawStage(c) {
-    var o = STG.o, t = G.t, h = G.hero, s = S();
-    c.fillStyle = o.bg || '#d8d4cc'; c.fillRect(0, 0, 640, 360);
-    View.text(c, (o.title || '') + ' (그림 자리)', 10, 16, 10, '#7a7480', 'left');
-    if (o.floor !== false) { c.fillStyle = o.floorFill || '#b7b1a6'; c.fillRect(0, 322, 640, 38); }
-    (o.boxes || []).forEach(function (b) { if (!b.hide) ph(c, b.x, b.y, b.w, b.h, b.label, b.fill); });
+    var o = STG.o, t = G.t, h = G.hero, s = S(), art = !!o.img && PixelArt.bg(c, o.img);
+    if (!art) {
+      c.fillStyle = o.bg || '#d8d4cc'; c.fillRect(0, 0, 640, 360);
+      View.text(c, (o.title || '') + ' (그림 자리)', 10, 16, 10, '#7a7480', 'left');
+      if (o.floor !== false) { c.fillStyle = o.floorFill || '#b7b1a6'; c.fillRect(0, 322, 640, 38); }
+    }
+    function boxes(front) {
+      (o.boxes || []).forEach(function (b) {
+        if (b.hide || (art && b.bg) || !!(art && b.front) !== front) return;
+        if (b.prop !== undefined && PixelArt.v7propIn(c, b.prop, b.x, b.y, b.w, b.h)) return;
+        ph(c, b.x, b.y, b.w, b.h, b.label, b.fill);
+      });
+    }
+    boxes(false);
     if (o.draw) o.draw(c, t);
     (o.people || []).forEach(function (p) {
       if (p.hide) return;
@@ -531,8 +608,16 @@ var Town = (function () {
       View.shadow(c, h.x, h.y + 1, 20);
       View.person(c, G, h.x, h.y, s.wearing === 'suit' ? 'suit' : 'hoodie', h.dir, t, h.walking ? 'walk' : (h.pose || 'stand'), h.scale || 2.35);
     }
+    // 앞에 오는 가구(축의대, 피로연 식탁): 배경 그림의 그 부분만 사람 위에 다시 덮고, 그 위에 놓인 소품을 그린다
+    if (art && o.fg) fgCut(c, o.img, o.fg);
+    boxes(true);
     if (o.top) o.top(c, t);
     if (o.night) View.nightTint(c, o.night);
+  }
+  function fgCut(c, key, pts) {
+    c.save(); c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath(); c.clip(); PixelArt.bg(c, key); c.restore();
   }
   // 장면이 끝나고 거실로 돌아온다 (저녁 흐름이 이어진다)
   function backIn(heroX) {

@@ -170,13 +170,16 @@ var Home = (function () {
   function drawHero(c) {
     var h = G.hero; if (!h.visible) return;
     var cleaning = H.clean && H.clean.kind, pose = cleaning ? H.clean.kind : h.walking ? 'walk' : (h.pose || 'stand');
+    // 카메라를 연 동안: 주머니에서 휴대폰을 꺼내(v7-hero 6번 칸) 얼굴 앞에 든다(7번 칸)
+    var cam = Phone.camOn() && !cleaning && !h.walking && (!h.pose || h.pose === 'stand') && !!PixelArt.v7img('v7Hero');
+    if (cam) { if (H.camT0 === null || H.camT0 === undefined) H.camT0 = G.t; pose = G.t - H.camT0 < .35 ? 'phoneOut' : 'phoneUp'; } else H.camT0 = null;
     View.shadow(c, h.x, h.y + 1, 20);
     View.person(c, G, h.x, h.y, heroLook(), h.walking && !cleaning ? h.dir : (h.face === undefined ? h.dir : h.face), G.t, pose, h.scale);
     // 정장이나 후드티에 붙은 털
     var fur = H.pro ? (H.proFur ? 2 : 0) : (S() && S().wearing === 'suit' ? S().fur : 0);
     if (fur > 0 && pose !== 'sit') furOn(c, h.x, h.y - 96 * h.scale / 2.35, fur, 1);
     // 카메라를 연 동안: 고양이 쪽으로 휴대폰을 든다 (그림 자리: 회색 '폰' 상자)
-    if (Phone.camOn()) { var px = h.x + (h.dir >= 0 ? 14 : -30); View.box(c, px, h.y - 112, 16, 22, '#c9c6c0', '#55505a', 2); View.text(c, '폰', px + 8, h.y - 97, 8, '#55505a', 'center'); }
+    if (Phone.camOn() && !cam) { var px = h.x + (h.dir >= 0 ? 14 : -30); View.box(c, px, h.y - 112, 16, 22, '#c9c6c0', '#55505a', 2); View.text(c, '폰', px + 8, h.y - 97, 8, '#55505a', 'center'); }
   }
   // 냄새: 구불구불한 줄이 피어올랐다 사라진다 (화장실 위, 냄새 밴 옷 위)
   function stinkLines(c, x, y, n, t) {
@@ -187,7 +190,8 @@ var Home = (function () {
   }
   var FUR = [[-10, 2], [6, 8], [-3, 18], [9, 24], [-12, 30], [3, 34], [-6, 12], [11, 14], [0, 26]];
   function furOn(c, x, y, n, px) { for (var i = 0; i < Math.min(FUR.length, n * 3); i++) View.hair(c, x + FUR[i][0], y + FUR[i][1], i, px || 1); }
-  function cleanTools() { var s = S(); return !!s && s.day >= Life.CLEAN_FROM; }
+  // 손님이 와 있는 동안(H.tidy가 오늘)은 빗자루와 대걸레를 치워 둔다
+  function cleanTools() { var s = S(); return !!s && s.day >= Life.CLEAN_FROM && H.tidy !== s.day; }
   function gone() { var s = S(); if (H.goneDay !== s.day) { H.gone = {}; H.goneDay = s.day; } return H.gone; }
   function drawLiving(c) {
     var s = S(), t = G.t, held = H.held && H.held.id;

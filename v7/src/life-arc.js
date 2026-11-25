@@ -117,17 +117,20 @@ var Arc = (function () {
     }
     M.next = G.t + 30;
   }
-  // 순간에는 고양이 그림 대신 그림 자리를 그린다 (그렸으면 true)
+  // 순간에는 고양이 새 자세를 그린다: 정장 위(v7-cats 0), 볕 쬐며 배 드러내기(1), 상자 속(2) (그렸으면 true)
+  var MOMENT_CAT = { suit: 0, sun: 1, box: 2 };
   function momentDraw(c, k) {
     if (!M.on || !M.ready || k.walking) return false;
     var sp = SPOT[M.on];
+    if (View.v7cat(c, G, MOMENT_CAT[M.on], k.x, k.y, M.on === 'sun' ? -1 : 1, k.scale || 1.6)) return true;
     ph(c, Math.round(k.x - sp.w / 2), Math.round(k.y - sp.h), sp.w, sp.h, sp.label);
     return true;
   }
-  // 비워 둔 상자: 고양이가 들어가 있지 않을 때 거실 바닥에
+  // 비워 둔 상자: 고양이가 들어가 있지 않을 때 거실 바닥에 (v7-props 4번, 뚜껑 날개를 연 빈 상자)
   function drawBox(c) {
     var s = S(), h = Home.H; if (!s || h.pro || h.room !== 'living' || !boxDay(s)) return;
     if (M.on === 'box' && M.ready) return;
+    if (PixelArt.v7propIn(c, 4, BOX.x, BOX.y, BOX.w, BOX.h)) return;
     ph(c, BOX.x, BOX.y, BOX.w, BOX.h, '빈 상자');
   }
   // 정장 위 고양이가 있는 동안 옷걸이의 정장은 침대 위에 있다
@@ -295,6 +298,7 @@ var Arc = (function () {
   // 이 동네에서 가장 가까워진 사람(성훈 씨, 옆집 할머니, 슈퍼 사장님)이 우산을 기울이고, 나는 그 아래로 한 걸음 들어간다.
   // 동기 지안이 가장 가까우면 지점을 나설 때 우산을 빌려줬다. 아무도 없으면 슈퍼에서 비닐우산을 사서 혼자 편다.
   var RAIN_PAL = { grandma: { label: '옆집 할머니', fill: '#d6cbbd' } };
+  var RAIN_LOOK = { one: 'one', grandma: 'grandma', boss: 'owner' };
   async function rainHome() {
     var s = S(), R = B().RAIN, who = Life.umbrellaBy(s);
     var st = { open: 0, opened: false, own: who === 'mate', mine: false, other: null, under: false, step: 0 }, STEP = 26;
@@ -307,7 +311,15 @@ var Arc = (function () {
         var h = G.hero, t = G.t;
         PixelArt.rain(c, { x: 0, y: 0, w: 640, h: 360 }, t, 1);
         // 함께 쓰는 우산: 그 사람이 들고 내 쪽으로 기울인다
-        if (o && o.on) {
+        // v7 그림: 머리 위로 든 손에 우산대를 쥐고 장바구니(할머니는 비닐봉지)를 든 모습 (v7-people 7번 칸). 우산은 그 손에 붙인다.
+        var art = o && PixelArt.v7img('v7People'), look = o && RAIN_LOOK[o.who];
+        if (o && o.on && art) {
+          View.shadow(c, o.x, 343, 18);
+          // 같이 걸을 때는 걷는 칸으로 앞(오른쪽)을 보고, 우산은 내 쪽 머리 위에 그대로 둔다
+          View.person(c, G, o.x, 342, look, o.walking && st.under ? 1 : o.dir, t, o.walking ? 'walk' : 'umbrella', 2.35);
+          var g = View.gripAt(look, o.x, 342, -1);
+          PixelArt.umbrella(c, g.x, g.y, st.under ? -.18 : -.5, View.HERO_PX, 'navy');
+        } else if (o && o.on) {
           View.shadow(c, o.x, 343, 18);
           if (RAIN_PAL[o.who]) { var P = RAIN_PAL[o.who]; View.box(c, o.x - 20, 236, 40, 106, P.fill, '#55505a', 2); }
           else View.person(c, G, o.x, 342, o.who === 'one' ? 'customerA' : 'customerC', o.walking ? 1 : o.dir, t, o.walking ? 'walk' : 'stand', 2.35, o.who === 'one' ? 100 : 200);
@@ -320,7 +332,7 @@ var Arc = (function () {
         if (holding) PixelArt.umbrella(c, h.x + (h.walking ? 6 : 16), h.walking ? 262 : 258 + (1 - st.open) * 30, 0, View.HERO_PX, st.own ? 'yellow' : 'clear');
         else if (st.mine) View.r(c, h.x + 14, 270, 3, 44, st.own ? '#e0b43c' : '#c9d2d8'); // 접힌 우산 (지안의 노란 우산 / 비닐우산)
         // 그림이 오기 전의 회색 상자: 이름은 나보다 앞에 써서 가리지 않는다
-        if (o && o.on && RAIN_PAL[o.who]) View.text(c, RAIN_PAL[o.who].label, o.x + 8, 254, 9, '#3b3540', 'center');
+        if (o && o.on && !art && RAIN_PAL[o.who]) View.text(c, RAIN_PAL[o.who].label, o.x + 8, 254, 9, '#3b3540', 'center');
       },
       hot: function () {
         var h = G.hero;
@@ -365,7 +377,8 @@ var Arc = (function () {
       await say(R.noUmbrella);
       if (o) {
         o.on = true; UI.sfx('door');
-        o.walking = true; await slideX(o, 458, .7); o.walking = false; o.dir = -1;
+        // 한 걸음 다가가도 얼굴이 맞닿지 않게 떨어져 선다 (다가간 뒤 사이 72, 우산 끝이 내 머리 위까지 온다)
+        o.walking = true; await slideX(o, 490, .7); o.walking = false; o.dir = -1;
         await say(R.come[o.who]);
         st.base = G.hero.x; st.ready = 'step';
         G.hand = { x: G.hero.x, y: 300, tx: G.hero.x + 30, ty: 300, period: 1.6, t0: G.t };

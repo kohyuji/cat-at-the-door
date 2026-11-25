@@ -252,7 +252,8 @@ var Mom = (function () {
   function parcelHere(s) { return s.mom.parcel !== null && s.day >= s.mom.parcel && s.mom.opened === null && s.mom.got !== null; }
   function drawHome(c) {
     var s = S(), h = Home.H; if (!s || h.pro || h.room !== 'living') return;
-    if (parcelHere(s)) ph(c, PARCEL.x, PARCEL.y, PARCEL.w, PARCEL.h, '엄마 택배');
+    // 엄마 택배 상자 (v7-props 3번)
+    if (parcelHere(s) && !PixelArt.v7propIn(c, 3, PARCEL.x, PARCEL.y, PARCEL.w, PARCEL.h)) ph(c, PARCEL.x, PARCEL.y, PARCEL.w, PARCEL.h, '엄마 택배');
   }
   function homeSpots(room) {
     var s = S(), h = Home.H, out = [];

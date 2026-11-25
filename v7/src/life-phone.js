@@ -88,10 +88,24 @@ var Phone = (function () {
   }
   function ring(on) { $('phoneButton').classList.toggle('ring', !!on); }
 
-  // 얼굴: 가까워지기 전에는 빈 실루엣, 가까워지면 그 사람 얼굴(그림 자리: 이름 첫 글자)
+  // 얼굴: 가까워지기 전에는 빈 실루엣, 가까워지면 그 사람의 대화 얼굴을 동그랗게 잘라 쓴다
+  var FACE_OF = { mom: ['mom'], mate: ['mate'], grandma: ['grandma'], one: ['one'], boss: ['customerC', 200] }, faceUrl = {};
+  function faceSrc(id) {
+    if (faceUrl[id] !== undefined) return faceUrl[id];
+    var f = FACE_OF[id], url = null;
+    if (f && typeof document !== 'undefined' && window.View && window.G) {
+      try {
+        var cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
+        var g = cv.getContext('2d'); g.fillStyle = '#e9dfcc'; g.fillRect(0, 0, 96, 96);
+        if (View.portrait(g, G, f[0], 0, 0, 96, 96, f[1])) url = cv.toDataURL('image/png');
+      } catch (e) { url = null; }
+    }
+    if (url) faceUrl[id] = url;
+    return url;
+  }
   function avatar(c, big) {
     var k = H.contact(c) || {};
-    if (k.face) return '<span class="ios-avatar face' + (big ? ' big' : '') + '" data-who="' + esc(k.id || '') + '">' + esc(c.charAt(0)) + '</span>';
+    if (k.face) { var src = faceSrc(k.id); return '<span class="ios-avatar face' + (src ? ' pic' : '') + (big ? ' big' : '') + '" data-who="' + esc(k.id || '') + '">' + (src ? '<img src="' + src + '" alt="">' : esc(c.charAt(0))) + '</span>'; }
     if (k.person) return '<span class="ios-avatar sil' + (big ? ' big' : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4.2" fill="#fff"/><path d="M4 21c.6-4.2 3.8-6.6 8-6.6s7.4 2.4 8 6.6z" fill="#fff"/></svg></span>';
     return '<span class="ios-avatar' + (big ? ' big' : '') + '">' + esc(c.charAt(0)) + '</span>';
   }
