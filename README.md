@@ -10,7 +10,7 @@
 
 인터랙티브 미디어 스토리텔링 수업에서 만든 픽셀아트 웹 게임입니다. 설치 없이 브라우저에서 바로 하고, PC의 크롬이나 엣지에서 마우스로 하는 것을 기준으로 만들었습니다.
 
-v7은 지금 만들고 있는 판입니다. 새로 생긴 장소(동물병원, 고깃집, 노래방, 결혼식장, 공원, 영화관, 카페 등)와 옆집 할머니는 그림이 들어오기 전까지 회색 상자에 이름만 적어 두었습니다.
+v7은 지금 만들고 있는 판입니다. 기획은 [v7 기획서](docs/기획서-v7.md)에 있습니다. 새로 생긴 장소(동물병원, 고깃집, 노래방, 결혼식장, 공원, 영화관, 카페 등)와 옆집 할머니는 그림이 들어오기 전까지 회색 상자에 이름만 적어 두었습니다.
 
 ## 이야기
 
@@ -79,6 +79,7 @@ v7은 지금 만들고 있는 판입니다. 새로 생긴 장소(동물병원, �
 
 - v4.1: https://kohyuji.github.io/cat-at-the-door/v4.1/ (itch.io: https://kohyuji.itch.io/cat-at-the-door)
 - v5 실험: [claude-v5](https://kohyuji.github.io/cat-at-the-door/claude-v5/) · [codex-v5](https://kohyuji.github.io/cat-at-the-door/codex-v5/) · [codex-v5-claude](https://kohyuji.github.io/cat-at-the-door/codex-v5-claude/) (v6 직전 작업본)
+- v7 기획서는 [`docs/기획서-v7.md`](docs/기획서-v7.md), 그림·음악 목록은 [`docs/v7-art/`](docs/v7-art/)에 있습니다.
 - 예전 코드와 기획 자료는 [`archive/`](archive/)에, v5 실험 코드는 각 브랜치에 있습니다.
 
 ## 만든 사람들
